@@ -1,0 +1,145 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * O ESTILO DESTE JOGO — e só dele. Os diálogos, os botões de menu, a tipografia e o `.sr-only` vêm da folha
+ * da engine (`@the-inclusionist/engine/style.css`, importada em `boot/boot.ts`).
+ *
+ * ============================ A LINHA QUE SUSTENTA TUDO ============================
+ * `--px` é UM PIXEL LÓGICO da grade 320×180, em pixels de CSS.
+ *
+ * O `ui/layout` da engine trava o `#game-region` num múltiplo INTEIRO de pixels REAIS de 320×180 (ADR-0001) e
+ * publica `--ui-fs: 8·k`. Dividir por 8 devolve o `k`, e com ele toda medida deste arquivo passa a ser dita
+ * em pixels do JOGO — `calc(32 * var(--px))` é a peça de 32, em qualquer tela e em qualquer dpr.
+ *
+ * É isto que mantém o número de DOM exatamente em cima da casa desenhada no canvas. Sem `--px`, as duas
+ * camadas seriam medidas por réguas diferentes, e a divergência apareceria só no aparelho da escola.
+ *
+ * ⚠️ E ELE MORA NO `.game-region`, NÃO NO `:root` — medido no navegador em 2026-09-05, onde estava errado.
+ * O `ui/layout` escreve `--ui-fs` no `#game-region` de propósito: a escala é ESCOPADA ao canvas, e fora dele
+ * o texto fica em 16 px e o alvo em 44 px. Declarar `--px` no `:root` faz `var(--ui-fs)` ser resolvido ALI,
+ * onde a variável não existe — então valia sempre o fallback, e o fallback herdava para o jogo inteiro.
+ *
+ * O defeito era INVISÍVEL porque `8 · 2 = 16`: em k=2 o fallback dá exatamente o valor certo, e k=2 é o piso
+ * do `ui/layout`. Ele só apareceria numa tela grande o bastante para k=3 — o tabuleiro ficaria em dois
+ * terços do tamanho, com os números do DOM fora das casas do canvas. Um bug que espera a tela da escola.
+ */
+.game-region { --px: calc(var(--ui-fs, 16px) / 8); }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #05070f;
+  color: #e8eef7;
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+main { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.stage-wrap { width: 100vw; height: 72vh; display: grid; place-items: center; }
+.stage { position: relative; }
+
+/* O `ui/layout` escreve `width`/`height` aqui. Nada neste arquivo pode disputar essas duas propriedades. */
+.game-region { position: relative; overflow: hidden; outline: none; }
+.game-region:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; outline-offset: 0; }
+
+/* O canvas é a FIGURA: ocupa a região inteira e leva `aria-hidden` em `boot/main.ts`. */
+#canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;   /* pixel art nítido: nada de interpolação entre pixels de arte */
+}
+
+/* ============================ A GRADE ACESSÍVEL ============================
+ * Ela fica POR CIMA do canvas e é o tabuleiro de verdade: `role="grid"`, foco e `aria-label`.
+ * As coordenadas vêm de `app/js/geometry.ts` por estilo em linha — uma geometria só, dois consumidores. */
+/* Cada célula é posicionada por `cellRect` (ver `ui/board-dom`), então este arquivo NÃO decide geometria —
+   ele só declara que a posição é absoluta e deixa o JavaScript escrever os números que a geometria dá. */
+.board { position: absolute; }
+.board__row { position: absolute; left: 0; right: 0; }
+
+.cell {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: calc(2 * var(--px));
+  /* A cor de fundo e a de tinta são escritas por `ui/board-dom`, a partir da paleta calculada. Deixá-las
+     aqui criaria uma segunda tabela de cores — e a segunda tabela é a que nunca passa pelo gate. */
+  transition: background-color 90ms linear;
+}
+
+/* ⚠️ O REALCE DE QUEM PODE FUNDIR vem do PAPEL declarado (campo 2 do contrato), nunca do valor da peça.
+   É a mesma pergunta que o sonar responde por som, respondida aqui por luz — então as duas nunca discordam. */
+.cell[data-role='goal'] { box-shadow: inset 0 0 0 calc(2 * var(--px)) #ffd23f; }
+
+/* Foco visível e GROSSO: 2 px lógicos viram 2·k px reais, então ele não some quando a tela cresce. */
+.cell:focus-visible { outline: calc(2 * var(--px)) solid #f6f8ff; outline-offset: calc(-1 * var(--px)); }
+
+/* ============================ HUD ============================ */
+.hud {
+  position: absolute;
+  left: calc(8 * var(--px));
+  top: calc(16 * var(--px));
+  width: calc(148 * var(--px));
+  font-size: calc(7 * var(--px));
+}
+.hud__title { font-size: calc(11 * var(--px)); margin: 0 0 calc(6 * var(--px)); line-height: 1.1; }
+.hud__line { margin: 0 0 calc(4 * var(--px)); }
+.hud__line b { font-size: calc(9 * var(--px)); }
+
+/* ============================ OS QUATRO ALVOS DE TOQUE ============================
+ * `--alvo-toque` vem de `padPxPerMm` (engine), em MILÍMETROS reais medidos no aparelho — WCAG 2.5.5. Um
+ * palpite em pixels seria grande num monitor e minúsculo num tablet de escola, que é onde ele importa. */
+.pad {
+  position: absolute;
+  left: calc(8 * var(--px));
+  bottom: calc(6 * var(--px));
+  display: grid;
+  grid-template-areas: '. up .' 'left . right' '. down .';
+  gap: calc(2 * var(--px));
+}
+.pad__btn {
+  min-width: var(--alvo-toque, calc(22 * var(--px)));
+  min-height: var(--alvo-toque, calc(22 * var(--px)));
+  font-size: calc(8 * var(--px));
+  background: #24528f;
+  color: #f6f8ff;
+  border: calc(1 * var(--px)) solid #58a0e8;
+  border-radius: calc(2 * var(--px));
+  cursor: pointer;
+}
+.pad__btn:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; }
+.pad__btn--up { grid-area: up; }
+.pad__btn--left { grid-area: left; }
+.pad__btn--right { grid-area: right; }
+.pad__btn--down { grid-area: down; }
+
+/* Ponteiro FINO (rato) não precisa dos alvos: quem tem teclado e rato usa as setas. Escondê-los é ganho de
+   espaço numa tela de 320 px lógicos — e `@media` de ponteiro é a pergunta certa, não a largura da janela. */
+@media (pointer: fine) { .pad { display: none; } }
+
+/* ============================ FERRAMENTAS, FORA DO CANVAS ============================
+ * Não escalam com o k, de propósito: o `ui/layout` decidiu que só a UI DENTRO do jogo acompanha a escala.
+ * Fora dele, texto de 16 px e alvo de 44 px, que é o piso da WCAG. */
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
+.tools__label { font-size: 16px; }
+.btn {
+  min-height: 44px; padding: 0 14px;
+  font: inherit; font-size: 16px;
+  background: #24528f; color: #f6f8ff;
+  border: 1px solid #58a0e8; border-radius: 6px; cursor: pointer;
+}
+.btn:focus-visible, #viz:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+#viz { min-height: 44px; font-size: 16px; background: #1d2130; color: #e8eef7; border: 1px solid #58a0e8; border-radius: 6px; }
+
+/* ============================ MOVIMENTO ============================
+ * A transição de cor da peça é curta e some inteira sob `prefers-reduced-motion`. Não é enfeite opcional:
+ * é a WCAG 2.3.3, e uma criança com sensibilidade vestibular não deveria precisar achar um menu para isso. */
+@media (prefers-reduced-motion: reduce) {
+  .cell { transition: none; }
+}

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2048 · Potência de 2</title>
+<!--
+  A CASCA, e ela é um contrato antes de ser uma página.
+
+  A engine EXIGE marcação com ids fixos e, quando ela falta, os painéis abrem VAZIOS — sem erro. Foi o
+  achado 6 do segundo consumidor da engine, e a correção do lado dela foi devolver a lista em `problems`
+  em vez de deixar cada jogo redescobri-la. O que este arquivo entrega:
+
+    · `#sr-status` / `#sr-alert` — o par de regiões vivas que `core/a11y-sr` procura. Educado e assertivo.
+    · `#stage-wrap` / `#stage` / `#game-region` — o que `ui/layout` mede e escala.
+    · `#cvd` — um `<svg>` VAZIO. `installCvdFilters()` o preenche em tempo de execução, então este jogo não
+      copia uma linha de markup da engine (achado 7).
+    · os ids do painel de tipografia, que é emprestado inteiro.
+
+  ⚠️ E o `#game-region` NÃO CONTÉM O TABULEIRO NO HTML. O canvas e a grade de `role="grid"` são montados por
+  `boot/main.ts`, porque as duas camadas leem a MESMA geometria (`app/js/geometry.ts`) e duplicá-la aqui
+  criaria a segunda versão que diverge no primeiro ajuste.
+-->
+<link rel="stylesheet" href="/vendor/fonts.css">
+<link rel="stylesheet" href="./css/game.css">
+</head>
+<body>
+  <p id="sr-status" class="sr-only" role="status" aria-live="polite"></p>
+  <p id="sr-alert" class="sr-only" role="alert" aria-live="assertive"></p>
+
+  <main>
+    <div id="stage-wrap" class="stage-wrap">
+      <div id="stage" class="stage">
+        <section id="game-region" class="game-region" tabindex="-1" aria-label="2048 · Potência de 2">
+          <!-- A COLUNA DO HUD, à esquerda do tabuleiro. Quem lê da esquerda para a direita encontra primeiro
+               o que a rodada pede — e é a mesma ordem em que o leitor de tela narra. -->
+          <div id="hud" class="hud">
+            <h1 class="hud__title" data-i18n="game.title">2048 · Potência de 2</h1>
+            <p class="hud__line"><span data-i18n="hud.objective">Chegue à peça 2048</span></p>
+            <p class="hud__line"><span data-i18n="hud.score">Pontos</span>: <b id="hud-score">0</b></p>
+            <p class="hud__line" id="hud-doubles">0 de 11 dobras.</p>
+            <button id="again" class="btn" type="button" data-i18n="end.again">Jogar outra vez</button>
+          </div>
+
+          <!-- OS QUATRO ALVOS DE TOQUE. Existem para quem não desliza o dedo e para quem joga com um
+               apontador só; `padPxPerMm` da engine os dimensiona em milímetros REAIS (WCAG 2.5.5). -->
+          <div class="pad" aria-hidden="false">
+            <button class="pad__btn pad__btn--up" type="button" data-dir="up" aria-label="Empurrar para cima">▲</button>
+            <button class="pad__btn pad__btn--left" type="button" data-dir="left" aria-label="Empurrar para a esquerda">◀</button>
+            <button class="pad__btn pad__btn--right" type="button" data-dir="right" aria-label="Empurrar para a direita">▶</button>
+            <button class="pad__btn pad__btn--down" type="button" data-dir="down" aria-label="Empurrar para baixo">▼</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- FORA do #game-region, então NÃO escala com o k: texto sempre 16px e toque 44px, como o `ui/layout`
+         da engine decidiu para tudo que não é o mundo do jogo. -->
+    <div class="tools">
+      <button id="open-typo" class="btn" type="button">🔤 Tipografia</button>
+      <button id="toggle-hc" class="btn" type="button" aria-pressed="false">◐ Alto contraste</button>
+      <label class="tools__label" for="viz">Visão:</label>
+      <select id="viz" aria-label="Correção de daltonismo"></select>
+    </div>
+    <svg id="cvd" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"></svg>
+
+    <div id="typo" class="overlay" hidden>
+      <div class="overlay__card" role="dialog" aria-modal="true" aria-labelledby="typo-title">
+        <h2 id="typo-title">Tipografia</h2>
+        <div id="typo-preview" class="typo-preview">Juiz foge e bota fita de cetim na xícara</div>
+        <div id="typo-list" class="ctrl-list" role="group" aria-label="Fontes"></div>
+        <div class="overlay__actions">
+          <button id="typo-reset" class="mode-btn" type="button" data-i18n="menu.restoreDefaults">Restaurar padrões deste menu</button>
+          <button id="typo-close" class="mode-btn is-on" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./js/boot/boot.ts"></script>
+</body>
+</html>

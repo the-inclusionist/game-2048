@@ -4,18 +4,24 @@ A sliding-merge number puzzle for Brazilian public schools, built on
 [The Inclusionist engine](https://github.com/the-inclusionist/the-inclusionist-engine) — accessible first,
 at the engine's 320×180 pixel grid, offline as a PWA.
 
-> ⚠️ **Under construction, and here is exactly how far it got.** The rules are written and gated; the screen
-> is not. See *State* below — the previous sentence in this slot said the repository held no product code at
-> all, and removing it was part of the commit that made it false (ADR-0067 §3).
+> ⚠️ **Playable, and not finished.** A full round runs start to end; what is missing is listed under *Still
+> owed*. The sentence that stood here first said the repository held no product code at all, and removing it
+> was part of the commit that made it false (ADR-0067 §3).
 
 ## State
 
 | | |
 |---|---|
-| ✅ The rules | `app/js/board.ts` — slide, merge-once-per-move, seeded spawn, `mergeSpots`, `canMove`, `maxTile`. Pure, no DOM, no renderer. 21 assertions, and **eight mutations proven red** before the green counted. |
-| ✅ The declaration | `app/js/declaration.ts` — the seven fields of `core/contract` for a 4×4 `grid`, **the project's first**. 17 assertions, **nine mutations proven red**. The objective counts *doublings*: the engine's `{have} de {need} {nome}` frame reads **"4 de 11 dobras"**, and 11 is what 2048 *is*. |
-| ⬜ The screen | PixiJS at 320×180 with the numbers as real DOM text over it. |
-| ⬜ Input, i18n, a11y gate | Remappable keyboard and swipe; `pt-BR`/`en-US`/neutral `es`; `a11y: true` in the CI caller. |
+| ✅ The rules | `app/js/board.ts` — slide, merge-once-per-move, seeded spawn, `mergeSpots`, `canMove`, `maxTile`. Pure: no DOM, no renderer. **Eight mutations proven red** before the green counted. |
+| ✅ The declaration | `app/js/declaration.ts` — the seven fields of `core/contract` for a 4×4 `grid`, **the project's first**. **Nine mutations red.** The objective counts *doublings*: the engine's `{have} de {need} {nome}` frame reads **"4 de 11 dobras"**, and 11 is what 2048 *is*. |
+| ✅ The screen | PixiJS paints the figure at 320×180 (`render/board-canvas`); the numbers are real DOM text over it (`ui/board-dom`), with `role="grid"`, roving focus and labels built from the declaration. One geometry (`geometry.ts`) feeds both, and a browser test compares them cell by cell. |
+| ✅ Colour | `render/palette.ts` — the ink is *computed*, not chosen. Every tile clears WCAG 1.4.3 AA as a gate; seven of thirteen reach AAA, counted and never claimed in bulk. |
+| ✅ Speech | `narration.ts` — the sentence a blind child receives, testable without a browser. Each merge is spoken with **both addends and the result** ("2 e 2 viraram 4"), because that is the curriculum, not a status line. |
+| ✅ i18n | `pt-BR`, `en-US`, neutral Latin-American `es`, delivered through the engine's `registerDict()`. A browser test plays a move in Spanish and reads it back out of the live region. |
+| ⬜ Still owed | Slide/merge **animation** (tiles jump today); the **sonar** wired to a remappable binding rather than `Alt+S`; the **axe gate** flipped to `a11y: true`; Libras; and a run on real school hardware. |
+
+**Verified**: `npm run validate` green — typecheck clean, **89 assertions** across node and browser, build passing.
+A full round played in a real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 
 ## Which record declares it
 
@@ -26,14 +32,29 @@ declared by the Dev on 2026-09-05, and suspends ADR-0068 §1's `the-inclusionist
 non-negotiable pillars, the accessibility contract, the licence posture — live in the engine and are
 inherited. This repository states only what is its own: its art, its credits and its third-party terms.
 
-## What has to exist before the first product commit
+## What this game gave back to the engine
 
-1. The seven fields of `core/contract` answered for a 4×4 grid — the FIRST `grid` topology in the project
-   (the quiz gave `hotspots`, and ADR-0030 says the contract stops being a hypothesis at the second one).
-2. The rules, written from scratch: slide, merge-once-per-move, seeded spawn. See **Origin** below.
-3. The board as real DOM text over a PixiJS canvas, because pillar 2 says text always lives in the DOM.
-4. `pt-BR`, `en-US` and neutral Latin-American `es` dictionaries, registered through the engine's
-   `registerDict()`.
+A consumer is worth more than its own screen: it is the only thing that measures what an engine actually
+delivers. This one is the **second preset** ADR-0030 was waiting for — the quiz gave `hotspots`, a list with
+no space at all; this gives `grid`, where distance and neighbourhood exist — and it forced three fixes on the
+engine before a line of the game could be written:
+
+| Found here | Fixed there |
+|---|---|
+| A game outside the engine repository had **no way to register its own strings**: locales arrive through an `import.meta.glob` resolved in the engine's build, against the engine's folder, and `DICTS` is module-private. The chess game had paid for this with a second i18n system, 383 lines of it. | `core/i18n` gained `registerDict()`, with a five-step resolution chain and a gate proven red first. |
+| The engine **was not publishable**: `private: true`, `exports` pointing at raw `.ts`, `pixi.js` as a devDependency, and the panel CSS plus 18 font faces required by borrowed dialogs that no export named. | `tsconfig.pkg.json`, a real `exports` map with `types`, and `./style.css` + `./assets/*`. |
+| Two **Vite-only constructs survived `tsc`** into the emitted package and would have failed — one of them *silently*, turning every non-Portuguese locale back into Portuguese. | Static locale loaders; `render/sprites` and `env.d.ts` excluded from the package; a gate that scans the shipped source. |
+
+## Deviations, written down rather than buried
+
+- **The arrow keys play; they do not read.** The APG `grid` pattern says arrows navigate between cells. Here
+  pushing the board *is* the verb, and arrows that only read would leave the keyboard-only child unable to
+  play — precisely the person the pattern exists to serve. **Shift + arrows** move the reading cursor
+  instead, Tab is never hijacked, every move is summarised into the live region, and the engine's sonar
+  answers "where is a merge" in one keystroke. See the header of `app/js/ui/board-dom.ts`.
+- **AAA is counted, never claimed.** Every tile clears AA (WCAG 1.4.3) as a hard gate. Seven of thirteen
+  reach AAA; that number is reported and asserted only to be *honest*, because 1.4.6 fights vivid colour and
+  pillar 2 says mark where only AA is reachable.
 
 ## Origin, and what is deliberately not inherited
 
