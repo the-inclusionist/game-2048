@@ -13,7 +13,7 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | | |
 |---|---|
 | ✅ The rules | `app/js/board.ts` — slide, merge-once-per-move, seeded spawn, `mergeSpots`, `canMove`, `maxTile`. Pure, no DOM, no renderer. 21 assertions, and **eight mutations proven red** before the green counted. |
-| ⬜ The declaration | The seven fields of `core/contract` for a 4×4 `grid` — the project's first. |
+| ✅ The declaration | `app/js/declaration.ts` — the seven fields of `core/contract` for a 4×4 `grid`, **the project's first**. 17 assertions, **nine mutations proven red**. The objective counts *doublings*: the engine's `{have} de {need} {nome}` frame reads **"4 de 11 dobras"**, and 11 is what 2048 *is*. |
 | ⬜ The screen | PixiJS at 320×180 with the numbers as real DOM text over it. |
 | ⬜ Input, i18n, a11y gate | Remappable keyboard and swipe; `pt-BR`/`en-US`/neutral `es`; `a11y: true` in the CI caller. |
 
