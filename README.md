@@ -4,9 +4,18 @@ A sliding-merge number puzzle for Brazilian public schools, built on
 [The Inclusionist engine](https://github.com/the-inclusionist/the-inclusionist-engine) — accessible first,
 at the engine's 320×180 pixel grid, offline as a PWA.
 
-> ⚠️ **This repository has NOT been built yet.** It holds a licence, this README, an ownership statement and
-> a CI caller, and no product code. The sentence you are reading is a debt with a due date: it becomes false
-> on the day the first product commit lands, and removing it is part of that commit (ADR-0067 §3).
+> ⚠️ **Under construction, and here is exactly how far it got.** The rules are written and gated; the screen
+> is not. See *State* below — the previous sentence in this slot said the repository held no product code at
+> all, and removing it was part of the commit that made it false (ADR-0067 §3).
+
+## State
+
+| | |
+|---|---|
+| ✅ The rules | `app/js/board.ts` — slide, merge-once-per-move, seeded spawn, `mergeSpots`, `canMove`, `maxTile`. Pure, no DOM, no renderer. 21 assertions, and **eight mutations proven red** before the green counted. |
+| ⬜ The declaration | The seven fields of `core/contract` for a 4×4 `grid` — the project's first. |
+| ⬜ The screen | PixiJS at 320×180 with the numbers as real DOM text over it. |
+| ⬜ Input, i18n, a11y gate | Remappable keyboard and swipe; `pt-BR`/`en-US`/neutral `es`; `a11y: true` in the CI caller. |
 
 ## Which record declares it
 
