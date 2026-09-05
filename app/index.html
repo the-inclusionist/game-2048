@@ -34,21 +34,21 @@
         <section id="game-region" class="game-region" tabindex="-1" aria-label="2048 · Potência de 2">
           <!-- A COLUNA DO HUD, à esquerda do tabuleiro. Quem lê da esquerda para a direita encontra primeiro
                o que a rodada pede — e é a mesma ordem em que o leitor de tela narra. -->
-          <div id="hud" class="hud">
-            <h1 class="hud__title" data-i18n="game.title">2048 · Potência de 2</h1>
-            <p class="hud__line"><span data-i18n="hud.objective">Chegue à peça 2048</span></p>
-            <p class="hud__line"><span data-i18n="hud.score">Pontos</span>: <b id="hud-score">0</b></p>
-            <p class="hud__line" id="hud-doubles">0 de 11 dobras.</p>
-            <button id="again" class="btn" type="button" data-i18n="end.again">Jogar outra vez</button>
+          <div id="p2-hud" class="p2-hud">
+            <h1 class="p2-hud__title" data-i18n="game.title">2048 · Potência de 2</h1>
+            <p class="p2-hud__line"><span data-i18n="hud.objective">Chegue à peça 2048</span></p>
+            <p class="p2-hud__line"><span data-i18n="hud.score">Pontos</span>: <b id="p2-score">0</b></p>
+            <p class="p2-hud__line" id="p2-doubles">0 de 11 dobras.</p>
+            <button id="p2-again" class="p2-btn" type="button" data-i18n="end.again">Jogar outra vez</button>
           </div>
 
           <!-- OS QUATRO ALVOS DE TOQUE. Existem para quem não desliza o dedo e para quem joga com um
                apontador só; `padPxPerMm` da engine os dimensiona em milímetros REAIS (WCAG 2.5.5). -->
-          <div class="pad" aria-hidden="false">
-            <button class="pad__btn pad__btn--up" type="button" data-dir="up" aria-label="Empurrar para cima">▲</button>
-            <button class="pad__btn pad__btn--left" type="button" data-dir="left" aria-label="Empurrar para a esquerda">◀</button>
-            <button class="pad__btn pad__btn--right" type="button" data-dir="right" aria-label="Empurrar para a direita">▶</button>
-            <button class="pad__btn pad__btn--down" type="button" data-dir="down" aria-label="Empurrar para baixo">▼</button>
+          <div class="p2-pad" aria-hidden="false">
+            <button class="p2-pad-btn p2-pad-btn--up" type="button" data-dir="up" aria-label="Empurrar para cima">▲</button>
+            <button class="p2-pad-btn p2-pad-btn--left" type="button" data-dir="left" aria-label="Empurrar para a esquerda">◀</button>
+            <button class="p2-pad-btn p2-pad-btn--right" type="button" data-dir="right" aria-label="Empurrar para a direita">▶</button>
+            <button class="p2-pad-btn p2-pad-btn--down" type="button" data-dir="down" aria-label="Empurrar para baixo">▼</button>
           </div>
         </section>
       </div>
@@ -56,10 +56,10 @@
 
     <!-- FORA do #game-region, então NÃO escala com o k: texto sempre 16px e toque 44px, como o `ui/layout`
          da engine decidiu para tudo que não é o mundo do jogo. -->
-    <div class="tools">
-      <button id="open-typo" class="btn" type="button">🔤 Tipografia</button>
-      <button id="toggle-hc" class="btn" type="button" aria-pressed="false">◐ Alto contraste</button>
-      <label class="tools__label" for="viz">Visão:</label>
+    <div class="p2-tools">
+      <button id="open-typo" class="p2-btn" type="button">🔤 Tipografia</button>
+      <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ Alto contraste</button>
+      <label class="p2-tools__label" for="viz">Visão:</label>
       <select id="viz" aria-label="Correção de daltonismo"></select>
     </div>
     <svg id="cvd" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"></svg>

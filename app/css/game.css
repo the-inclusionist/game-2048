@@ -47,7 +47,7 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .game-region:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; outline-offset: 0; }
 
 /* O canvas é a FIGURA: ocupa a região inteira e leva `aria-hidden` em `boot/main.ts`. */
-#canvas {
+#p2-canvas {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   image-rendering: pixelated;   /* pixel art nítido: nada de interpolação entre pixels de arte */
@@ -58,44 +58,71 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
  * As coordenadas vêm de `app/js/geometry.ts` por estilo em linha — uma geometria só, dois consumidores. */
 /* Cada célula é posicionada por `cellRect` (ver `ui/board-dom`), então este arquivo NÃO decide geometria —
    ele só declara que a posição é absoluta e deixa o JavaScript escrever os números que a geometria dá. */
-.board { position: absolute; }
-.board__row { position: absolute; left: 0; right: 0; }
+.p2-board { position: absolute; }
+.p2-row { position: absolute; left: 0; right: 0; }
 
-.cell {
+.p2-cell {
   position: absolute;
   display: grid;
   place-items: center;
   font-weight: 700;
   line-height: 1;
   border-radius: calc(2 * var(--px));
-  /* A cor de fundo e a de tinta são escritas por `ui/board-dom`, a partir da paleta calculada. Deixá-las
-     aqui criaria uma segunda tabela de cores — e a segunda tabela é a que nunca passa pelo gate. */
-  transition: background-color 90ms linear;
+  /* ⚠️ A CASA NÃO TEM COR NENHUMA AQUI, e isso mudou quando a animação entrou. Ela chegou a ser a peça —
+     tinha fundo, tinta e tamanho de letra. Agora quem pinta o buraco é o canvas e quem pinta a peça é o
+     canvas: a casa em DOM é o lugar com nome, foco e rótulo, e mais nada. */
+}
+
+/* ============================ A CAMADA DAS PEÇAS ============================
+ * Ela fica ENTRE o canvas e a grade acessível: por cima da figura, por baixo do foco.
+ *
+ * ⚠️ A PEÇA AQUI É SÓ O NÚMERO — sem fundo, sem borda. A peça COLORIDA é pintada pelo canvas, na mesma
+ * posição e no mesmo quadro, e é ele que dá a cara de pixel-art integral da família. Um `div` colorido com
+ * cantos arredondados no lugar faria isto parecer uma página web em vez de um jogo de 320×180.
+ *
+ * `pointer-events: none` porque quem recebe clique e foco é a CASA, atrás dela. Uma peça que capturasse o
+ * ponteiro roubaria o alvo de toque da célula que ela cobre — e o alvo de toque é dimensionado em milímetros
+ * reais justamente para não ser roubado. */
+/* A posição vem de `ui/tiles-layer`, que a lê da geometria — como a grade acessível faz. `inset: 0`
+   aqui já significou a camada cobrir a região inteira e os números saírem de cima das peças. */
+.p2-tiles { position: absolute; pointer-events: none; }
+.p2-tile {
+  position: absolute;
+  top: 0; left: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  line-height: 1;
+  /* SEM `transition`: quem move esta peça é o laço de `boot/main.ts`, escrevendo `transform` a cada quadro.
+     Uma transição de CSS aqui seria um SEGUNDO relógio correndo em paralelo com o do canvas, e os dois
+     descolariam — o número atrasado em relação à peça, no meio do movimento. */
+  will-change: transform;
 }
 
 /* ⚠️ O REALCE DE QUEM PODE FUNDIR vem do PAPEL declarado (campo 2 do contrato), nunca do valor da peça.
-   É a mesma pergunta que o sonar responde por som, respondida aqui por luz — então as duas nunca discordam. */
-.cell[data-role='goal'] { box-shadow: inset 0 0 0 calc(2 * var(--px)) #ffd23f; }
+   É a mesma pergunta que o sonar responde por som, respondida aqui por luz — então as duas nunca discordam.
+   Ele mora na CASA e não na peça: a casa não se move, então o realce não treme durante o deslizamento. */
+.p2-cell[data-role='goal'] { box-shadow: inset 0 0 0 calc(2 * var(--px)) #ffd23f; }
 
 /* Foco visível e GROSSO: 2 px lógicos viram 2·k px reais, então ele não some quando a tela cresce. */
-.cell:focus-visible { outline: calc(2 * var(--px)) solid #f6f8ff; outline-offset: calc(-1 * var(--px)); }
+.p2-cell:focus-visible { outline: calc(2 * var(--px)) solid #f6f8ff; outline-offset: calc(-1 * var(--px)); }
 
 /* ============================ HUD ============================ */
-.hud {
+.p2-hud {
   position: absolute;
   left: calc(8 * var(--px));
   top: calc(16 * var(--px));
   width: calc(148 * var(--px));
   font-size: calc(7 * var(--px));
 }
-.hud__title { font-size: calc(11 * var(--px)); margin: 0 0 calc(6 * var(--px)); line-height: 1.1; }
-.hud__line { margin: 0 0 calc(4 * var(--px)); }
-.hud__line b { font-size: calc(9 * var(--px)); }
+.p2-hud__title { font-size: calc(11 * var(--px)); margin: 0 0 calc(6 * var(--px)); line-height: 1.1; }
+.p2-hud__line { margin: 0 0 calc(4 * var(--px)); }
+.p2-hud__line b { font-size: calc(9 * var(--px)); }
 
 /* ============================ OS QUATRO ALVOS DE TOQUE ============================
  * `--alvo-toque` vem de `padPxPerMm` (engine), em MILÍMETROS reais medidos no aparelho — WCAG 2.5.5. Um
  * palpite em pixels seria grande num monitor e minúsculo num tablet de escola, que é onde ele importa. */
-.pad {
+.p2-pad {
   position: absolute;
   left: calc(8 * var(--px));
   bottom: calc(6 * var(--px));
@@ -103,7 +130,7 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   grid-template-areas: '. up .' 'left . right' '. down .';
   gap: calc(2 * var(--px));
 }
-.pad__btn {
+.p2-pad-btn {
   min-width: var(--alvo-toque, calc(22 * var(--px)));
   min-height: var(--alvo-toque, calc(22 * var(--px)));
   font-size: calc(8 * var(--px));
@@ -113,33 +140,33 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   border-radius: calc(2 * var(--px));
   cursor: pointer;
 }
-.pad__btn:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; }
-.pad__btn--up { grid-area: up; }
-.pad__btn--left { grid-area: left; }
-.pad__btn--right { grid-area: right; }
-.pad__btn--down { grid-area: down; }
+.p2-pad-btn:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; }
+.p2-pad-btn--up { grid-area: up; }
+.p2-pad-btn--left { grid-area: left; }
+.p2-pad-btn--right { grid-area: right; }
+.p2-pad-btn--down { grid-area: down; }
 
 /* Ponteiro FINO (rato) não precisa dos alvos: quem tem teclado e rato usa as setas. Escondê-los é ganho de
    espaço numa tela de 320 px lógicos — e `@media` de ponteiro é a pergunta certa, não a largura da janela. */
-@media (pointer: fine) { .pad { display: none; } }
+@media (pointer: fine) { .p2-pad { display: none; } }
 
 /* ============================ FERRAMENTAS, FORA DO CANVAS ============================
  * Não escalam com o k, de propósito: o `ui/layout` decidiu que só a UI DENTRO do jogo acompanha a escala.
  * Fora dele, texto de 16 px e alvo de 44 px, que é o piso da WCAG. */
-.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
-.tools__label { font-size: 16px; }
-.btn {
+.p2-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
+.p2-tools__label { font-size: 16px; }
+.p2-btn {
   min-height: 44px; padding: 0 14px;
   font: inherit; font-size: 16px;
   background: #24528f; color: #f6f8ff;
   border: 1px solid #58a0e8; border-radius: 6px; cursor: pointer;
 }
-.btn:focus-visible, #viz:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+.p2-btn:focus-visible, #viz:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
 #viz { min-height: 44px; font-size: 16px; background: #1d2130; color: #e8eef7; border: 1px solid #58a0e8; border-radius: 6px; }
 
 /* ============================ MOVIMENTO ============================
  * A transição de cor da peça é curta e some inteira sob `prefers-reduced-motion`. Não é enfeite opcional:
  * é a WCAG 2.3.3, e uma criança com sensibilidade vestibular não deveria precisar achar um menu para isso. */
 @media (prefers-reduced-motion: reduce) {
-  .cell { transition: none; }
+  .p2-cell { transition: none; }
 }

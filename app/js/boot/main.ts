@@ -17,9 +17,12 @@ import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
 import * as PIXI from 'pixi.js';
 
 import {
-  OBJETIVO, canMove, emptyBoard, maxTile, slide, spawn,
-  type Board, type Direction,
+  OBJETIVO, SIZE, canMove, emptyBoard, maxTile, slide, spawn,
+  type Board, type Direction, type Movimento,
 } from '../board.ts';
+import {
+  criarAnimador, duracaoDaJogada, pecasParadas, relogioDoNavegador, type Peca,
+} from '../animation.ts';
 import { criarDeclaracao } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
 import { LOGICAL_H, LOGICAL_W } from '../geometry.ts';
@@ -27,6 +30,18 @@ import { registrarIdiomas } from '../i18n/index.ts';
 import { pintarTabuleiro } from '../render/board-canvas.ts';
 import { FUNDO_DA_TELA } from '../render/palette.ts';
 import { criarGradeDom } from '../ui/board-dom.ts';
+import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
+
+/**
+ * A criança pediu menos movimento? Então nenhuma animação — não uma mais rápida.
+ *
+ * Lido do SISTEMA e não de um menu do jogo: quem precisa disto já configurou no aparelho, e obrigá-la a
+ * achar uma opção dentro de cada jogo é transferir para ela um trabalho que o navegador já fez. É a WCAG
+ * 2.3.3, e é também por que este jogo não acrescenta um interruptor próprio: dois lugares para a mesma
+ * decisão é um lugar para eles discordarem.
+ */
+const movimentoReduzido = (win: Window): boolean =>
+  win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 /* ===================== O ESTADO DA RODADA =====================
  *
@@ -62,7 +77,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   novaRodada();
 
   const grade = criarGradeDom(doc);
-  região.appendChild(grade.raiz);
+  const camadaDePecas = criarCamadaDePecas(doc);
 
   // 2. A DECLARAÇÃO. Ela OBSERVA o estado; não o possui. Ver o cabeçalho de `declaration.ts`.
   const declaration = criarDeclaracao({
@@ -89,9 +104,14 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     antialias: false, resolution: 1, powerPreference: 'low-power',
   });
   const tela = pixi.view as HTMLCanvasElement;
-  tela.id = 'canvas';
+  tela.id = 'p2-canvas';
   tela.setAttribute('aria-hidden', 'true');
-  região.insertBefore(tela, grade.raiz);
+  // ⚠️ O CANVAS VAI NA FRENTE DE TUDO NO DOM, o que o põe ATRÁS de tudo na tela. `append` o colocava depois
+  // do HUD e dos botões de toque — e como todos são posicionados, ele os PINTAVA POR CIMA: a coluna de
+  // objetivo e placar simplesmente sumia da tela. Ninguém percebe isso lendo o código, e nenhum teste de
+  // asserção percebia: o HUD continuava no DOM, com o texto certo, coberto por uma tela de pintura.
+  região.prepend(tela);
+  região.append(camadaDePecas.raiz, grade.raiz);
   const figura = new PIXI.Graphics();
   pixi.stage.addChild(figura);
 
@@ -102,20 +122,54 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   layout();
   win.addEventListener('resize', () => layout());
 
-  const altoContraste = () => doc.documentElement.dataset.hc === '1';
+  // ⚠️ VOLTAR A APARECER RECONCILIA A TELA COM O MODELO. Enquanto o documento está escondido não se anima
+  // (ver `podeAnimar`), e o socorro garante que o quadro final chegue — mas uma aba que passou minutos
+  // escondida pode ter perdido quadros por outras razões. Redesenhar ao reaparecer é barato e fecha a
+  // categoria inteira: seja qual for o motivo de a tela ter ficado para trás, ela alcança o estado ao voltar.
+  doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'visible') desenhar(); });
 
+  const altoContraste = () => doc.documentElement.dataset.hc === '1';
+  const papelDa = (i: number) => declaration.roleAt({ x: i % SIZE, y: Math.floor(i / SIZE) });
+
+  /**
+   * UM QUADRO — as duas camadas pintadas a partir das MESMAS peças.
+   *
+   * ⚠️ É a única função que desenha, e é por isso que as camadas não podem descolar. O canvas recebe as
+   * posições e o DOM recebe as mesmas posições, na mesma chamada. Se cada uma tivesse a própria animação —
+   * uma em `requestAnimationFrame`, outra numa transição de CSS —, andariam com relógios diferentes e o
+   * número descolaria da peça no meio do movimento. Já custou uma tarde vê-las descoladas PARADAS.
+   */
+  function quadro(pecas: readonly Peca[]): void {
+    pintarTabuleiro(figura, { papel: papelDa, altoContraste: altoContraste(), pecas });
+    camadaDePecas.desenhar(pecas, altoContraste(), papelDa);
+  }
+
+  /** O tabuleiro PARADO: o que se vê entre jogadas, e o quadro final de toda animação. */
   function desenhar(): void {
-    pintarTabuleiro(figura, board, {
-      papel: (i) => declaration.roleAt({ x: i % 4, y: Math.floor(i / 4) }),
-      altoContraste: altoContraste(),
-    });
-    grade.atualizar(board, declaration, t);
+    quadro(pecasParadas(board));
+    grade.atualizar(declaration, t);
     const o = declaration.objectiveOf(0);
-    const hud = doc.querySelector<HTMLElement>('#hud-doubles');
+    const hud = doc.querySelector<HTMLElement>('#p2-doubles');
     if (hud) hud.textContent = t('move.doubles', { have: o.have, need: o.need });
-    const placar = doc.querySelector<HTMLElement>('#hud-score');
+    const placar = doc.querySelector<HTMLElement>('#p2-score');
     if (placar) placar.textContent = String(pontos);
   }
+
+  /**
+   * O LAÇO, montado — e ele NÃO mora mais aqui.
+   *
+   * ⚠️ Morava, e era intestável: o relógio de quadros do navegador não roda num painel oculto, e tentar
+   * observá-lo ao vivo devolveu zero quadros três vezes seguidas. O laço não estava errado; o ambiente não o
+   * deixava correr. Depender do olho para saber se o CANCELAMENTO e o SOCORRO funcionam é exatamente o gate
+   * que nunca pôde ficar vermelho.
+   *
+   * Ele foi para `animation.ts` com o relógio INJETADO — a mesma disciplina que o `core/rng` da engine já usa
+   * para o acaso. O que sobrou aqui são as três coisas que são deste jogo: qual relógio (o de verdade), o que
+   * desenhar a cada quadro (as duas camadas juntas), e quanto tempo (zero, sob movimento reduzido).
+   */
+  const animador = criarAnimador(relogioDoNavegador(win), quadro);
+  const animar = (movimentos: readonly Movimento[]): Promise<void> =>
+    animador.correr(movimentos, duracaoDaJogada(movimentoReduzido(win)), doc.visibilityState !== 'hidden');
 
   /** Uma jogada inteira: empurra, conta, sorteia, anuncia, redesenha. */
   function jogar(dir: Direction): void {
@@ -127,6 +181,14 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
       srSay(narrarSemMovimento(dir, t));
       return;
     }
+
+    // ⚠️ O ESTADO MUDA AGORA, E A ANIMAÇÃO É SÓ A ILUSTRAÇÃO DISSO. O modelo já é o tabuleiro seguinte antes
+    // do primeiro quadro — a animação desenha o passado a caminho do presente, e nunca o contrário.
+    //
+    // A ordem importa para quem NÃO vê a animação: o leitor de tela, o teste e a criança que joga com
+    // movimento reduzido recebem o resultado imediatamente, sem esperar 110 ms de enfeite. Se o estado
+    // esperasse a animação terminar, o jogo passaria a mentir por um décimo de segundo a cada jogada — e
+    // mentiria mais quanto mais lento fosse o aparelho, que é o pilar 1 ao contrário.
     board = r.board;
     pontos += r.gained;
     heading = RUMO[dir];
@@ -134,7 +196,8 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     const nascida = spawn(board, rnd);
     if (nascida) board = nascida.board;
 
-    desenhar();
+    // A animação corre com o tabuleiro ANTIGO em voo; o quadro final é `desenhar()`, com o novo.
+    void animar(r.movimentos).then(desenhar);
 
     // FIM DE RODADA — e ele TERMINA. Sem "continuar jogando" depois do 2048 e sem caça à pontuação: é o
     // laço de compulsão que o ADR-0006 nomeia, e o ADR-0049 diz que a única celebração é o crescimento.
@@ -196,7 +259,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     b.addEventListener('click', () => jogar(b.dataset.dir as Direction));
   }
 
-  doc.querySelector('#again')?.addEventListener('click', () => {
+  doc.querySelector('#p2-again')?.addEventListener('click', () => {
     novaRodada();
     desenhar();
     grade.focar();

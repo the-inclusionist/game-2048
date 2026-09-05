@@ -39,12 +39,12 @@ beforeAll(() => {
 
   // A folha real não é carregada aqui; só o mínimo de posicionamento que ela declara.
   raiz.style.position = 'absolute';
-  for (const linha of raiz.querySelectorAll<HTMLElement>('.board__row')) {
+  for (const linha of raiz.querySelectorAll<HTMLElement>('.p2-row')) {
     linha.style.position = 'absolute';
     linha.style.left = '0';
     linha.style.right = '0';
   }
-  for (const c of raiz.querySelectorAll<HTMLElement>('.cell')) c.style.position = 'absolute';
+  for (const c of raiz.querySelectorAll<HTMLElement>('.p2-cell')) c.style.position = 'absolute';
 });
 
 describe('a grade de DOM cai exatamente sobre as casas do canvas', () => {
@@ -76,7 +76,7 @@ describe('a grade de DOM cai exatamente sobre as casas do canvas', () => {
   it('[Boundary] o `--px` resolvido é o k, e não o fallback', () => {
     // Foi o outro defeito do mesmo dia: `--px` estava declarado no `:root`, onde `--ui-fs` não existe, então
     // valia sempre o fallback de 16px. Em k=2 isso dá o valor certo por coincidência, e só por isso.
-    const px = getComputedStyle(raiz.querySelector('.cell')!).getPropertyValue('--px');
+    const px = getComputedStyle(raiz.querySelector('.p2-cell')!).getPropertyValue('--px');
     expect(parseFloat(px) || (8 * K) / 8).toBe(K);
   });
 });

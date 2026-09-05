@@ -48,10 +48,33 @@ export interface Merge {
   readonly exponent: number;
 }
 
+/**
+ * O CAMINHO DE UMA PEÇA nesta jogada: de onde saiu, onde parou, e se morreu dentro de uma fusão.
+ *
+ * ⚠️ QUEM SABE ISTO SÃO AS REGRAS, e é por isso que mora aqui e não no renderizador. Uma animação de
+ * deslizamento precisa responder "de onde veio a peça que está nesta casa", e o renderizador só consegue
+ * ADIVINHAR isso comparando dois tabuleiros — o que dá errado exatamente no caso interessante, o da fusão,
+ * onde DUAS peças terminam no mesmo lugar e o palpite tem de escolher uma. Aqui não há palpite: `slide` já
+ * sabia, e passou a dizer.
+ *
+ * Toda peça entra na lista, inclusive a que não se moveu (`from === to`). Quem desenha precisa de todas, e
+ * uma lista "só das que mexeram" obrigaria o renderizador a redescobrir o resto.
+ */
+export interface Movimento {
+  readonly from: number;
+  readonly to: number;
+  /** O EXPOENTE QUE ELA TINHA AO SAIR — não o que ela virou. É este número que viaja pela tela. */
+  readonly exponent: number;
+  /** Ela desapareceu dentro de uma fusão? Então some ao chegar, e a peça nova nasce no lugar. */
+  readonly merged: boolean;
+}
+
 /** O resultado de uma jogada. `moved: false` é o que impede o sorteio de premiar uma tecla inútil. */
 export interface Move {
   readonly board: Board;
   readonly merges: readonly Merge[];
+  /** O caminho de CADA peça, para quem for desenhar o deslizamento. Ver `Movimento`. */
+  readonly movimentos: readonly Movimento[];
   readonly moved: boolean;
   /** A soma dos VALORES formados — o placar da rodada, que morre com ela (ADR-0037). */
   readonly gained: number;
@@ -96,22 +119,32 @@ function caminhos(dir: Direction): number[][] {
 export function slide(board: Board, dir: Direction): Move {
   const saida = [...board];
   const merges: Merge[] = [];
+  const movimentos: Movimento[] = [];
   let gained = 0;
   let moved = false;
 
   for (const caminho of caminhos(dir)) {
-    const cheias = caminho.map((i) => board[i]).filter((e) => e !== 0);
+    // ⚠️ OS ÍNDICES, e não os valores. A versão anterior fazia `.map(i => board[i]).filter(...)` e perdia a
+    // ORIGEM de cada peça no caminho — o que bastava para calcular o tabuleiro seguinte e não bastava para
+    // dizer de onde cada peça veio. Guardar o índice custa nada e é a metade que faltava.
+    const cheias = caminho.filter((i) => board[i] !== 0);
     const resultado: number[] = [];
 
     for (let k = 0; k < cheias.length; k++) {
-      if (k + 1 < cheias.length && cheias[k] === cheias[k + 1]) {
-        const exponent = cheias[k] + 1;
+      const destino = caminho[resultado.length];
+      if (k + 1 < cheias.length && board[cheias[k]] === board[cheias[k + 1]]) {
+        const exponent = board[cheias[k]] + 1;
         resultado.push(exponent);
-        merges.push({ at: caminho[resultado.length - 1], exponent });
+        merges.push({ at: destino, exponent });
+        // AS DUAS peças viajam até a mesma casa, e as duas morrem lá. É o único caso em que dois caminhos
+        // terminam no mesmo ponto, e é exatamente o caso que um renderizador não conseguiria adivinhar.
+        movimentos.push({ from: cheias[k], to: destino, exponent: exponent - 1, merged: true });
+        movimentos.push({ from: cheias[k + 1], to: destino, exponent: exponent - 1, merged: true });
         gained += 2 ** exponent;
         k++; // ⚠️ o parceiro foi consumido: é isto que impede a cascata
       } else {
-        resultado.push(cheias[k]);
+        resultado.push(board[cheias[k]]);
+        movimentos.push({ from: cheias[k], to: destino, exponent: board[cheias[k]], merged: false });
       }
     }
 
@@ -122,7 +155,7 @@ export function slide(board: Board, dir: Direction): Move {
     });
   }
 
-  return { board: saida, merges, moved, gained };
+  return { board: saida, merges, movimentos, moved, gained };
 }
 
 /** Os índices das casas vazias, em ordem de leitura. */

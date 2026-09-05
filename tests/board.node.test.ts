@@ -115,6 +115,71 @@ describe('slide — deslizar e fundir', () => {
   });
 });
 
+describe('movimentos — de onde cada peça veio, que é o que a animação precisa saber', () => {
+  it('[Zero] jogada que não move nada não inventa caminho para as peças paradas... ', () => {
+    // ...mas TAMBÉM não as esquece: elas continuam na lista, com `from === to`. Quem desenha precisa de
+    // todas as peças, e uma lista "só das que mexeram" o obrigaria a redescobrir o resto comparando
+    // tabuleiros — que é exatamente o palpite que este campo existe para eliminar.
+    const r = slide(linha(4, 2, 0, 0), 'left');
+    expect(r.moved).toBe(false);
+    expect(r.movimentos).toEqual([
+      { from: 0, to: 0, exponent: 2, merged: false },
+      { from: 1, to: 1, exponent: 1, merged: false },
+    ]);
+  });
+
+  it('[One] uma peça que desliza guarda a origem e o destino', () => {
+    const r = slide(linha(0, 0, 8, 0), 'left');
+    expect(r.movimentos).toEqual([{ from: 2, to: 0, exponent: 3, merged: false }]);
+  });
+
+  it('[Right] numa fusão, AS DUAS peças viajam para a mesma casa e as duas morrem', () => {
+    // É o caso que um renderizador não teria como adivinhar comparando dois tabuleiros: duas origens, um
+    // destino, e a peça que aparece lá não é nenhuma das duas.
+    const r = slide(linha(2, 2, 0, 0), 'left');
+    expect(r.movimentos).toEqual([
+      { from: 0, to: 0, exponent: 1, merged: true },
+      { from: 1, to: 0, exponent: 1, merged: true },
+    ]);
+    expect(r.merges).toEqual([{ at: 0, exponent: 2 }]);
+  });
+
+  it('[Interface] o expoente que viaja é o de ANTES da fusão — é esse número que atravessa a tela', () => {
+    const r = slide(linha(8, 8, 0, 0), 'left');
+    expect(r.movimentos.every((m) => m.exponent === 3), '8 = 2^3 viajando, não o 16').toBe(true);
+    expect(r.merges[0].exponent, 'o 16 nasce no destino, não viaja até ele').toBe(4);
+  });
+
+  it('[Many] com quatro iguais são QUATRO caminhos e dois destinos, não uma cascata', () => {
+    const r = slide(linha(2, 2, 2, 2), 'left');
+    expect(r.movimentos.map((m) => `${m.from}->${m.to}`)).toEqual(['0->0', '1->0', '2->1', '3->1']);
+    expect(r.movimentos.every((m) => m.merged)).toBe(true);
+  });
+
+  it('[Boundary] nas colunas os caminhos são verticais, e o destino é o índice de verdade', () => {
+    const r = slide(coluna(0, 4, 0, 4), 'up');
+    expect(r.movimentos).toEqual([
+      { from: 4, to: 0, exponent: 2, merged: true },
+      { from: 12, to: 0, exponent: 2, merged: true },
+    ]);
+  });
+
+  it('[Cross-check] toda peça do tabuleiro de ENTRADA aparece exatamente uma vez na lista', () => {
+    // O invariante que impede a animação de perder ou duplicar uma peça na tela.
+    const antes = grade(2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2);
+    for (const dir of ['left', 'right', 'up', 'down'] as const) {
+      const origens = slide(antes, dir).movimentos.map((m) => m.from).sort((a, b) => a - b);
+      const ocupadas = antes.map((e, i) => (e ? i : -1)).filter((i) => i >= 0);
+      expect(origens, dir).toEqual(ocupadas);
+    }
+  });
+
+  it('[Right] todo destino da lista está ocupado no tabuleiro de SAÍDA', () => {
+    const r = slide(linha(2, 2, 4, 8), 'left');
+    for (const m of r.movimentos) expect(r.board[m.to], `destino ${m.to}`).not.toBe(0);
+  });
+});
+
 describe('spawn — o sorteio, e por que ele é semeado', () => {
   /** Um `rnd` de mentira: devolve a sequência dada, em ordem. Semente falsa é semente controlada. */
   const rndFixo = (...vs: number[]) => { let i = 0; return () => vs[i++ % vs.length]; };

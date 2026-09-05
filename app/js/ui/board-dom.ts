@@ -3,10 +3,17 @@
 //
 // ========================= O PILAR 2 DECIDE A ARQUITETURA, NÃO SÓ O ACABAMENTO =========================
 // "Text always in the DOM". Um algarismo pintado no canvas some para o leitor de tela e some para o VLibras,
-// que traduz TEXTO. Então as camadas se dividem assim, e a ordem importa:
+// que traduz TEXTO. Então são TRÊS camadas, cada uma com um dono, e a divisão importa:
 //
-//   · este módulo desenha os NÚMEROS, tem `role="grid"`, o foco e os `aria-label` — é o tabuleiro;
-//   · o canvas desenha a figura por baixo e leva `aria-hidden="true"` — é a ilustração.
+//   · este módulo — as 16 CASAS: `role="grid"`, foco, `aria-label`. Posição fixa, e é o tabuleiro para quem
+//     usa leitor de tela;
+//   · `ui/tiles-layer` — as PEÇAS: os números, em texto de verdade, na camada que se move;
+//   · `render/board-canvas` — a FIGURA: moldura, casas e peças coloridas, com `aria-hidden="true"`.
+//
+// ⚠️ O NÚMERO MORAVA AQUI E MUDOU-SE quando a animação entrou (2026-09-05). A razão é que célula e peça
+// deixaram de ser a mesma coisa: a casa não se move, e a peça atravessa várias delas. Nada do que era
+// ANUNCIADO mudou — o `aria-label` sempre substituiu o conteúdo da célula, então nenhum leitor lia o
+// algarismo solto antes nem deixa de ler o número agora.
 //
 // Uma criança cega e uma criança que enxerga jogam O MESMO jogo, e não duas versões dele.
 //
@@ -25,9 +32,8 @@
 //   · e o SONAR da engine responde "onde há uma fusão", que é a pergunta que a leitura célula a célula
 //     custaria dezesseis paradas para responder.
 import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
-import { SIZE, type Board } from '../board.ts';
-import { BOARD, BOARD_X, BOARD_Y, TILE, cellRect, fontFor } from '../geometry.ts';
-import { fundoDe, inkFor } from '../render/palette.ts';
+import { SIZE } from '../board.ts';
+import { BOARD, BOARD_X, BOARD_Y, TILE, cellRect } from '../geometry.ts';
 
 /** O que a grade precisa perguntar. Fatia MÍNIMA da declaração — a regra do `core/contract`. */
 export type Falante = Pick<GameDeclaration, 'roleAt' | 'nameAt'>;
@@ -35,8 +41,14 @@ export type Falante = Pick<GameDeclaration, 'roleAt' | 'nameAt'>;
 export interface GradeDom {
   /** O elemento com `role="grid"`. Quem monta a página decide onde ele entra. */
   readonly raiz: HTMLElement;
-  /** Repinta números, rótulos e papéis a partir do tabuleiro atual. */
-  atualizar(board: Board, falante: Falante, t: (k: string, p?: Record<string, string | number>) => string): void;
+  /**
+   * Repinta rótulos e papéis das 16 casas.
+   *
+   * ⚠️ NÃO recebe o tabuleiro, de propósito: tudo o que ela precisa vem da DECLARAÇÃO — `roleAt` diz o papel
+   * e `nameAt` diz o nome. Ter o tabuleiro aqui também seria uma segunda fonte da mesma verdade, e a segunda
+   * fonte é a que diverge.
+   */
+  atualizar(falante: Falante, t: (k: string, p?: Record<string, string | number>) => string): void;
   /** Move o cursor de leitura e devolve o índice novo. Enrola nas bordas, como a grade de letras da engine. */
   mover(dx: number, dy: number): number;
   /** Onde o cursor está. É o que o campo 4 da declaração devolve como `focusOf`. */
@@ -55,8 +67,8 @@ const px = (n: number) => `calc(${n} * var(--px))`;
  */
 export function criarGradeDom(doc: Document): GradeDom {
   const raiz = doc.createElement('div');
-  raiz.id = 'board';
-  raiz.className = 'board';
+  raiz.id = 'p2-board';
+  raiz.className = 'p2-board';
   raiz.setAttribute('role', 'grid');
   raiz.style.left = px(BOARD_X);
   raiz.style.top = px(BOARD_Y);
@@ -79,7 +91,7 @@ export function criarGradeDom(doc: Document): GradeDom {
     const faixa = cellRect(y * SIZE);
     const linha = doc.createElement('div');
     linha.setAttribute('role', 'row');
-    linha.className = 'board__row';
+    linha.className = 'p2-row';
     linha.style.top = px(faixa.y - BOARD_Y);
     linha.style.height = px(TILE);
     for (let x = 0; x < SIZE; x++) {
@@ -87,7 +99,7 @@ export function criarGradeDom(doc: Document): GradeDom {
       const r = cellRect(i);
       const c = doc.createElement('div');
       c.setAttribute('role', 'gridcell');
-      c.className = 'cell';
+      c.className = 'p2-cell';
       c.dataset.i = String(i);
       // Tabindex ROVING: exatamente uma célula é alcançável pelo Tab, e o Shift+setas move qual é.
       // Dezesseis paradas de Tab dentro de um tabuleiro seria hostil para quem só usa teclado.
@@ -107,19 +119,19 @@ export function criarGradeDom(doc: Document): GradeDom {
     raiz,
     cursor: () => atual,
 
-    atualizar(board, falante, t) {
+    atualizar(falante, t) {
       raiz.setAttribute('aria-label', t('a11y.board', { cols: SIZE, rows: SIZE }));
       celulas.forEach((c, i) => {
-        const e = board[i];
         const at = { x: i % SIZE, y: Math.floor(i / SIZE) };
-        const valor = e === 0 ? '' : String(2 ** e);
-        const fundo = fundoDe(e);
 
-        // O NÚMERO, como texto de verdade. É a linha por que este módulo existe.
-        if (c.textContent !== valor) c.textContent = valor;
-        c.style.background = '#' + fundo.toString(16).padStart(6, '0');
-        c.style.color = '#' + inkFor(fundo).toString(16).padStart(6, '0');
-        c.style.fontSize = px(fontFor(valor.length || 1));
+        // ⚠️ A CÉLULA NÃO CARREGA MAIS O NÚMERO, e a mudança é de arquitetura e não de estilo. Ela chegou a
+        // ser a peça: tinha o algarismo, a cor e o tamanho de letra. Uma peça que DESLIZA não pode ser isso,
+        // porque a casa não se move — ela tem posição fixa, foco e rótulo, e a peça atravessa várias delas
+        // no caminho. O número mudou-se para `ui/tiles-layer`, que é a camada que se move.
+        //
+        // O que ficou aqui é o que uma CASA é: um lugar com nome, que se pode focar e que a engine pode
+        // perguntar. É também o que o leitor de tela sempre leu — o `aria-label` já substituía o conteúdo,
+        // então nada do que era anunciado deixou de ser.
 
         // O PAPEL vem da declaração, não de uma segunda cópia da regra aqui dentro. É o que faz o alto
         // contraste e o realce concordarem com o que o sonar aponta.
