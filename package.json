@@ -17,8 +17,13 @@
     "care the engine's did (ADR-0072 §4). A scaffold that could be published by accident is worse than one",
     "that cannot be published at all."
   ],
-  "repository": { "type": "git", "url": "git+https://github.com/the-inclusionist/pixi-2048.git" },
-  "engines": { "node": ">=24" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/the-inclusionist/pixi-2048.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "assets": "node scripts/copy-engine-assets.mjs",
     "predev": "npm run assets",
@@ -27,6 +32,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test:a11y": "node scripts/axe-check.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:node": "vitest run --project node",
@@ -45,6 +51,7 @@
     "pixi.js": "7.4.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@types/node": "^22.0.0",
     "@vitest/browser": "^4.0.0",
     "@vitest/browser-playwright": "^4.0.0",

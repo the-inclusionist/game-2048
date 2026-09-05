@@ -6,9 +6,14 @@
 # create the failure that record refuses: three hundred copies drift, and the ones that drift silently are
 # the ones that stop gating. This file is allowed to grow only in the `with:` block.
 #
-# ⚠️ `a11y: false` TODAY, AND IT IS A DEBT WITH A NAME. The axe gate needs a game that can be served, and
-# this one is still a scaffold. It flips to `true` in the commit that gives the game a shell — pillar 2 is
-# not optional, and the input exists so that skipping it is a visible line here rather than an absence.
+# `a11y: true` since 2026-09-05, and the line above used to read `false` with a promise attached: the axe
+# gate needs a game that can be SERVED, and this repository was a scaffold. It stopped being one, so the debt
+# is paid in the same commit that made it payable — a scaffold README and a disabled gate are the same kind
+# of lie, and both are removed by the commit that falsifies them (ADR-0067 §3 applied to CI).
+#
+# ⚠️ THE GATE HAS NO EXCLUSIONS. The engine's own excludes the VLibras widget, whose markup is a third
+# party's; this game does not load it, so nothing here is exempt. Proven able to fail before being trusted:
+# a page with a missing `alt` and a 1.4:1 text pair makes it report `image-alt` and `color-contrast`.
 name: ci
 
 on:
@@ -20,4 +25,4 @@ jobs:
   ci:
     uses: the-inclusionist/the-inclusionist-engine/.github/workflows/game-ci.yml@main
     with:
-      a11y: false
+      a11y: true

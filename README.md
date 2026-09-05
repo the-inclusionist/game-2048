@@ -17,8 +17,9 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ The screen | PixiJS paints the figure at 320×180 (`render/board-canvas`); the numbers are real DOM text over it (`ui/board-dom`), with `role="grid"`, roving focus and labels built from the declaration. One geometry (`geometry.ts`) feeds both, and a browser test compares them cell by cell. |
 | ✅ Colour | `render/palette.ts` — the ink is *computed*, not chosen. Every tile clears WCAG 1.4.3 AA as a gate; seven of thirteen reach AAA, counted and never claimed in bulk. |
 | ✅ Speech | `narration.ts` — the sentence a blind child receives, testable without a browser. Each merge is spoken with **both addends and the result** ("2 e 2 viraram 4"), because that is the curriculum, not a status line. |
+| ✅ a11y gate | `scripts/axe-check.mjs` runs axe-core against the RUNNING game and the CI caller asks for it (`a11y: true`). **Zero WCAG A/AA violations, with no exclusions at all** — the engine excludes the third-party VLibras widget; this game does not load it, so nothing here is exempt. Proven able to fail before being trusted. |
 | ✅ i18n | `pt-BR`, `en-US`, neutral Latin-American `es`, delivered through the engine's `registerDict()`. A browser test plays a move in Spanish and reads it back out of the live region. |
-| ⬜ Still owed | Slide/merge **animation** (tiles jump today); the **sonar** wired to a remappable binding rather than `Alt+S`; the **axe gate** flipped to `a11y: true`; Libras; and a run on real school hardware. |
+| ⬜ Still owed | Slide/merge **animation** (tiles jump today); the **sonar** wired to a remappable binding rather than `Alt+S`; Libras; and a run on real school hardware. |
 
 **Verified**: `npm run validate` green — typecheck clean, **89 assertions** across node and browser, build passing.
 A full round played in a real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
