@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# THE CALLER — and it is short on purpose (ADR-0068 §4).
+#
+# The gate itself lives once, in the engine repository, and every game invokes it. Copying it here would
+# create the failure that record refuses: three hundred copies drift, and the ones that drift silently are
+# the ones that stop gating. This file is allowed to grow only in the `with:` block.
+#
+# ⚠️ `a11y: false` TODAY, AND IT IS A DEBT WITH A NAME. The axe gate needs a game that can be served, and
+# this one is still a scaffold. It flips to `true` in the commit that gives the game a shell — pillar 2 is
+# not optional, and the input exists so that skipping it is a visible line here rather than an absence.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    uses: the-inclusionist/the-inclusionist-engine/.github/workflows/game-ci.yml@main
+    with:
+      a11y: false
