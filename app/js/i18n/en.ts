@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// en — American English, by lexical choice rather than by tag.
+//
+// The BCP-47 tag stays a bare `en`: the engine hands the browser `en` on purpose so it picks the local
+// variant, and pinning `en-US` would impose an American accent on a child in India or Nigeria. What is
+// American here is the WORDING, which is what a dictionary is for.
+import type { Dicionario } from './pt.ts';
+
+export const en: Dicionario = {
+  'game.title': '2048 · Power of Two',
+  'game.tagline': 'Merge equal tiles and double your way to 2048.',
+
+  'cell.empty': 'empty',
+  'hud.nome.dobras': 'doublings',
+
+  'hud.score': 'Score',
+  'hud.best': 'Largest tile',
+  'hud.objective': 'Reach the 2048 tile',
+
+  'a11y.board': 'Board, {cols} by {rows}',
+  'a11y.cell': 'Row {row}, column {col}: {what}',
+  'a11y.cellMergeable': 'Row {row}, column {col}: {what}, can merge',
+  'a11y.instructions': 'Use the arrow keys to push the board. Tab moves the reading cursor.',
+
+  'move.none': 'Nothing moves {dir}.',
+  'move.merged': 'Merged: {pairs}.',
+  'move.pair': '{a} and {a} became {b}',
+  'move.spawned': '{value} appeared at row {row}, column {col}.',
+  'move.doubles': '{have} of {need} doublings.',
+
+  'dir.left': 'left',
+  'dir.right': 'right',
+  'dir.up': 'up',
+  'dir.down': 'down',
+
+  'end.win': 'You reached 2048. That is eleven doublings, start to finish.',
+  'end.stuck': 'No moves left. The largest tile was {value}, which is {doubles} doublings.',
+  'end.again': 'Play again',
+};
+
+export default en;
