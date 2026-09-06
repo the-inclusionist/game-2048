@@ -3,9 +3,9 @@
 //
 // Antes de 2026-09-05 este arquivo não podia existir. Os locales da engine entravam por
 // `import.meta.glob('../i18n/*.ts')`, um glob resolvido no build DELA e contra a pasta DELA, e `DICTS` era
-// privado do módulo: um jogo instalado como pacote não tinha porta nenhuma para as próprias chaves. O
-// `hartwig-zdog-chess` pagou o preço da forma mais cara possível — escreveu um SEGUNDO sistema de i18n
-// inteiro, 383 linhas, e importa o `t` da engine à parte só para as strings dela.
+// privado do módulo: um jogo instalado como pacote não tinha porta nenhuma para as próprias chaves.
+// O `game-chess` pagou o preço da forma mais cara possível — escreveu um SEGUNDO sistema de i18n inteiro,
+// 383 linhas, e importa o `t` da engine à parte só para as strings dela.
 //
 // `registerDict()` é a porta. Este jogo usa o i18n da engine e mais nada.
 import { registerDict } from '@the-inclusionist/engine/core/i18n.js';

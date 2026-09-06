@@ -8,11 +8,12 @@
   "comment:name": [
     "Package `@the-inclusionist/game-2048` (ADR-0068 §3 with ADR-0071's scope) in repository",
     "`the-inclusionist/game-2048` (ADR-0081). They MIRROR each other, so there is nothing to hold in the head.",
-    "⚠️ This paragraph used to justify a DIVERGENCE. The repository was `pixi-2048` until 2026-09-06 and the",
-    "two names pointed different ways — as they still do for the chess, where `@the-inclusionist/game-chess`",
-    "lives in `the-inclusionist/hartwig-zdog-chess`. ADR-0081 superseded that choice WHOLE. The reason the",
-    "shorter form works is ADR-0071 §1's: inside the organisation the container is already named, so",
-    "`the-inclusionist/the-inclusionist-game-2048` would say the word twice."
+    "⚠️ This paragraph used to justify a DIVERGENCE, and there is none left to justify. The repository was",
+    "`pixi-2048` until 2026-09-06 and the two names pointed different ways; ADR-0081 superseded that choice",
+    "whole. The chess did the same — it is `the-inclusionist/game-chess` now, not `hartwig-zdog-chess` — so",
+    "`game-<slug>` is what both game repositories carry. The reason the short form works is ADR-0071 §1's:",
+    "inside the organisation the container is already named, so `the-inclusionist/the-inclusionist-game-2048`",
+    "would say the word twice."
   ],
   "comment:private": [
     "`private: true` UNTIL there is something to publish. ADR-0068 §3 says a game publishes itself as a",
@@ -44,7 +45,7 @@
   },
   "comment:dependencies": [
     "THE ENGINE COMES BY `file:`, not from the registry, and that is the current state rather than the plan.",
-    "ADR-0072 chose public npmjs and nothing is published yet; `hartwig-zdog-chess` already consumes the",
+    "ADR-0072 chose public npmjs and nothing is published yet; `game-chess` already consumes the",
     "engine the same way. The day `@the-inclusionist/engine` is published, this line becomes a semver range",
     "and nothing else in this repository changes.",
     "`pixi.js` is pinned to the engine's EXACT version: two PixiJS in one page is a bug, not a fallback."
