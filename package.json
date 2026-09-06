@@ -6,10 +6,13 @@
   "description": "2048 · Potência de 2 — a sliding-merge number puzzle on the accessibility-first Inclusionist engine. Reimplemented from the rules, not forked from any of the MIT descendants of Threes!.",
   "license": "AGPL-3.0-or-later",
   "comment:name": [
-    "The package is `@the-inclusionist/game-2048` (ADR-0068 §3 with ADR-0071's scope) while the REPOSITORY",
-    "is `the-inclusionist/pixi-2048` (ADR-0073). The divergence is deliberate and it is not new: the chess",
-    "game is `@the-inclusionist/game-chess` in `the-inclusionist/hartwig-zdog-chess`. A dependency line is",
-    "read by strangers, and `game-` tells them what the thing is; the address says which renderer built it."
+    "Package `@the-inclusionist/game-2048` (ADR-0068 §3 with ADR-0071's scope) in repository",
+    "`the-inclusionist/game-2048` (ADR-0081). They MIRROR each other, so there is nothing to hold in the head.",
+    "⚠️ This paragraph used to justify a DIVERGENCE. The repository was `pixi-2048` until 2026-09-06 and the",
+    "two names pointed different ways — as they still do for the chess, where `@the-inclusionist/game-chess`",
+    "lives in `the-inclusionist/hartwig-zdog-chess`. ADR-0081 superseded that choice WHOLE. The reason the",
+    "shorter form works is ADR-0071 §1's: inside the organisation the container is already named, so",
+    "`the-inclusionist/the-inclusionist-game-2048` would say the word twice."
   ],
   "comment:private": [
     "`private: true` UNTIL there is something to publish. ADR-0068 §3 says a game publishes itself as a",
@@ -19,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/the-inclusionist/pixi-2048.git"
+    "url": "git+https://github.com/the-inclusionist/game-2048.git"
   },
   "engines": {
     "node": ">=24"

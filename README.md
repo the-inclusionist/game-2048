@@ -28,8 +28,13 @@ real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the
 
 ## Which record declares it
 
-**ADR-0073**, in the engine's `docs/2-Architecture/adr/`. It records the address `the-inclusionist/pixi-2048`
-declared by the Dev on 2026-09-05, and suspends ADR-0068 §1's `the-inclusionist-game-<slug>` naming pattern.
+**ADR-0081**, in the engine's `docs/2-Architecture/adr/`. It records the address `the-inclusionist/game-2048`
+declared by the Dev on 2026-09-06, and keeps ADR-0068 §1's `the-inclusionist-game-<slug>` pattern SUSPENDED —
+the container is already named by the organisation, so repeating it would say the word twice (ADR-0071 §1).
+
+It superseded **ADR-0073 whole**, which had declared `pixi-2048` the day before: the old address sat in that
+record's title, and a title is a record's identity rather than one of its clauses. The rename cost three
+strings because it happened before the repository existed — the window ADR-0073 had itself predicted.
 
 ⚠️ **A game repository holds no `adr/` folder and never will** (ADR-0068 §5). The records — the ten
 non-negotiable pillars, the accessibility contract, the licence posture — live in the engine and are
