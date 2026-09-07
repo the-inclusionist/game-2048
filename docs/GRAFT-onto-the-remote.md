@@ -16,7 +16,7 @@ descend from its.
 | | |
 |---|---|
 | Remote `origin/main` | 2 commits · `README.md`, `LICENSE` |
-| Local `main` | 14 commits · the whole game |
+| Local `main` | the whole game — `git rev-list --count main` says how many, and it grows with every commit made before you run this |
 | Common ancestor | **none** |
 | Safety net | branch **`backup-before-the-graft`**, pointing at `main` as it was before any rewrite |
 
@@ -60,7 +60,8 @@ git log --oneline --graph | tail -18
 npm ci && npm run validate
 ```
 
-Expected: 16 commits on a single line, starting with the two scaffold commits; **138 assertions**, typecheck
+Expected: a single line starting with the two scaffold commits and holding every commit `main` had, so two
+more than `git rev-list --count main` reported before the rebase; **138 assertions**, typecheck
 clean, build passing.
 
 ### If it goes wrong
