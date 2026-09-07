@@ -55,8 +55,17 @@ describe('a declaração é bem-formada aos olhos da própria engine', () => {
     }
   });
 
-  it('[Right] a topologia é uma GRADE 4×4 — o primeiro consumidor `grid` do projeto', () => {
-    expect(observar(VAZIO).topology).toEqual({ kind: 'grid', cols: SIZE, rows: SIZE });
+  it('[Right] a topologia é uma GRADE 4×4, ortogonal e em bússola', () => {
+    expect(observar(VAZIO).topology()).toEqual({
+      kind: 'grid', size: [SIZE, SIZE], move: 'orthogonal', frame: 'compass',
+    });
+  });
+
+  it('[Right] o MUNDO é declarado, e não é `none`', () => {
+    // `none` existe para atividade sem espaço — pintura, formulário — e o contrato avisa que ele não pode
+    // ser o que acontece quando alguém esquece. Um tabuleiro tem espaço, e declarar `none` desligaria o
+    // sonar e a empatia num jogo em que eles são a mecânica.
+    expect(observar(VAZIO).world()).toEqual({ kind: 'element', selector: '#game-region' });
   });
 
   it('[Right] o turno é do JOGADOR, então a WCAG 2.2.1 é satisfeita por construção', () => {
@@ -133,10 +142,14 @@ describe('campo 4 — o foco, e o que o sonar faz com ele', () => {
     expect(f).toEqual({ id: 'p0', at: { x: 2, y: 3 }, heading: 'e' });
   });
 
-  it('[Cross-check] a distância da engine mede em CÉLULAS, e a diagonal custa um passo', () => {
-    const t = observar(VAZIO).topology;
+  it('[Cross-check] a distância mede em CÉLULAS, e a diagonal custa DOIS passos', () => {
+    // ⚠️ Esta asserção dizia "um passo" e estava errada sobre este jogo. A engine publicada tirou a métrica
+    // de `move`, e ao declarar `orthogonal` — que é como uma peça de 2048 anda — a diagonal passa a custar
+    // dois. Não é a engine mudando de ideia: é o contrato obrigando o jogo a dizer como se anda nele, e a
+    // resposta certa fazendo o sonar parar de chamar de "bem perto" uma casa para onde a peça não vai.
+    const t = observar(VAZIO).topology();
     expect(distance(t, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(3);
-    expect(distance(t, { x: 0, y: 0 }, { x: 1, y: 1 }), 'passo de rei').toBe(1);
+    expect(distance(t, { x: 0, y: 0 }, { x: 1, y: 1 }), 'sem diagonal, é L¹').toBe(2);
   });
 
   it('[Interface] o sonar recebe o que precisa sem nenhum tile: topologia, alvo e nome', () => {
@@ -149,7 +162,7 @@ describe('campo 4 — o foco, e o que o sonar faz com ele', () => {
     const de = { x: 3, y: 0 };
     const d = observar(COM_PAR, de);
     const perto = d.targetsOf(0)
-      .map((a) => ({ a, dist: distance(d.topology, de, a) }))
+      .map((a) => ({ a, dist: distance(d.topology(), de, a) }))
       .sort((p, q) => p.dist - q.dist)[0];
     expect(perto.dist).toBe(2);
     expect(perto.a).toEqual({ x: 1, y: 0 });

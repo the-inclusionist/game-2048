@@ -44,14 +44,31 @@
     "validate": "npm run typecheck && vitest run && vite build"
   },
   "comment:dependencies": [
-    "THE ENGINE COMES BY `file:`, not from the registry, and that is the current state rather than the plan.",
-    "ADR-0072 chose public npmjs and nothing is published yet; `game-chess` already consumes the",
-    "engine the same way. The day `@the-inclusionist/engine` is published, this line becomes a semver range",
-    "and nothing else in this repository changes.",
+    "THE ENGINE COMES FROM THE REGISTRY since 2026-09-06 — `@the-inclusionist/engine` is published on npmjs",
+    "(ADR-0072), and this is ADR-0068 §3's mechanism working: a game depends on the engine as a VERSIONED",
+    "package. It used to be `file:../SP-the-inclusionist-tracer`, and switching was the first honest test of",
+    "everything the packaging commits claimed.",
+    "⚠️ AND THE CLAIM THIS PARAGRAPH USED TO MAKE WAS FALSE. It said `the day the engine is published, this",
+    "line becomes a semver range and nothing else in this repository changes`. Three things changed: the",
+    "contract's `topology` became a method, a required `world()` field appeared, and the `grid` topology",
+    "gained `size`/`move`/`frame`. None of that was visible through a `file:` link into a folder somebody",
+    "else was editing — which is exactly what a link into a moving target hides.",
     "`pixi.js` is pinned to the engine's EXACT version: two PixiJS in one page is a bug, not a fallback."
   ],
+  "comment:stopgap": [
+    "⚠️ `@mintplex-labs/piper-tts-web` IS NOT THIS GAME'S DEPENDENCY. It is the engine's neural voice",
+    "(ADR-0065), reached from `platform/tts.js` by a lazy `import()`. The published engine declares it as a",
+    "devDependency, so a consumer installing from the registry cannot resolve it and the BUILD FAILS —",
+    "measured on 2026-09-06, the first build against the published package. Under `file:` it resolved through",
+    "the engine's own node_modules, which is why nothing had caught it.",
+    "It is declared here to unblock this repository and NOTHING ELSE. The real fix is one line in the engine:",
+    "the dependency belongs in `dependencies`, because the voice belongs to the engine. Every one of the 300",
+    "games would otherwise carry this same line — which is the `three hundred copies` failure ADR-0068 §4",
+    "exists to refuse. REMOVE THIS the day the engine ships the dependency itself."
+  ],
   "dependencies": {
-    "@the-inclusionist/engine": "file:../SP-the-inclusionist-tracer",
+    "@mintplex-labs/piper-tts-web": "^1.0.4",
+    "@the-inclusionist/engine": "^6.36.1",
     "pixi.js": "7.4.2"
   },
   "devDependencies": {

@@ -20,7 +20,7 @@
 // cada jogada, e quem é dono do estado é quem joga. Guardar uma cópia aqui criaria a segunda versão da
 // verdade que diverge no primeiro `undo`.
 import type {
-  Focus, GameDeclaration, Heading, Objective, Role, Speakable, Spot,
+  Focus, GameDeclaration, Heading, Objective, Role, Speakable, Spot, Topology, WorldScope,
 } from '@the-inclusionist/engine/core/contract.js';
 import { OBJETIVO, SIZE, maxTile, mergeSpots, type Board } from './board.ts';
 
@@ -43,7 +43,39 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
   return {
     // 1 · TOPOLOGIA. Com métrica, e é a métrica que faz o sonar existir: numa grade a distância é em
     //     CÉLULAS e o passo é de rei, então "duas casas para a esquerda" é dizível sem falar em pixel.
-    topology: { kind: 'grid', cols: SIZE, rows: SIZE },
+    //
+    //     ⚠️ É UMA FUNÇÃO, e virou uma na engine publicada. Este jogo devolve sempre a mesma grade, então a
+    //     forma parece cerimônia — não é: o `game-15puzzle` tem tabuleiro 3×3, 4×4 ou 5×5 na mesma partida, e
+    //     com o campo constante ele só cabia no tipo por um GETTER, o que o contrato da engine chama de
+    //     "coincidência do TypeScript, não contrato". A porta do sonar sempre pediu `() => Topology`.
+    topology(): Topology {
+      return {
+        kind: 'grid',
+        size: [SIZE, SIZE],
+        // ⚠️ ORTOGONAL, e a escolha muda o que o sonar DIZ. No 2048 uma peça anda em linha reta e nunca na
+        //    diagonal, então a casa na diagonal está a DOIS passos e não a um. A engine usa isto como métrica
+        //    (L¹ para ortogonal, L∞ para diagonal), e declarar `diagonal` aqui faria o sonar dizer "bem perto"
+        //    de um lugar para onde a peça não tem como ir. A regra de movimento do jogo É a régua da narração.
+        move: 'orthogonal',
+        // Bússola, e não relógio: isto é um tabuleiro visto de cima, onde linha e coluna são norte e leste.
+        // O relógio é o referencial da PLATAFORMA, vista de lado, onde "norte" não quer dizer nada.
+        frame: 'compass',
+      };
+    },
+
+    // 1b · QUAL ELEMENTO É O MUNDO — campo novo da engine publicada, e obrigatório de propósito.
+    //
+    //      É onde a engine aplica o que é DO MUNDO e só ali: correção de daltonismo, alto contraste,
+    //      simulações de empatia. Aqui é o `#game-region` — o mesmo elemento que o `ui/layout` trava em
+    //      320×180 e o mesmo em que este jogo já aplicava o filtro de visão à mão, em `boot/boot.ts`.
+    //
+    //      ⚠️ E NÃO É `none`. O contrato avisa que `none` não pode ser o que acontece quando alguém esquece:
+    //      é para atividade SEM espaço — uma tela de pintura, um formulário —, onde não há alvo para o sonar
+    //      apontar. Um tabuleiro 4×4 tem espaço, distância e vizinhança; declarar `none` aqui desligaria o
+    //      sonar e a empatia num jogo em que eles são a mecânica.
+    world(): WorldScope {
+      return { kind: 'element', selector: '#game-region' };
+    },
 
     // 6 · DE QUEM É O TURNO. Do jogador — e isto não é detalhe: com o turno do jogador o tempo não pressiona,
     //     a varredura pode esperar, e a WCAG 2.2.1 (Timing Adjustable) é satisfeita por CONSTRUÇÃO em vez de
