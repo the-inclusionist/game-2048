@@ -53,22 +53,15 @@
     "contract's `topology` became a method, a required `world()` field appeared, and the `grid` topology",
     "gained `size`/`move`/`frame`. None of that was visible through a `file:` link into a folder somebody",
     "else was editing — which is exactly what a link into a moving target hides.",
+    "⚠️ AND A FOURTH, ON 7.0.1: `@mintplex-labs/piper-tts-web` was a stopgap dependency HERE for one day,",
+    "because the engine shipped it as a devDependency and no consumer could build. The engine did not move it",
+    "to `dependencies` as I had proposed — it turned the neural voice into an injected PORT (ADR-0094), which",
+    "is the better fix: naming the provider would force 135.4 MB of onnxruntime-web on every consumer. The",
+    "stopgap is gone, and this game declines the port on purpose — see `boot/main.ts`.",
     "`pixi.js` is pinned to the engine's EXACT version: two PixiJS in one page is a bug, not a fallback."
   ],
-  "comment:stopgap": [
-    "⚠️ `@mintplex-labs/piper-tts-web` IS NOT THIS GAME'S DEPENDENCY. It is the engine's neural voice",
-    "(ADR-0065), reached from `platform/tts.js` by a lazy `import()`. The published engine declares it as a",
-    "devDependency, so a consumer installing from the registry cannot resolve it and the BUILD FAILS —",
-    "measured on 2026-09-06, the first build against the published package. Under `file:` it resolved through",
-    "the engine's own node_modules, which is why nothing had caught it.",
-    "It is declared here to unblock this repository and NOTHING ELSE. The real fix is one line in the engine:",
-    "the dependency belongs in `dependencies`, because the voice belongs to the engine. Every one of the 300",
-    "games would otherwise carry this same line — which is the `three hundred copies` failure ADR-0068 §4",
-    "exists to refuse. REMOVE THIS the day the engine ships the dependency itself."
-  ],
   "dependencies": {
-    "@mintplex-labs/piper-tts-web": "^1.0.4",
-    "@the-inclusionist/engine": "^6.36.1",
+    "@the-inclusionist/engine": "^7.0.1",
     "pixi.js": "7.4.2"
   },
   "devDependencies": {

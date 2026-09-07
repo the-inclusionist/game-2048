@@ -94,6 +94,20 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     host: { doc, win, cvdHost: doc.querySelector('#cvd') },
     declines: { semMenuDePausa: true, semAssistenteDePad: true, semAtorDePausa: true },
     isNavigable: () => true,
+    // ⚠️ SEM `carregarVozNeural`, E ISSO É ESCOLHA E NÃO ESQUECIMENTO. A porta existe (ADR-0094) e ligá-la é
+    //    uma linha: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. A narração cai na voz
+    //    do NAVEGADOR, que fala o idioma certo.
+    //
+    //    O que ela custaria, medido neste repositório em 2026-09-06 ao trocar a engine 6.36.1 pela 7.0.1:
+    //    o `dist/` passou de **28,9 MB para 1,6 MB**. Os 27 MB eram o runtime ONNX que vem junto — e o
+    //    pilar 1 é o tablet de escola, enquanto o pilar 8 é o PWA offline, cujo orçamento de precache é a
+    //    razão de o ADR-0068 §2 fazer o catálogo ESCOLHER jogos em vez de mandar todos.
+    //
+    //    ⚠️ E O QUE SE PERDE É REAL, não é zero: a voz do navegador pode não existir offline no aparelho da
+    //    escola, e é justamente offline que este jogo tem de funcionar. Um 2048 é jogável sem voz — o
+    //    tabuleiro inteiro está em `aria-label` e o leitor de tela do sistema o lê. A troca seria outra num
+    //    jogo de alfabetização, onde a fala É o conteúdo. Aqui é escolha de ORÇAMENTO, e fica escrita para
+    //    ser revista quando o hardware-alvo existir de verdade.
   });
   if (motor.problems.length) console.warn('[2048] lacunas do hospedeiro:', motor.problems);
 
