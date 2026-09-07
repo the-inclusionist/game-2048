@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A FIGURA DO TABULEIRO — o que fica POR BAIXO dos números, e que leva `aria-hidden`.
+// THE PICTURE OF THE BOARD — what sits UNDER the numbers, and what carries `aria-hidden`.
 //
-// ========================= NÃO IMPORTA PIXI, E ISSO É O ADR-0035 EM USO =========================
-// Recebe um `Desenho` — a porta do renderizador que a engine já define em `render/port` — em vez de importar
-// PixiJS. É a mesma aposta que o ADR-0035 fez para a engine: o renderizador é substituível porque nenhum
-// módulo o nomeia. O ganho imediato é outro e é maior: com a porta, esta função roda no project `node`
-// contra um desenho de mentira, e o TABULEIRO PODE SER TESTADO SEM NAVEGADOR.
+// ========================= IT DOES NOT IMPORT PIXI, AND THAT IS ADR-0035 IN USE =========================
+// It receives a `Desenho` — the renderer port the engine already defines in `render/port` — instead of
+// importing PixiJS. It is the same bet ADR-0035 made for the engine: the renderer is replaceable because no
+// module names it. The immediate gain is another one and it is bigger: with the port, this function runs in
+// the `node` project against a fake drawing, and THE BOARD CAN BE TESTED WITHOUT A BROWSER.
 //
-// ========================= ARTE É DADO, E AQUI ELA NEM CHEGA A SER ARQUIVO =========================
-// Nenhum PNG. Todas as peças são retângulos numa paleta calculada — a regra "arte procedural" do projeto,
-// que aqui também resolve a licença apagando a pergunta: não há asset de terceiro para licenciar, e não há
-// direito de artista (Lei nº 9.610/1998) a respeitar, porque não há desenho.
+// ========================= ART IS DATA, AND HERE IT NEVER EVEN BECOMES A FILE =========================
+// No PNG. Every tile is a rectangle in a computed palette — the project's "procedural art" rule, which here
+// also settles the licence question by erasing it: there is no third-party asset to license, and no artist's
+// rights under Lei nº 9.610/1998 to respect, because there is no drawing.
 import type { Desenho } from '@the-inclusionist/engine/render/port.js';
 import type { Role } from '@the-inclusionist/engine/core/contract.js';
 
@@ -20,31 +20,31 @@ import { BOARD, BOARD_X, BOARD_Y, LOGICAL_H, LOGICAL_W, TILE, cellRect } from '.
 import { FUNDO_DA_TELA, HC_POR_PAPEL, MOLDURA, fundoDe } from './palette.ts';
 
 export interface PinturaOpts {
-  /** O papel de cada casa, vindo da declaração. É o campo 2 do contrato, e é quem manda no alto contraste. */
+  /** Each square's role, from the declaration. It is field 2 of the contract, and it rules high contrast. */
   readonly papel: (i: number) => Role;
-  /** Alto contraste ligado? Então pinta-se por PAPEL e não por valor. */
+  /** High contrast on? Then paint by ROLE and not by value. */
   readonly altoContraste: boolean;
   /**
-   * AS PEÇAS, já posicionadas — em pixels lógicos, não em índices de casa.
+   * THE TILES, already positioned — in logical pixels, not in square indices.
    *
-   * ⚠️ É ISTO QUE PERMITE A ANIMAÇÃO, e é a razão de este argumento existir. No meio de um deslizamento uma
-   * peça NÃO está numa casa: está entre duas. Enquanto a pintura lia o tabuleiro e desenhava por índice, o
-   * mais que ela podia fazer era teletransportar as peças de um quadro para o outro.
+   * ⚠️ THIS IS WHAT MAKES THE ANIMATION POSSIBLE, and it is why this argument exists. Mid-slide a tile is NOT
+   * in a square: it is between two. While the painting read the board and drew by index, the most it could do
+   * was teleport the tiles from one frame to the next.
    *
-   * Quem calcula estas posições é `animation.ts`, que é puro; quem gira o relógio é o `boot/main.ts`.
+   * These positions are computed by `animation.ts`, which is pure; the clock is turned by `boot/main.ts`.
    */
   readonly pecas: readonly Peca[];
 }
 
 /**
- * Desenha fundo, moldura, as 16 casas vazias e as peças onde elas estiverem AGORA.
+ * Draws the background, the frame, the 16 empty squares and the tiles wherever they are RIGHT NOW.
  *
- * ⚠️ NÃO desenha número nenhum, de propósito, e é a decisão mais importante deste arquivo. Os algarismos são
- * texto no DOM (`ui/tiles-layer`) porque o pilar 2 manda, e duplicá-los aqui criaria a pior das combinações:
- * dois lugares que precisam concordar, e um deles invisível para o leitor de tela.
+ * ⚠️ IT DRAWS NO NUMBER, on purpose, and that is the most important decision in this file. The digits are text
+ * in the DOM (`ui/tiles-layer`) because pillar 2 requires it, and duplicating them here would create the worst
+ * combination available: two places that have to agree, one of them invisible to the screen reader.
  *
- * As duas camadas se movem juntas por CONSTRUÇÃO, não por disciplina: recebem as mesmas coordenadas, vindas
- * da mesma chamada de `pecasNoInstante(t)`, dentro do mesmo quadro.
+ * The two layers move together by CONSTRUCTION, not by discipline: they receive the same coordinates, from the
+ * same call to `pecasNoInstante(t)`, inside the same frame.
  */
 export function pintarTabuleiro(g: Desenho, o: PinturaOpts): void {
   g.clear();
@@ -52,21 +52,21 @@ export function pintarTabuleiro(g: Desenho, o: PinturaOpts): void {
   g.beginFill(FUNDO_DA_TELA).drawRect(0, 0, LOGICAL_W, LOGICAL_H).endFill();
   g.beginFill(MOLDURA).drawRect(BOARD_X, BOARD_Y, BOARD, BOARD).endFill();
 
-  // AS CASAS VAZIAS — os buracos do tabuleiro. Elas não dependem de peça nenhuma: existem 16, sempre, e é o
-  // que faz o tabuleiro continuar sendo um tabuleiro enquanto as peças voam por cima.
+  // THE EMPTY SQUARES — the holes in the board. They depend on no tile: there are 16, always, and that is what
+  // keeps the board looking like a board while the tiles fly over it.
   for (let i = 0; i < SIZE * SIZE; i++) {
     const r = cellRect(i);
     const cor = o.altoContraste ? (HC_POR_PAPEL[o.papel(i)] ?? HC_POR_PAPEL.free) : fundoDe(0);
     g.beginFill(cor).drawRect(r.x, r.y, r.w, r.h).endFill();
   }
 
-  // AS PEÇAS, por cima e na ordem recebida. Duas metades de uma fusão chegam sobrepostas no fim do
-  // movimento, e desenhar as duas é o certo: é o que faz elas se ENCONTRAREM em vez de uma sumir no caminho.
+  // THE TILES, on top and in the order received. The two halves of a merge arrive overlapping at the end of
+  // the motion, and drawing both is right: it is what makes them MEET rather than one vanishing on the way.
   for (const p of o.pecas) {
-    // ⚠️ O PAPEL É PERGUNTADO, não recebido — e a diferença apareceu num teste vermelho. A peça carregava um
-    // campo `papel` que o chamador tinha de preencher, e um chamador que esquecesse recebia silenciosamente a
-    // cor por VALOR no lugar da cor por papel: o alto contraste desligado sem ninguém pedir. Como a peça já
-    // sabe a casa a que pertence (`at`), o campo era redundante — e campo redundante é campo que diverge.
+    // ⚠️ THE ROLE IS ASKED FOR, not received — and the difference showed up in a red test. The tile used to
+    // carry a `papel` field the caller had to fill in, and a caller who forgot silently got the colour by
+    // VALUE instead of the colour by role: high contrast switched off with nobody asking. Since the tile
+    // already knows the square it belongs to (`at`), the field was redundant — and a redundant field drifts.
     const cor = o.altoContraste
       ? (HC_POR_PAPEL[o.papel(p.at)] ?? HC_POR_PAPEL.free)
       : fundoDe(p.exponent);

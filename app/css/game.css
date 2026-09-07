@@ -1,26 +1,27 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * O ESTILO DESTE JOGO — e só dele. Os diálogos, os botões de menu, a tipografia e o `.sr-only` vêm da folha
- * da engine (`@the-inclusionist/engine/style.css`, importada em `boot/boot.ts`).
+ * THIS GAME'S STYLE — and only this game's. The dialogs, the menu buttons, the typography and `.sr-only` come
+ * from the engine's sheet (`@the-inclusionist/engine/style.css`, imported in `boot/boot.ts`).
  *
- * ============================ A LINHA QUE SUSTENTA TUDO ============================
- * `--px` é UM PIXEL LÓGICO da grade 320×180, em pixels de CSS.
+ * ============================ THE LINE THAT HOLDS EVERYTHING UP ============================
+ * `--px` is ONE LOGICAL PIXEL of the 320×180 grid, expressed in CSS pixels.
  *
- * O `ui/layout` da engine trava o `#game-region` num múltiplo INTEIRO de pixels REAIS de 320×180 (ADR-0001) e
- * publica `--ui-fs: 8·k`. Dividir por 8 devolve o `k`, e com ele toda medida deste arquivo passa a ser dita
- * em pixels do JOGO — `calc(32 * var(--px))` é a peça de 32, em qualquer tela e em qualquer dpr.
+ * The engine's `ui/layout` locks `#game-region` to an INTEGER multiple of 320×180 in REAL pixels (ADR-0001)
+ * and publishes `--ui-fs: 8·k`. Dividing by 8 gives `k` back, and with it every measurement in this file is
+ * stated in GAME pixels — `calc(32 * var(--px))` is the 32-pixel tile, on any screen and at any dpr.
  *
- * É isto que mantém o número de DOM exatamente em cima da casa desenhada no canvas. Sem `--px`, as duas
- * camadas seriam medidas por réguas diferentes, e a divergência apareceria só no aparelho da escola.
+ * This is what keeps the DOM number exactly on top of the square painted on the canvas. Without `--px` the two
+ * layers would be measured by different rulers, and the divergence would only show up on the school's device.
  *
- * ⚠️ E ELE MORA NO `.game-region`, NÃO NO `:root` — medido no navegador em 2026-09-05, onde estava errado.
- * O `ui/layout` escreve `--ui-fs` no `#game-region` de propósito: a escala é ESCOPADA ao canvas, e fora dele
- * o texto fica em 16 px e o alvo em 44 px. Declarar `--px` no `:root` faz `var(--ui-fs)` ser resolvido ALI,
- * onde a variável não existe — então valia sempre o fallback, e o fallback herdava para o jogo inteiro.
+ * ⚠️ AND IT LIVES ON `.game-region`, NOT ON `:root` — measured in the browser on 2026-09-05, where it was
+ * wrong. `ui/layout` writes `--ui-fs` onto `#game-region` on purpose: the scale is SCOPED to the canvas, and
+ * outside it text stays at 16 px and touch targets at 44 px. Declaring `--px` on `:root` makes `var(--ui-fs)`
+ * resolve THERE, where the variable does not exist — so the fallback always won, and the fallback inherited
+ * down into the whole game.
  *
- * O defeito era INVISÍVEL porque `8 · 2 = 16`: em k=2 o fallback dá exatamente o valor certo, e k=2 é o piso
- * do `ui/layout`. Ele só apareceria numa tela grande o bastante para k=3 — o tabuleiro ficaria em dois
- * terços do tamanho, com os números do DOM fora das casas do canvas. Um bug que espera a tela da escola.
+ * The defect was INVISIBLE because `8 · 2 = 16`: at k=2 the fallback gives exactly the right value, and k=2 is
+ * `ui/layout`'s floor. It would only have appeared on a screen large enough for k=3 — the board at two thirds
+ * of its size, with the DOM numbers outside the canvas squares. A bug waiting for the school's screen.
  */
 .game-region { --px: calc(var(--ui-fs, 16px) / 8); }
 
@@ -42,22 +43,22 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .stage-wrap { width: 100vw; height: 72vh; display: grid; place-items: center; }
 .stage { position: relative; }
 
-/* O `ui/layout` escreve `width`/`height` aqui. Nada neste arquivo pode disputar essas duas propriedades. */
+/* `ui/layout` writes `width`/`height` here. Nothing in this file may contend for those two properties. */
 .game-region { position: relative; overflow: hidden; outline: none; }
 .game-region:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; outline-offset: 0; }
 
-/* O canvas é a FIGURA: ocupa a região inteira e leva `aria-hidden` em `boot/main.ts`. */
+/* The canvas is the PICTURE: it fills the region and gets `aria-hidden` in `boot/main.ts`. */
 #p2-canvas {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  image-rendering: pixelated;   /* pixel art nítido: nada de interpolação entre pixels de arte */
+  image-rendering: pixelated;   /* crisp pixel art: no interpolation between art pixels */
 }
 
-/* ============================ A GRADE ACESSÍVEL ============================
- * Ela fica POR CIMA do canvas e é o tabuleiro de verdade: `role="grid"`, foco e `aria-label`.
- * As coordenadas vêm de `app/js/geometry.ts` por estilo em linha — uma geometria só, dois consumidores. */
-/* Cada célula é posicionada por `cellRect` (ver `ui/board-dom`), então este arquivo NÃO decide geometria —
-   ele só declara que a posição é absoluta e deixa o JavaScript escrever os números que a geometria dá. */
+/* ============================ THE ACCESSIBLE GRID ============================
+ * It sits OVER the canvas and it is the real board: `role="grid"`, focus and `aria-label`.
+ * The coordinates come from `app/js/geometry.ts` as inline styles — one geometry, two consumers.
+ * Every cell is positioned by `cellRect` (see `ui/board-dom`), so this file does NOT decide geometry — it only
+ * declares that the position is absolute and lets JavaScript write the numbers the geometry gives. */
 .p2-board { position: absolute; }
 .p2-row { position: absolute; left: 0; right: 0; }
 
@@ -68,23 +69,24 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   font-weight: 700;
   line-height: 1;
   border-radius: calc(2 * var(--px));
-  /* ⚠️ A CASA NÃO TEM COR NENHUMA AQUI, e isso mudou quando a animação entrou. Ela chegou a ser a peça —
-     tinha fundo, tinta e tamanho de letra. Agora quem pinta o buraco é o canvas e quem pinta a peça é o
-     canvas: a casa em DOM é o lugar com nome, foco e rótulo, e mais nada. */
+  /* ⚠️ THE SQUARE HAS NO COLOUR HERE AT ALL, and that changed when the animation arrived. It used to be the
+     tile — it had a background, an ink and a type size. Now the canvas paints the hole and the canvas paints
+     the tile: the DOM square is the place with a name, focus and a label, and nothing else. */
 }
 
-/* ============================ A CAMADA DAS PEÇAS ============================
- * Ela fica ENTRE o canvas e a grade acessível: por cima da figura, por baixo do foco.
+/* ============================ THE TILE LAYER ============================
+ * It sits BETWEEN the canvas and the accessible grid: over the picture, under the focus.
  *
- * ⚠️ A PEÇA AQUI É SÓ O NÚMERO — sem fundo, sem borda. A peça COLORIDA é pintada pelo canvas, na mesma
- * posição e no mesmo quadro, e é ele que dá a cara de pixel-art integral da família. Um `div` colorido com
- * cantos arredondados no lugar faria isto parecer uma página web em vez de um jogo de 320×180.
+ * ⚠️ A TILE HERE IS ONLY THE NUMBER — no background, no border. The COLOURED tile is painted by the canvas, at
+ * the same position and in the same frame, and that is what gives the family's integer-scaled pixel-art look.
+ * A coloured `div` with rounded corners in its place would make this read as a web page rather than a 320×180
+ * game.
  *
- * `pointer-events: none` porque quem recebe clique e foco é a CASA, atrás dela. Uma peça que capturasse o
- * ponteiro roubaria o alvo de toque da célula que ela cobre — e o alvo de toque é dimensionado em milímetros
- * reais justamente para não ser roubado. */
-/* A posição vem de `ui/tiles-layer`, que a lê da geometria — como a grade acessível faz. `inset: 0`
-   aqui já significou a camada cobrir a região inteira e os números saírem de cima das peças. */
+ * `pointer-events: none` because what receives click and focus is the SQUARE behind it. A tile capturing the
+ * pointer would steal the touch target of the cell it covers — and the touch target is sized in real
+ * millimetres precisely so that it is not stolen. */
+/* The position comes from `ui/tiles-layer`, which reads it from the geometry — as the accessible grid does.
+   `inset: 0` here once meant the layer covering the whole region and the numbers sliding off their tiles. */
 .p2-tiles { position: absolute; pointer-events: none; }
 .p2-tile {
   position: absolute;
@@ -93,18 +95,19 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   place-items: center;
   font-weight: 700;
   line-height: 1;
-  /* SEM `transition`: quem move esta peça é o laço de `boot/main.ts`, escrevendo `transform` a cada quadro.
-     Uma transição de CSS aqui seria um SEGUNDO relógio correndo em paralelo com o do canvas, e os dois
-     descolariam — o número atrasado em relação à peça, no meio do movimento. */
+  /* NO `transition`: what moves this tile is the loop in `boot/main.ts`, writing `transform` every frame. A
+     CSS transition here would be a SECOND clock running alongside the canvas's, and the two would come apart
+     — the number lagging its tile, mid-motion. */
   will-change: transform;
 }
 
-/* ⚠️ O REALCE DE QUEM PODE FUNDIR vem do PAPEL declarado (campo 2 do contrato), nunca do valor da peça.
-   É a mesma pergunta que o sonar responde por som, respondida aqui por luz — então as duas nunca discordam.
-   Ele mora na CASA e não na peça: a casa não se move, então o realce não treme durante o deslizamento. */
+/* ⚠️ THE HIGHLIGHT FOR WHAT CAN MERGE comes from the declared ROLE (field 2 of the contract), never from the
+   tile's value. It is the same question the sonar answers with sound, answered here with light — so the two
+   never disagree. It lives on the SQUARE and not on the tile: the square does not move, so the highlight does
+   not shake during the slide. */
 .p2-cell[data-role='goal'] { box-shadow: inset 0 0 0 calc(2 * var(--px)) #ffd23f; }
 
-/* Foco visível e GROSSO: 2 px lógicos viram 2·k px reais, então ele não some quando a tela cresce. */
+/* A visible and THICK focus ring: 2 logical px become 2·k real px, so it does not vanish as the screen grows. */
 .p2-cell:focus-visible { outline: calc(2 * var(--px)) solid #f6f8ff; outline-offset: calc(-1 * var(--px)); }
 
 /* ============================ HUD ============================ */
@@ -119,9 +122,9 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .p2-hud__line { margin: 0 0 calc(4 * var(--px)); }
 .p2-hud__line b { font-size: calc(9 * var(--px)); }
 
-/* ============================ OS QUATRO ALVOS DE TOQUE ============================
- * `--alvo-toque` vem de `padPxPerMm` (engine), em MILÍMETROS reais medidos no aparelho — WCAG 2.5.5. Um
- * palpite em pixels seria grande num monitor e minúsculo num tablet de escola, que é onde ele importa. */
+/* ============================ THE FOUR TOUCH TARGETS ============================
+ * `--alvo-toque` comes from `padPxPerMm` (engine), in real MILLIMETRES measured on the device — WCAG 2.5.5. A
+ * guess in pixels would be large on a monitor and tiny on a school tablet, which is where it matters. */
 .p2-pad {
   position: absolute;
   left: calc(8 * var(--px));
@@ -146,13 +149,14 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .p2-pad-btn--right { grid-area: right; }
 .p2-pad-btn--down { grid-area: down; }
 
-/* Ponteiro FINO (rato) não precisa dos alvos: quem tem teclado e rato usa as setas. Escondê-los é ganho de
-   espaço numa tela de 320 px lógicos — e `@media` de ponteiro é a pergunta certa, não a largura da janela. */
+/* A FINE pointer (a mouse) does not need the targets: whoever has a keyboard and a mouse uses the arrows.
+   Hiding them buys space on a 320-logical-pixel screen — and a pointer `@media` is the right question to ask,
+   not the window's width. */
 @media (pointer: fine) { .p2-pad { display: none; } }
 
-/* ============================ FERRAMENTAS, FORA DO CANVAS ============================
- * Não escalam com o k, de propósito: o `ui/layout` decidiu que só a UI DENTRO do jogo acompanha a escala.
- * Fora dele, texto de 16 px e alvo de 44 px, que é o piso da WCAG. */
+/* ============================ TOOLS, OUTSIDE THE CANVAS ============================
+ * They do not scale with k, on purpose: `ui/layout` decided that only the UI INSIDE the game follows the
+ * scale. Outside it, 16 px text and 44 px targets, which is WCAG's floor. */
 .p2-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
 .p2-tools__label { font-size: 16px; }
 .p2-btn {
@@ -164,9 +168,9 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .p2-btn:focus-visible, #viz:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
 #viz { min-height: 44px; font-size: 16px; background: #1d2130; color: #e8eef7; border: 1px solid #58a0e8; border-radius: 6px; }
 
-/* ============================ MOVIMENTO ============================
- * A transição de cor da peça é curta e some inteira sob `prefers-reduced-motion`. Não é enfeite opcional:
- * é a WCAG 2.3.3, e uma criança com sensibilidade vestibular não deveria precisar achar um menu para isso. */
+/* ============================ MOTION ============================
+ * Everything animated disappears entirely under `prefers-reduced-motion`. It is not optional decoration: it is
+ * WCAG 2.3.3, and a child with vestibular sensitivity should not have to find a menu for it. */
 @media (prefers-reduced-motion: reduce) {
   .p2-cell { transition: none; }
 }

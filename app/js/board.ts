@@ -1,86 +1,86 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// AS REGRAS — e nada mais. Sem DOM, sem PixiJS, sem engine: um módulo-folha, puro, de zero dependências.
+// THE RULES — and nothing else. No DOM, no PixiJS, no engine: a pure leaf module with zero dependencies.
 //
-// ========================= POR QUE A PUREZA AQUI NÃO É ESTILO =========================
-// Três coisas dependem dela, e nenhuma é estética:
-//   · o project `node` do Vitest roda isto sem navegador, então as regras do jogo são auditáveis por uma
-//     escola ou por uma Secretaria sem abrir um Chromium;
-//   · a DECLARAÇÃO dos sete campos (`declaration.ts`) responde à engine consultando este módulo, então quem
-//     responde "onde há uma fusão possível" para a criança cega é a mesma função que decide a jogada — e não
-//     uma segunda cópia da regra que pode divergir em silêncio;
-//   · o alto contraste por PAPEL precisa perguntar "esta peça pode fundir?", que é uma pergunta de regra e
-//     não de desenho.
+// ========================= WHY THE PURITY HERE IS NOT STYLE =========================
+// Three things depend on it, and none of them is aesthetic:
+//   · Vitest's `node` project runs this without a browser, so the rules of the game are auditable by a
+//     school or by a Secretaria without opening a Chromium;
+//   · the seven-field DECLARATION (`declaration.ts`) answers the engine by asking this module, so whatever
+//     tells a blind child "where is a merge available" is the same function that decides the move — not a
+//     second copy of the rule that can drift in silence;
+//   · high contrast BY ROLE has to ask "can this tile merge?", which is a question about rules and not
+//     about drawing.
 //
-// ========================= EXPOENTES, NÃO VALORES =========================
-// `0` é casa vazia; `n` é a peça 2^n. Fundir é `n + 1`. O objetivo é `11`.
+// ========================= EXPONENTS, NOT VALUES =========================
+// `0` is an empty square; `n` is the tile 2^n. Merging is `n + 1`. The goal is `11`.
 //
-// Não é economia de memória — é o que faz "potência de dois" ser o MODELO e não um rótulo colado depois. O
-// enunciado da atividade ("dois elevado a quê?") lê exatamente o número que a mecânica move, e a narração
-// para quem não vê a tela pode dizer "dois elevado a três" sem nenhuma conversão inventada no caminho.
+// This is not memory thrift — it is what makes "power of two" the MODEL rather than a label stuck on
+// afterwards. The activity's question ("two to the what?") reads exactly the number the mechanic moves, and
+// the narration for a child who cannot see the screen can say "two to the third" with no conversion invented
+// along the way.
 //
-// ========================= ESCRITO DAS REGRAS, NÃO DE UM FORK =========================
-// `docs/LICENSES.md` explica por quê: regra de jogo não tem direito autoral, implementação tem, e a
-// titularidade do Município tem de ser do inteiro. `tests/board.node.test.ts` é onde "escrevemos do zero"
-// deixa de ser alegação e vira propriedade medida.
+// ========================= WRITTEN FROM THE RULES, NOT FROM A FORK =========================
+// `docs/LICENSES.md` explains why: the rules of a game carry no copyright, an implementation does, and the
+// Município's title has to cover the whole of what it owns. `tests/board.node.test.ts` is where "we wrote it
+// from scratch" stops being a claim and becomes a measured property.
 
-/** Lado do tabuleiro. Toda a mecânica é genérica sobre ele — uma variante 5×5 é esta linha e mais nada. */
+/** Side of the board. All the mechanics are generic over it — a 5×5 variant is this line and nothing else. */
 export const SIZE = 4;
 
-/** O expoente que fecha a rodada: 2^11 = 2048. É o `need` do campo 5 do contrato da engine. */
+/** The exponent that closes the round: 2^11 = 2048. It is the `need` of the contract's field 5. */
 export const OBJETIVO = 11;
 
 /**
- * A fatia do sorteio que sai 4 em vez de 2 — 10%, como no 2048 de que este jogo descende.
+ * The share of the draw that yields a 4 instead of a 2 — 10%, as in the 2048 this game descends from.
  *
- * ⚠️ É a única regra aqui que é ESCOLHA e não dedução, então fica nomeada em vez de espalhada como `0.1`
- * dentro de um `if`. Ela governa o ritmo do jogo inteiro: mais 4 encurta a partida, menos 4 a arrasta.
+ * ⚠️ It is the one rule here that is a CHOICE rather than a deduction, so it is named instead of scattered as
+ * a `0.1` inside an `if`. It governs the pace of the whole game: more 4s shortens the round, fewer drags it.
  */
 export const CHANCE_DE_QUATRO = 0.1;
 
-/** O tabuleiro: `SIZE × SIZE` expoentes, em ordem de leitura (índice = `y * SIZE + x`). Imutável. */
+/** The board: `SIZE × SIZE` exponents in reading order (index = `y * SIZE + x`). Immutable. */
 export type Board = readonly number[];
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
-/** Uma fusão que ACONTECEU: onde a peça nova ficou, e qual expoente ela passou a ter. */
+/** A merge that HAPPENED: where the new tile ended up, and which exponent it took. */
 export interface Merge {
   readonly at: number;
   readonly exponent: number;
 }
 
 /**
- * O CAMINHO DE UMA PEÇA nesta jogada: de onde saiu, onde parou, e se morreu dentro de uma fusão.
+ * THE PATH OF ONE TILE in this move: where it left from, where it stopped, and whether it died in a merge.
  *
- * ⚠️ QUEM SABE ISTO SÃO AS REGRAS, e é por isso que mora aqui e não no renderizador. Uma animação de
- * deslizamento precisa responder "de onde veio a peça que está nesta casa", e o renderizador só consegue
- * ADIVINHAR isso comparando dois tabuleiros — o que dá errado exatamente no caso interessante, o da fusão,
- * onde DUAS peças terminam no mesmo lugar e o palpite tem de escolher uma. Aqui não há palpite: `slide` já
- * sabia, e passou a dizer.
+ * ⚠️ THE RULES ARE WHAT KNOWS THIS, which is why it lives here and not in the renderer. A slide animation has
+ * to answer "where did the tile now in this square come from", and a renderer can only GUESS that by diffing
+ * two boards — which fails on exactly the interesting case, the merge, where TWO tiles end in the same place
+ * and the guess has to pick one. There is no guess here: `slide` already knew, and now it says.
  *
- * Toda peça entra na lista, inclusive a que não se moveu (`from === to`). Quem desenha precisa de todas, e
- * uma lista "só das que mexeram" obrigaria o renderizador a redescobrir o resto.
+ * Every tile is in the list, including one that did not move (`from === to`). Whoever draws needs all of
+ * them, and a list of "only the ones that moved" would force the renderer to rediscover the rest.
  */
 export interface Movimento {
   readonly from: number;
   readonly to: number;
-  /** O EXPOENTE QUE ELA TINHA AO SAIR — não o que ela virou. É este número que viaja pela tela. */
+  /** THE EXPONENT IT HELD ON LEAVING — not what it became. This is the number that travels across the screen. */
   readonly exponent: number;
-  /** Ela desapareceu dentro de uma fusão? Então some ao chegar, e a peça nova nasce no lugar. */
+  /** Did it vanish into a merge? Then it disappears on arrival, and the new tile is born in its place. */
   readonly merged: boolean;
 }
 
-/** O resultado de uma jogada. `moved: false` é o que impede o sorteio de premiar uma tecla inútil. */
+/** The result of a move. `moved: false` is what stops the draw from rewarding a useless keystroke. */
 export interface Move {
   readonly board: Board;
   readonly merges: readonly Merge[];
-  /** O caminho de CADA peça, para quem for desenhar o deslizamento. Ver `Movimento`. */
+  /** The path of EVERY tile, for whoever draws the slide. See `Movimento`. */
   readonly movimentos: readonly Movimento[];
   readonly moved: boolean;
-  /** A soma dos VALORES formados — o placar da rodada, que morre com ela (ADR-0037). */
+  /** The sum of the VALUES formed — the round's score, which dies with it (ADR-0037). */
   readonly gained: number;
 }
 
-/** Onde a peça nova caiu e o que ela é. `null` quando não havia casa livre, e null é resposta. */
+/** Where the new tile landed and what it is. `null` when there was no free square, and null is an answer. */
 export interface Spawn {
   readonly board: Board;
   readonly at: number;
@@ -90,12 +90,12 @@ export interface Spawn {
 export const emptyBoard = (): Board => new Array<number>(SIZE * SIZE).fill(0);
 
 /**
- * Os CAMINHOS que uma direção percorre, cada um começando na PAREDE para onde se empurra.
+ * The PATHS a direction travels, each one starting at the WALL being pushed towards.
  *
- * É a única parte que sabe o que "esquerda" quer dizer, e é por isso que ela existe separada: com os
- * caminhos em mãos, deslizar para os quatro lados é o MESMO código sobre listas diferentes. A alternativa —
- * quatro laços com índices espelhados — é onde a regra de fundir-uma-vez-só é implementada quatro vezes e
- * fica certa em três.
+ * This is the only part that knows what "left" means, and that is why it exists separately: with the paths in
+ * hand, sliding in all four directions is the SAME code over different lists. The alternative — four loops
+ * with mirrored indices — is where the merge-once-only rule gets implemented four times and comes out right
+ * in three.
  */
 function caminhos(dir: Direction): number[][] {
   const linhas: number[][] = [];
@@ -110,11 +110,11 @@ function caminhos(dir: Direction): number[][] {
 }
 
 /**
- * Empurra o tabuleiro e funde o que encostar. Devolve um tabuleiro NOVO; o de entrada não é tocado.
+ * Pushes the board and merges whatever meets. Returns a NEW board; the input is untouched.
  *
- * ⚠️ A REGRA QUE OS FORKS ERRAM está no `k++` extra lá embaixo: ao fundir um par, o parceiro é CONSUMIDO,
- * então a peça recém-formada não pode fundir outra vez na mesma jogada. `[2,2,2,2]` para a esquerda é
- * `[4,4]`, nunca `[8]` — e a diferença não é de detalhe: com cascata, uma partida acaba em quinze jogadas.
+ * ⚠️ THE RULE THE FORKS GET WRONG is the extra `k++` below: merging a pair CONSUMES the partner, so a freshly
+ * formed tile cannot merge again in the same move. `[2,2,2,2]` to the left is `[4,4]`, never `[8]` — and the
+ * difference is not a detail: with the cascade, a round ends in fifteen moves.
  */
 export function slide(board: Board, dir: Direction): Move {
   const saida = [...board];
@@ -124,9 +124,9 @@ export function slide(board: Board, dir: Direction): Move {
   let moved = false;
 
   for (const caminho of caminhos(dir)) {
-    // ⚠️ OS ÍNDICES, e não os valores. A versão anterior fazia `.map(i => board[i]).filter(...)` e perdia a
-    // ORIGEM de cada peça no caminho — o que bastava para calcular o tabuleiro seguinte e não bastava para
-    // dizer de onde cada peça veio. Guardar o índice custa nada e é a metade que faltava.
+    // ⚠️ THE INDICES, not the values. The earlier version did `.map(i => board[i]).filter(...)` and lost each
+    // tile's ORIGIN along the path — enough to compute the next board and not enough to say where each tile
+    // came from. Keeping the index costs nothing and is the half that was missing.
     const cheias = caminho.filter((i) => board[i] !== 0);
     const resultado: number[] = [];
 
@@ -136,12 +136,12 @@ export function slide(board: Board, dir: Direction): Move {
         const exponent = board[cheias[k]] + 1;
         resultado.push(exponent);
         merges.push({ at: destino, exponent });
-        // AS DUAS peças viajam até a mesma casa, e as duas morrem lá. É o único caso em que dois caminhos
-        // terminam no mesmo ponto, e é exatamente o caso que um renderizador não conseguiria adivinhar.
+        // BOTH tiles travel to the same square, and both die there. It is the only case where two paths end
+        // at the same point, and it is exactly the case a renderer could not have guessed.
         movimentos.push({ from: cheias[k], to: destino, exponent: exponent - 1, merged: true });
         movimentos.push({ from: cheias[k + 1], to: destino, exponent: exponent - 1, merged: true });
         gained += 2 ** exponent;
-        k++; // ⚠️ o parceiro foi consumido: é isto que impede a cascata
+        k++; // ⚠️ the partner was consumed: this is what stops the cascade
       } else {
         resultado.push(board[cheias[k]]);
         movimentos.push({ from: cheias[k], to: destino, exponent: board[cheias[k]], merged: false });
@@ -158,20 +158,20 @@ export function slide(board: Board, dir: Direction): Move {
   return { board: saida, merges, movimentos, moved, gained };
 }
 
-/** Os índices das casas vazias, em ordem de leitura. */
+/** The indices of the empty squares, in reading order. */
 export const emptySpots = (board: Board): number[] =>
   board.reduce<number[]>((acc, e, i) => (e === 0 ? (acc.push(i), acc) : acc), []);
 
 /**
- * Sorteia uma peça nova numa casa vazia. O acaso ENTRA por parâmetro, e essa é a decisão importante.
+ * Draws a new tile into an empty square. Chance ENTERS as a parameter, and that is the decision that matters.
  *
- * Um `Math.random()` aqui dentro tornaria a partida irreproduzível e este módulo intestável no ponto que
- * mais importa. Com o gerador injetado, o jogo passa o RNG semeado da engine (`core/rng`) e a mesma semente
- * dá a mesma partida — que é o que o ADR-0049 pede de uma recompensa determinística, e o que deixa uma
- * professora repetir exatamente a rodada que a criança acabou de jogar.
+ * A `Math.random()` in here would make the round irreproducible and this module untestable at the point that
+ * matters most. With the generator injected, the game passes the engine's seeded RNG (`core/rng`) and the
+ * same seed gives the same round — which is what ADR-0049 asks of a deterministic reward, and what lets a
+ * teacher replay exactly the round the child has just played.
  *
- * Duas tiragens, nesta ordem: a CASA e depois o VALOR. A ordem é contrato, porque é o que um teste com
- * gerador falso precisa saber para escrever a sequência.
+ * Two draws, in this order: the SQUARE and then the VALUE. The order is contract, because it is what a test
+ * with a fake generator needs to know in order to write the sequence.
  */
 export function spawn(board: Board, rnd: () => number): Spawn | null {
   const livres = emptySpots(board);
@@ -187,12 +187,13 @@ export function spawn(board: Board, rnd: () => number): Spawn | null {
 }
 
 /**
- * As casas que participam de alguma fusão disponível AGORA — ordenadas, sem repetição.
+ * The squares taking part in some merge available NOW — sorted, without repetition.
  *
- * ⚠️ ESTE É O CAMPO 5 DO CONTRATO DA ENGINE, e é onde este jogo paga a engine de volta. `targetsOf` devolve
- * "onde está o que ainda conta", e o sonar compara distâncias na topologia declarada. Num quiz linear ele
- * era correto e inútil (o achado 9 do segundo consumidor diz isso com todas as letras); aqui ele responde
- * "onde há uma fusão possível", que para uma criança que não vê a tela é a informação da mecânica inteira.
+ * ⚠️ THIS IS FIELD 5 OF THE ENGINE'S CONTRACT, and it is where this game pays the engine back. `targetsOf`
+ * returns "where the things that still count are", and the sonar compares distances in the declared
+ * topology. In a linear quiz it was correct and useless (the second consumer's finding 9 says so in as many
+ * words); here it answers "where is a merge available", which for a child who cannot see the screen is the
+ * whole mechanic.
  */
 export function mergeSpots(board: Board): number[] {
   const casas = new Set<number>();
@@ -207,9 +208,9 @@ export function mergeSpots(board: Board): number[] {
   return [...casas].sort((a, b) => a - b);
 }
 
-/** Ainda há jogada? Uma casa vazia basta; sem nenhuma, é preciso um par vizinho. */
+/** Is there still a move? One empty square is enough; with none, a neighbouring pair is required. */
 export const canMove = (board: Board): boolean =>
   emptySpots(board).length > 0 || mergeSpots(board).length > 0;
 
-/** O maior EXPOENTE em jogo — o `have` do objetivo, que se compara com `OBJETIVO`. */
+/** The largest EXPONENT in play — the objective's `have`, compared against `OBJETIVO`. */
 export const maxTile = (board: Board): number => board.reduce((m, e) => (e > m ? e : m), 0);

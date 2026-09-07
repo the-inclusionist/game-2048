@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A ENTREGA DOS DICIONÁRIOS À ENGINE — três linhas de código e uma decisão inteira atrás delas.
+// HANDING THE DICTIONARIES TO THE ENGINE — three lines of code with a whole decision behind them.
 //
-// Antes de 2026-09-05 este arquivo não podia existir. Os locales da engine entravam por
-// `import.meta.glob('../i18n/*.ts')`, um glob resolvido no build DELA e contra a pasta DELA, e `DICTS` era
-// privado do módulo: um jogo instalado como pacote não tinha porta nenhuma para as próprias chaves.
-// O `game-chess` pagou o preço da forma mais cara possível — escreveu um SEGUNDO sistema de i18n inteiro,
-// 383 linhas, e importa o `t` da engine à parte só para as strings dela.
+// Before 2026-09-05 this file could not exist. The engine's locales arrived through
+// `import.meta.glob('../i18n/*.ts')`, a glob resolved in ITS build against ITS folder, and `DICTS` was module
+// private: a game installed as a package had no door at all to its own keys. The `game-chess` paid the price
+// the most expensive way possible — it wrote a SECOND i18n system, 383 lines of it, and imports the engine's
+// `t` separately just for the engine's own strings.
 //
-// `registerDict()` é a porta. Este jogo usa o i18n da engine e mais nada.
+// `registerDict()` is the door. This game uses the engine's i18n and nothing else.
 import { registerDict } from '@the-inclusionist/engine/core/i18n.js';
 import en from './en.ts';
 import es from './es.ts';
@@ -16,11 +16,11 @@ import pt from './pt.ts';
 export type { Chave, Dicionario } from './pt.ts';
 
 /**
- * Registra os três idiomas. Chamar ANTES de qualquer texto ir para a tela.
+ * Registers the three languages. Call BEFORE any text reaches the screen.
  *
- * Os três de uma vez, e não sob demanda: são 24 chaves cada, o custo é irrisório, e registrar
- * preguiçosamente exigiria um gancho na troca de idioma que a engine não oferece — inventar um seria
- * resolver, com máquina, um problema que não existe neste tamanho.
+ * All three at once rather than on demand: they are 24 keys each, the cost is negligible, and registering
+ * lazily would need a hook on the language switch that the engine does not offer — inventing one would be
+ * solving, with machinery, a problem that does not exist at this size.
  */
 export function registrarIdiomas(): void {
   registerDict('pt', pt);

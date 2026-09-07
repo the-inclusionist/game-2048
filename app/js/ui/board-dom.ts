@@ -1,69 +1,68 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A GRADE ACESSÍVEL — e ela não é uma legenda do desenho: ela É o tabuleiro.
+// THE ACCESSIBLE GRID — and it is not a caption of the drawing: it IS the board.
 //
-// ========================= O PILAR 2 DECIDE A ARQUITETURA, NÃO SÓ O ACABAMENTO =========================
-// "Text always in the DOM". Um algarismo pintado no canvas some para o leitor de tela e some para o VLibras,
-// que traduz TEXTO. Então são TRÊS camadas, cada uma com um dono, e a divisão importa:
+// ========================= PILLAR 2 DECIDES THE ARCHITECTURE, NOT JUST THE FINISH =========================
+// "Text always in the DOM". A digit painted on the canvas disappears for the screen reader and for VLibras,
+// which translates TEXT. So there are THREE layers, each with an owner, and the division matters:
 //
-//   · este módulo — as 16 CASAS: `role="grid"`, foco, `aria-label`. Posição fixa, e é o tabuleiro para quem
-//     usa leitor de tela;
-//   · `ui/tiles-layer` — as PEÇAS: os números, em texto de verdade, na camada que se move;
-//   · `render/board-canvas` — a FIGURA: moldura, casas e peças coloridas, com `aria-hidden="true"`.
+//   · this module — the 16 SQUARES: `role="grid"`, focus, `aria-label`. Fixed position, and this is the board
+//     for whoever uses a screen reader;
+//   · `ui/tiles-layer` — the TILES: the numbers, as real text, on the layer that moves;
+//   · `render/board-canvas` — the PICTURE: frame, squares and coloured tiles, with `aria-hidden="true"`.
 //
-// ⚠️ O NÚMERO MORAVA AQUI E MUDOU-SE quando a animação entrou (2026-09-05). A razão é que célula e peça
-// deixaram de ser a mesma coisa: a casa não se move, e a peça atravessa várias delas. Nada do que era
-// ANUNCIADO mudou — o `aria-label` sempre substituiu o conteúdo da célula, então nenhum leitor lia o
-// algarismo solto antes nem deixa de ler o número agora.
+// ⚠️ THE NUMBER USED TO LIVE HERE AND MOVED OUT when the animation arrived (2026-09-05). The reason is that
+// cell and tile stopped being the same thing: the square does not move, and the tile crosses several of them.
+// Nothing that was ANNOUNCED changed — an `aria-label` has always replaced a cell's content, so no reader read
+// the bare digit before and none stops reading the number now.
 //
-// Uma criança cega e uma criança que enxerga jogam O MESMO jogo, e não duas versões dele.
+// A blind child and a sighted child play THE SAME game, not two versions of it.
 //
-// ========================= ⚠️ O DESVIO DO APG, DECLARADO EM VEZ DE ESCONDIDO =========================
-// O padrão `grid` da APG diz que as SETAS navegam entre células. Aqui as setas JOGAM: empurrar o tabuleiro é
-// o verbo deste jogo, e "esquerda" é a jogada, não um passo de leitura.
+// ========================= ⚠️ THE APG DEVIATION, DECLARED RATHER THAN BURIED =========================
+// The APG's `grid` pattern says the ARROW KEYS navigate between cells. Here the arrows PLAY: pushing the board
+// is this game's verb, and "left" is the move, not a reading step.
 //
-// Isto é um desvio, e ele é deliberado. A alternativa — setas que só leem — deixaria a criança que usa
-// exclusivamente teclado sem como JOGAR, que é precisamente quem o padrão existe para servir; e mover a
-// jogada para outra tecla jogaria fora a memória muscular de um jogo que a criança provavelmente já conhece.
+// This is a deviation, and it is deliberate. The alternative — arrows that only read — would leave the child
+// who uses the keyboard exclusively unable to PLAY, which is precisely the person the pattern exists to serve;
+// and moving the move to another key would throw away the muscle memory of a game the child probably knows.
 //
-// O que se perde é reposto, não abandonado:
-//   · **Shift + setas** movem o CURSOR DE LEITURA célula a célula, e cada parada é anunciada;
-//   · o Tab entra e sai da grade normalmente — nunca é sequestrado, que seria o desvio caro;
-//   · depois de cada jogada, um resumo vai para a região `aria-live` da engine;
-//   · e o SONAR da engine responde "onde há uma fusão", que é a pergunta que a leitura célula a célula
-//     custaria dezesseis paradas para responder.
+// What is lost is replaced, not abandoned:
+//   · **Shift + arrows** move the READING CURSOR cell by cell, and every stop is announced;
+//   · Tab enters and leaves the grid normally — it is never hijacked, which would be the expensive deviation;
+//   · after each move, a summary goes to the engine's `aria-live` region;
+//   · and the engine's SONAR answers "where is a merge", which reading cell by cell would cost sixteen stops.
 import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
 import { SIZE } from '../board.ts';
 import { BOARD, BOARD_X, BOARD_Y, TILE, cellRect } from '../geometry.ts';
 
-/** O que a grade precisa perguntar. Fatia MÍNIMA da declaração — a regra do `core/contract`. */
+/** What the grid needs to ask. The MINIMAL slice of the declaration — `core/contract`'s own rule. */
 export type Falante = Pick<GameDeclaration, 'roleAt' | 'nameAt'>;
 
 export interface GradeDom {
-  /** O elemento com `role="grid"`. Quem monta a página decide onde ele entra. */
+  /** The element carrying `role="grid"`. Whoever builds the page decides where it goes. */
   readonly raiz: HTMLElement;
   /**
-   * Repinta rótulos e papéis das 16 casas.
+   * Repaints the 16 squares' labels and roles.
    *
-   * ⚠️ NÃO recebe o tabuleiro, de propósito: tudo o que ela precisa vem da DECLARAÇÃO — `roleAt` diz o papel
-   * e `nameAt` diz o nome. Ter o tabuleiro aqui também seria uma segunda fonte da mesma verdade, e a segunda
-   * fonte é a que diverge.
+   * ⚠️ It does NOT receive the board, on purpose: everything it needs comes from the DECLARATION — `roleAt`
+   * gives the role and `nameAt` gives the name. Holding the board here too would be a second source of the
+   * same truth, and the second source is the one that drifts.
    */
   atualizar(falante: Falante, t: (k: string, p?: Record<string, string | number>) => string): void;
-  /** Move o cursor de leitura e devolve o índice novo. Enrola nas bordas, como a grade de letras da engine. */
+  /** Moves the reading cursor and returns the new index. Wraps at the edges, like the engine's letter grid. */
   mover(dx: number, dy: number): number;
-  /** Onde o cursor está. É o que o campo 4 da declaração devolve como `focusOf`. */
+  /** Where the cursor is. It is what field 4 of the declaration returns as `focusOf`. */
   cursor(): number;
-  /** Põe o foco do navegador na célula do cursor — o que faz o leitor de tela ler. */
+  /** Puts the browser's focus on the cursor's cell — which is what makes the screen reader read. */
   focar(): void;
 }
 
 const px = (n: number) => `calc(${n} * var(--px))`;
 
 /**
- * Monta as 16 células uma vez. Depois disso, `atualizar` só troca texto e atributos.
+ * Builds the 16 cells once. After that, `atualizar` only swaps text and attributes.
  *
- * Reconstruir a grade a cada jogada seria o defeito clássico: o elemento com foco deixa de existir, o foco
- * volta para o `<body>` e o leitor de tela perde o lugar — no meio de uma partida, a cada tecla.
+ * Rebuilding the grid on every move would be the classic defect: the focused element stops existing, focus
+ * falls back to `<body>` and the screen reader loses its place — mid-round, on every key.
  */
 export function criarGradeDom(doc: Document): GradeDom {
   const raiz = doc.createElement('div');
@@ -75,17 +74,17 @@ export function criarGradeDom(doc: Document): GradeDom {
   raiz.style.width = px(BOARD);
   raiz.style.height = px(BOARD);
 
-  // ⚠️ CADA CÉLULA É POSICIONADA PELO `cellRect`, E NÃO POR FLEXBOX. Medido no navegador em 2026-09-05: com
-  // linhas flex e `margin: GAP/2`, as células do DOM ficavam 2 pixels lógicos à esquerda das casas pintadas
-  // no canvas — 8 px reais em k=4. Duas réguas para o mesmo tabuleiro, que é exatamente o que
-  // `app/js/geometry.ts` existe para impedir; o flexbox estava reimplementando a geometria em vez de a ler.
+  // ⚠️ EVERY CELL IS POSITIONED BY `cellRect`, NOT BY FLEXBOX. Measured in the browser on 2026-09-05: with flex
+  // rows and `margin: GAP/2`, the DOM cells sat 2 logical pixels to the left of the squares painted on the
+  // canvas — 8 real px at k=4. Two rulers for one board, which is exactly what `app/js/geometry.ts` exists to
+  // prevent; the flexbox was reimplementing the geometry instead of reading it.
   //
-  // O defeito não aparece em k=2 a olho nu e não aparece em teste nenhum de lógica.
-  // `tests/board-alinhado.browser.test.ts` passou a compará-las diretamente.
+  // The defect is invisible to the eye at k=2 and invisible to every logic test.
+  // `tests/board-alinhado.browser.test.ts` now compares the two directly.
   //
-  // As linhas continuam sendo ELEMENTOS de verdade (`role="row"`), posicionadas na sua faixa: `display:
-  // contents` resolveria o layout numa linha e já foi motivo de a linha sumir da árvore de acessibilidade em
-  // navegadores que ainda circulam em máquina de escola. Uma grade sem linhas não se navega.
+  // The rows are still REAL elements (`role="row"`), positioned in their band: `display: contents` would solve
+  // the layout in one line and has been the reason a row vanished from the accessibility tree in browsers that
+  // still circulate on school machines. A grid without rows cannot be navigated.
   const celulas: HTMLElement[] = [];
   for (let y = 0; y < SIZE; y++) {
     const faixa = cellRect(y * SIZE);
@@ -101,8 +100,8 @@ export function criarGradeDom(doc: Document): GradeDom {
       c.setAttribute('role', 'gridcell');
       c.className = 'p2-cell';
       c.dataset.i = String(i);
-      // Tabindex ROVING: exatamente uma célula é alcançável pelo Tab, e o Shift+setas move qual é.
-      // Dezesseis paradas de Tab dentro de um tabuleiro seria hostil para quem só usa teclado.
+      // ROVING tabindex: exactly one cell is reachable by Tab, and Shift+arrows moves which one.
+      // Sixteen Tab stops inside a board would be hostile to anyone using only a keyboard.
       c.tabIndex = i === 0 ? 0 : -1;
       c.style.left = px(r.x - BOARD_X);
       c.style.width = px(r.w);
@@ -124,22 +123,23 @@ export function criarGradeDom(doc: Document): GradeDom {
       celulas.forEach((c, i) => {
         const at = { x: i % SIZE, y: Math.floor(i / SIZE) };
 
-        // ⚠️ A CÉLULA NÃO CARREGA MAIS O NÚMERO, e a mudança é de arquitetura e não de estilo. Ela chegou a
-        // ser a peça: tinha o algarismo, a cor e o tamanho de letra. Uma peça que DESLIZA não pode ser isso,
-        // porque a casa não se move — ela tem posição fixa, foco e rótulo, e a peça atravessa várias delas
-        // no caminho. O número mudou-se para `ui/tiles-layer`, que é a camada que se move.
+        // ⚠️ THE CELL NO LONGER CARRIES THE NUMBER, and the change is architectural rather than stylistic. It
+        // used to be the tile: it had the digit, the colour and the type size. A tile that SLIDES cannot be
+        // that, because the square does not move — it has a fixed position, focus and a label, and the tile
+        // crosses several of them on the way. The number moved to `ui/tiles-layer`, the layer that moves.
         //
-        // O que ficou aqui é o que uma CASA é: um lugar com nome, que se pode focar e que a engine pode
-        // perguntar. É também o que o leitor de tela sempre leu — o `aria-label` já substituía o conteúdo,
-        // então nada do que era anunciado deixou de ser.
+        // What stayed here is what a SQUARE is: a place with a name, which can take focus and which the engine
+        // can question. It is also what the screen reader always read — the `aria-label` already replaced the
+        // content, so nothing that was announced stopped being announced.
 
-        // O PAPEL vem da declaração, não de uma segunda cópia da regra aqui dentro. É o que faz o alto
-        // contraste e o realce concordarem com o que o sonar aponta.
+        // THE ROLE comes from the declaration, not from a second copy of the rule in here. It is what makes
+        // high contrast and the highlight agree with what the sonar points at.
         const papel = falante.roleAt(at);
         c.dataset.role = papel;
 
-        // O RÓTULO É A CÉLULA INTEIRA, e não só o número: quem ouve precisa de onde, do quê, e de se dá
-        // para juntar. `nameAt` responde o "quê" — inclusive a palavra traduzida para a casa vazia.
+        // THE LABEL IS THE WHOLE CELL, and not just the number: whoever is listening needs where, what, and
+        // whether it can merge. `nameAt` answers the "what" — including the translated word for an empty
+        // square.
         const nome = falante.nameAt(at)?.text ?? '';
         const params = { row: at.y + 1, col: at.x + 1, what: nome };
         c.setAttribute('aria-label', t(papel === 'goal' ? 'a11y.cellMergeable' : 'a11y.cell', params));

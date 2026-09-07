@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// AS CORES — e a tinta de cada uma é CALCULADA, não escolhida.
+// THE COLOURS — and the ink for each one is COMPUTED, not chosen.
 //
-// ========================= POR QUE ISTO É UM MÓDULO PURO =========================
-// Zero PIXI, zero DOM: é aritmética de cor. Assim o CONTRASTE de cada peça é verificável no project `node`,
-// sem navegador — e passa a ser gate em vez de boa intenção. `tests/palette.node.test.ts` reprova qualquer
-// par que não alcance a AA da WCAG 1.4.3, e mede quantos alcançam a AAA da 1.4.6.
+// ========================= WHY THIS IS A PURE MODULE =========================
+// Zero PIXI, zero DOM: it is colour arithmetic. That makes every tile's CONTRAST verifiable in the `node`
+// project, without a browser — and it becomes a gate instead of a good intention.
+// `tests/palette.node.test.ts` fails any pair that does not reach WCAG 1.4.3's AA, and counts how many reach
+// 1.4.6's AAA.
 //
-// ========================= A TINTA NÃO É ESCOLHIDA À MÃO, E É POR ISSO QUE ELA NÃO ERRA =========================
-// `inkFor()` escolhe entre uma tinta quase-preta e uma quase-branca pela que tiver MAIS contraste com o
-// fundo. Escolher à mão, cor a cor, é onde alguém acerta dez e erra a décima primeira — e a décima primeira
-// é a peça 2048, a única que a criança vai olhar por muito tempo. Aqui o erro não tem por onde entrar.
+// ========================= THE INK IS NOT PICKED BY HAND, WHICH IS WHY IT DOES NOT GET IT WRONG =========
+// `inkFor()` chooses between a near-black and a near-white ink by whichever has MORE contrast with the
+// background. Picking by hand, colour by colour, is where somebody gets ten right and the eleventh wrong —
+// and the eleventh is the 2048 tile, the one the child will look at longest. Here the mistake has no way in.
 //
-// ========================= E NENHUMA COR VEM DO 2048 ORIGINAL =========================
-// `docs/LICENSES.md` diz que nenhuma cor da paleta original é reusada. A identidade visual de Cirulli — os
-// bege e laranja — é desenho dele, e desenho é expressão. Esta rampa é fria→quente por outro caminho: começa
-// num azul de papel e termina no verde que a engine já usa para "conseguiu".
+// ========================= AND NO COLOUR COMES FROM THE ORIGINAL 2048 =========================
+// `docs/LICENSES.md` says no colour of the original palette is reused. Cirulli's visual identity — the beiges
+// and oranges — is his design, and design is expression. This ramp goes cool→warm by another route: it starts
+// at a paper blue and ends at the green the engine already uses for "you did it".
 
-/** Uma cor em `0xRRGGBB`, como a PIXI quer. */
+/** A colour as `0xRRGGBB`, the way PIXI wants it. */
 export type Cor = number;
 
 const canais = (c: Cor): [number, number, number] => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
 
-/** Luminância relativa da WCAG 2.x (§ relative luminance). */
+/** WCAG 2.x relative luminance (§ relative luminance). */
 export function luminancia(c: Cor): number {
   const [r, g, b] = canais(c).map((v) => {
     const s = v / 255;
@@ -30,67 +31,69 @@ export function luminancia(c: Cor): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** Razão de contraste da WCAG 2.x. 4,5 é a AA para texto normal; 7 é a AAA. */
+/** WCAG 2.x contrast ratio. 4.5 is AA for normal text; 7 is AAA. */
 export function contraste(a: Cor, b: Cor): number {
   const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
   return (x + 0.05) / (y + 0.05);
 }
 
 /**
- * As duas tintas candidatas. Não são `#000` e `#fff` puros de propósito: preto absoluto sobre cor saturada
- * cria halo em tela de matriz barata, e branco absoluto sobre fundo escuro "sangra" na mesma tela. O alvo
- * são os aparelhos do pilar 1, não um monitor de escritório.
+ * The two candidate inks. They are not pure `#000` and `#fff` on purpose: absolute black over a saturated
+ * colour haloes on a cheap matrix screen, and absolute white over a dark background "bleeds" on the same
+ * screen. The target is pillar 1's devices, not an office monitor.
  */
 export const TINTA_ESCURA: Cor = 0x14161f;
 export const TINTA_CLARA: Cor = 0xf6f8ff;
 
-/** A tinta que dá MAIS contraste sobre este fundo. Calculada, e por isso nunca esquecida. */
+/** The ink with MORE contrast over this background. Computed, and therefore never forgotten. */
 export const inkFor = (fundo: Cor): Cor =>
   contraste(fundo, TINTA_ESCURA) >= contraste(fundo, TINTA_CLARA) ? TINTA_ESCURA : TINTA_CLARA;
 
 /**
- * O fundo de cada peça, indexado pelo EXPOENTE. A posição 0 é a casa vazia.
+ * The background of each tile, indexed by EXPONENT. Position 0 is the empty square.
  *
- * Onze degraus, porque onze dobras é a rodada inteira, mais um extra para quem passar do 2048 sem que a
- * partida acabe por isso. A rampa é monotônica em luminância nos primeiros degraus e depois vira matiz: uma
- * criança com daltonismo distingue os primeiros pelo CLARO/ESCURO mesmo sem distinguir a cor, e os altos são
- * poucos e raros o bastante para o número ser a pista principal.
+ * Eleven steps, because eleven doublings is the whole round, plus one extra for anyone who goes past 2048
+ * without the round ending on it. The ramp is monotonic in luminance for the first steps and then turns to
+ * hue: a child with colour blindness tells the early ones apart by LIGHT/DARK even without telling the colours
+ * apart, and the high ones are few and rare enough that the number is the main cue.
+ *
+ * ⚠️ AND THE DEAD ZONE IS WHAT GAVE THIS RAMP ITS SHAPE, measured on 2026-09-05 when the gate failed two
+ * colours I had chosen myself. There is a band of luminance — roughly between 0.17 and 0.21 — where NEITHER
+ * ink reaches 4.5:1, because the colour is too far from both black and white at once. It is not solved by
+ * choosing better: it is solved by JUMPING the band. Hence the abrupt step between the 16 (light, dark ink)
+ * and the 32 (dark, light ink), which looks arbitrary and is the opposite of that.
  */
-// ⚠️ E A ZONA MORTA É O QUE DEU FORMA A ESTA RAMPA, medida em 2026-09-05 quando o gate reprovou duas cores
-// que eu mesmo tinha escolhido. Existe uma faixa de luminância — grosso modo entre 0,17 e 0,21 — em que
-// NENHUMA das duas tintas alcança 4,5:1, porque a cor está longe demais do preto e do branco ao mesmo tempo.
-// Não se resolve escolhendo melhor: resolve-se SALTANDO a faixa. Daí o degrau brusco entre o 16 (claro,
-// tinta escura) e o 32 (escuro, tinta clara), que parece arbitrário e é o oposto disso.
 export const FUNDO: readonly Cor[] = [
-  0x1d2130, // 0 — casa vazia: o buraco do tabuleiro          · 15,08:1
-  0xe8eef7, // 1 — 2                                          · 15,46:1
-  0xb9d0ec, // 2 — 4                                          · 11,42:1
-  0x86b3e3, // 3 — 8                                          ·  8,22:1
-  0x58a0e8, // 4 — 16    (último com tinta escura na descida)  ·  6,53:1
-  0x24528f, // 5 — 32    (salta a zona morta, e a tinta vira clara) · 7,39:1
-  0x6d4fb5, // 6 — 64                                         ·  5,76:1
-  0x9a3fa8, // 7 — 128                                        ·  5,42:1
-  0xb83c66, // 8 — 256                                        ·  5,11:1
-  0xa8481c, // 9 — 512                                        ·  5,48:1
-  0xd99a1f, // 10 — 1024 (volta ao claro para a reta final)    ·  7,38:1
-  0x34e29b, // 11 — 2048: o verde que a engine já usa para "conseguiu" · 10,73:1
-  0xffd23f, // 12+ — além do que a rodada pedia                · 12,49:1
+  0x1d2130, // 0 — empty square: the hole in the board                · 15.08:1
+  0xe8eef7, // 1 — 2                                                  · 15.46:1
+  0xb9d0ec, // 2 — 4                                                  · 11.42:1
+  0x86b3e3, // 3 — 8                                                  ·  8.22:1
+  0x58a0e8, // 4 — 16   (last with dark ink on the way down)           ·  6.53:1
+  0x24528f, // 5 — 32   (jumps the dead zone, and the ink flips light) ·  7.39:1
+  0x6d4fb5, // 6 — 64                                                 ·  5.76:1
+  0x9a3fa8, // 7 — 128                                                ·  5.42:1
+  0xb83c66, // 8 — 256                                                ·  5.11:1
+  0xa8481c, // 9 — 512                                                ·  5.48:1
+  0xd99a1f, // 10 — 1024 (back to light for the home stretch)          ·  7.38:1
+  0x34e29b, // 11 — 2048: the green the engine already uses for "you did it" · 10.73:1
+  0xffd23f, // 12+ — beyond what the round asked for                   · 12.49:1
 ];
 
-/** O fundo desta peça, com o último degrau valendo para tudo que passar dele. */
+/** This tile's background, with the last step covering everything past it. */
 export const fundoDe = (expoente: number): Cor => FUNDO[Math.min(expoente, FUNDO.length - 1)];
 
-/** A moldura do tabuleiro e o fundo da tela. */
+/** The board's frame and the screen's background. */
 export const MOLDURA: Cor = 0x2b3145;
 export const FUNDO_DA_TELA: Cor = 0x0d1018;
 
 /**
- * ALTO CONTRASTE POR PAPEL — o achado 8 do quiz, resolvido no lado do jogo porque é aqui que ele mora.
+ * HIGH CONTRAST BY ROLE — the quiz's finding 8, solved on the game's side because this is where it lives.
  *
- * Os modos `hcnew` da engine repintam TEXTURAS DE TILE da plataforma, e este jogo não tem os tiles dela.
- * O que viaja é a IDEIA, e ela vem do campo 2 do contrato: pinta-se pelo PAPEL, não pelo valor. Quem pode
- * fundir (`goal`) recebe a cor de destaque; quem só ocupa espaço (`structure`) fica no cinza; casa livre
- * (`free`) fica no fundo. A criança com baixa visão passa a ver A JOGADA em vez de decorar o tabuleiro.
+ * The engine's `hcnew` modes repaint the platformer's TILE TEXTURES, and this game does not have its tiles.
+ * What travels is the IDEA, and it comes from field 2 of the contract: paint by ROLE, not by value. Whatever
+ * can merge (`goal`) gets the highlight colour; whatever merely takes up space (`structure`) stays grey; a
+ * free square (`free`) stays background. The child with low vision starts seeing THE MOVE instead of
+ * memorising the board.
  */
 export const HC_POR_PAPEL: Readonly<Record<string, Cor>> = {
   goal: 0xffd23f,

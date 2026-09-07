@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A ENTRADA DO NAVEGADOR — e ela existe separada do `main.ts` por um motivo mecânico, não organizacional.
+// THE BROWSER ENTRY POINT — and it exists separately from `main.ts` for a mechanical reason, not an
+// organisational one.
 //
-// `main.ts` é importado pelos testes do project `node`, que não têm bundler para uma folha de estilo: um
-// `import '...css'` lá dentro quebraria a suíte de lógica inteira. Então a CSS e os painéis emprestados
-// entram AQUI, na única metade que só existe no navegador.
+// `main.ts` is imported by the `node` project's tests, which have no bundler for a stylesheet: an
+// `import '...css'` in there would break the whole logic suite. So the CSS and the borrowed panels come in
+// HERE, in the only half that exists solely in a browser.
 import '@the-inclusionist/engine/style.css';
 
 import { srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
@@ -19,8 +20,9 @@ const $ = <T extends Element = Element>(sel: string): T | null => document.query
 
 const motor = bootar();
 if (motor) {
-  // TIPOGRAFIA — emprestada inteira. O quiz mediu que este painel serve fora do gênero sem uma linha de
-  // mudança, e é a evidência mais forte de que a pilha de menus é da engine e não do jogo de plataforma.
+  // TYPOGRAPHY — borrowed whole. The quiz measured that this panel serves outside its genre without a line of
+  // change, and it is the strongest evidence that the menu stack belongs to the engine rather than to the
+  // platformer.
   const typo = initSettingsTypo({ $, srSay, store, root: document.documentElement });
   $('#open-typo')?.addEventListener('click', () => {
     const ov = $<HTMLElement>('#typo');
@@ -34,9 +36,9 @@ if (motor) {
   $('#typo-close')?.addEventListener('click', fechar);
   motor.overlays.register('typo', { close: fechar, inEscapeChain: true });
 
-  // ALTO CONTRASTE POR PAPEL. É deste jogo, e não da engine — o achado 8 do quiz: os modos `hcnew` dela
-  // repintam texturas de tile da plataforma, e este jogo não tem os tiles dela. O que viaja é a IDEIA
-  // (pintar pelo campo 2 do contrato), e ela mora em `render/palette`.
+  // HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
+  // `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels
+  // is the IDEA (paint by field 2 of the contract), and it lives in `render/palette`.
   const hc = $<HTMLButtonElement>('#toggle-hc');
   hc?.addEventListener('click', () => {
     const ligado = document.documentElement.dataset.hc === '1';
@@ -46,17 +48,18 @@ if (motor) {
     srSay(hc.textContent ?? '');
   });
 
-  // DALTONISMO: o seletor é deste jogo; os seis filtros já foram montados pelo `createGame`. `VIZ_DOM_ONLY`
-  // é a resposta DECLARADA da engine para "o que funciona sem canvas" — antes cada consumidor a recalculava
-  // misturando duas perguntas diferentes.
+  // COLOUR VISION: the selector belongs to this game; the six filters were already installed by `createGame`.
+  // `VIZ_DOM_ONLY` is the engine's DECLARED answer to "what works without a canvas" — before it, every
+  // consumer recomputed it by mixing two different questions.
   const seletor = $<HTMLSelectElement>('#viz');
   const alvo = $<HTMLElement>('#game-region');
   if (seletor && alvo && motor.cvdFilters > 0) {
     const opcoes = VIZ_DOM_ONLY.filter((m) => !simulatesDisability(m.key));
-    // ⚠️ POR `new Option`, e não por `innerHTML` com um template. O texto aqui é NOSSO — vem de `VIZ_DOM_ONLY`
-    // e do dicionário —, então não há injeção a temer hoje; mas o dia em que uma dessas fontes passar a
-    // aceitar texto de fora, o defeito nasce pronto e invisível. Construir o nó custa o mesmo e fecha a
-    // classe inteira. (O `consumer-quiz` da engine ainda usa o template: é o mesmo conserto, do lado dela.)
+    // ⚠️ VIA `new Option`, not via `innerHTML` with a template. The text here is OURS — it comes from
+    // `VIZ_DOM_ONLY` and from the dictionary — so there is no injection to fear today; but the day one of
+    // those sources starts accepting text from outside, the defect is born ready-made and invisible. Building
+    // the node costs the same and closes the whole class. (The engine's `consumer-quiz` still uses the
+    // template: same fix, on its side.)
     seletor.replaceChildren(...opcoes.map((m) => new Option(t(m.nome), m.key)));
     seletor.addEventListener('change', () => {
       alvo.style.filter = VIZ_FILTER[seletor.value] || '';
@@ -64,9 +67,9 @@ if (motor) {
     });
   }
 
-  // TOQUE: a metade PURA de `input/touch`. `padPxPerMm` ancora o milímetro real no aparelho (WCAG 2.5.5), e
-  // os quatro botões passam a ter 11 mm MEDIDOS em vez de um palpite em pixels. O `initTouch` inteiro fica
-  // de fora de propósito: o pad dele é uma cruz de plataforma com doze ids fixos que este jogo não quer.
+  // TOUCH: the PURE half of `input/touch`. `padPxPerMm` anchors the real millimetre to the device (WCAG 2.5.5),
+  // and the four buttons get 11 mm MEASURED instead of a guess in pixels. The whole `initTouch` is deliberately
+  // left out: its pad is a platformer d-pad with twelve fixed ids this game does not want.
   const pxmm = padPxPerMm(matchMedia('(pointer: coarse)').matches, window.innerWidth, window.innerHeight);
   document.documentElement.style.setProperty('--alvo-toque', (11 * pxmm).toFixed(1) + 'px');
 }

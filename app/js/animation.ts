@@ -1,105 +1,108 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A ANIMAÇÃO DE DESLIZE — a parte que é ARITMÉTICA, separada da parte que é relógio.
+// THE SLIDE ANIMATION — the half that is ARITHMETIC, kept apart from the half that is a clock.
 //
-// ========================= UM RELÓGIO, UMA CURVA, DOIS PINTORES =========================
-// O tabuleiro é desenhado por duas camadas: o canvas pinta a figura, o DOM escreve os números. Numa animação
-// isso vira um risco novo — se cada camada tivesse a própria animação (uma em `requestAnimationFrame`, outra
-// numa transição de CSS), elas andariam com relógios diferentes e o número descolaria da peça no meio do
-// movimento. Já perdemos uma tarde com as duas camadas medidas por réguas diferentes PARADAS; em movimento
-// seria pior e mais difícil de ver.
+// ========================= ONE CLOCK, ONE CURVE, TWO PAINTERS =========================
+// The board is drawn by two layers: the canvas paints the picture, the DOM writes the numbers. An animation
+// turns that into a new risk — if each layer had its own animation (one in `requestAnimationFrame`, the other
+// in a CSS transition), they would run on different clocks and the number would come unstuck from its tile
+// mid-move. An afternoon was already lost to the two layers measured by different rulers while STANDING
+// STILL; in motion it would be worse and harder to see.
 //
-// Então: **um só `requestAnimationFrame`, um só `t`, uma só curva** — e as duas camadas recebem as MESMAS
-// coordenadas, calculadas aqui. Ficarem juntas deixa de ser disciplina e passa a ser construção.
+// So: **one `requestAnimationFrame`, one `t`, one curve** — and both layers receive the SAME coordinates,
+// computed here. Staying together stops being discipline and becomes construction.
 //
-// ========================= PURO, PORQUE O RELÓGIO NÃO É TESTÁVEL E A CONTA É =========================
-// Nada aqui sabe o que é `requestAnimationFrame`, `Date` ou canvas. Entra `t` entre 0 e 1, sai posição em
-// pixels lógicos. O laço vive em `boot/main.ts`, que é onde o tempo mora.
+// ========================= PURE, BECAUSE THE CLOCK IS NOT TESTABLE AND THE MATHS IS =========================
+// Nothing here knows what `requestAnimationFrame`, `Date` or a canvas is. A `t` between 0 and 1 goes in, a
+// position in logical pixels comes out. The loop lives below, with the clock injected.
 import type { Movimento } from './board.ts';
 import { SIZE, type Board } from './board.ts';
 import { cellRect } from './geometry.ts';
 
 /**
- * A duração de uma jogada, em milissegundos.
+ * The duration of a move, in milliseconds.
  *
- * ⚠️ CURTA DE PROPÓSITO. Este jogo é de turno do jogador (campo 6 do contrato: `tick: 'player'`), e uma
- * criança que joga bem encadeia jogadas depressa. Animação longa em jogo de turno vira espera, e espera vira
- * a criança apertando a tecla de novo achando que não funcionou. 110 ms é o suficiente para o olho seguir a
- * peça e curto o bastante para não entrar no caminho.
+ * ⚠️ SHORT ON PURPOSE. This is a player-turn game (field 6 of the contract: `tick: 'player'`), and a child who
+ * plays well chains moves quickly. A long animation in a turn-based game becomes waiting, and waiting becomes
+ * the child pressing the key again thinking it did not work. 110 ms is enough for the eye to follow the tile
+ * and short enough to stay out of the way.
  */
 export const DURACAO_MS = 110;
 
 /**
- * ⚠️ E ELA É ZERO SOB `prefers-reduced-motion`, sem passar por menu nenhum.
+ * ⚠️ AND IT IS ZERO UNDER `prefers-reduced-motion`, with no menu in between.
  *
- * É a WCAG 2.3.3 (Animation from Interactions), e a decisão de não exigir que a criança ache uma opção:
- * quem precisa disso já configurou no sistema operacional, e o jogo tem de obedecer sem ser perguntado.
+ * That is WCAG 2.3.3 (Animation from Interactions), and the decision not to require the child to find an
+ * option: whoever needs this has already configured it in the operating system, and the game has to obey
+ * without being asked.
  *
- * ⚠️ ACHADO DA ENGINE, anotado aqui porque é onde ele dói: o `platform/storage` dela guarda `reducedMotion`,
- * mas o valor é um objeto de bandeiras do JOGO DE PLATAFORMA — `parallax`, `decor`, `items`, `particles`.
- * Não existe um "movimento reduzido" GERAL que um consumidor de outro gênero possa ler, e escolher a
- * bandeira `items` para decidir sobre peças de tabuleiro seria adivinhar a forma da pergunta. É a mesma
- * família do achado 2 (o dicionário): uma configuração modelada para um gênero, que não atravessa.
+ * ⚠️ AN ENGINE FINDING, noted here because this is where it hurts: the engine's `platform/storage` keeps a
+ * `reducedMotion` entry, but the value is a set of flags belonging to the PLATFORMER — `parallax`, `decor`,
+ * `items`, `particles`. There is no GENERAL "reduced motion" a consumer of another genre can read, and
+ * picking the `items` flag to decide about board tiles would be guessing the shape of the question. It is the
+ * same family as finding 2 (the dictionary): a setting modelled for one genre, which does not travel.
  */
 export const duracaoDaJogada = (movimentoReduzido: boolean): number => (movimentoReduzido ? 0 : DURACAO_MS);
 
 /**
- * Vale a pena animar AGORA?
+ * Is it worth animating RIGHT NOW?
  *
- * ⚠️ NÃO SE ANIMA NUMA ABA ESCONDIDA, e isto é um defeito MEDIDO e não uma precaução. Num documento oculto o
- * navegador PARA o `requestAnimationFrame` — não o atrasa, para. O laço que espera o próximo quadro nunca é
- * chamado, a promessa nunca resolve, e o quadro final — aquele que desenha o tabuleiro NOVO — nunca chega.
+ * ⚠️ NOTHING IS ANIMATED IN A HIDDEN TAB, and this is a MEASURED defect rather than a precaution. In a hidden
+ * document the browser STOPS `requestAnimationFrame` — it does not delay it, it stops it. The loop waiting for
+ * the next frame is never called, the promise never resolves, and the final frame — the one that draws the NEW
+ * board — never arrives.
  *
- * O resultado observado em 2026-09-05, com o painel do navegador oculto: o modelo já em `4:2 12:4` e a tela
- * ainda mostrando as duas peças de antes, com o contador em "1 de 11" em vez de "2 de 11". Para a criança
- * isso é trocar de aba (ou o tablet apagar a tela) no meio de uma jogada e voltar para um tabuleiro que
- * mente — até ela jogar de novo.
+ * Observed on 2026-09-05 with the browser pane hidden: the model already at `4:4 12:4` and the screen still
+ * showing the two previous tiles, with the counter reading "1 of 11" instead of "2 of 11". For the child that
+ * is switching tabs (or the tablet blanking its screen) mid-move and coming back to a board that lies — until
+ * she plays again.
  *
- * A resposta certa não é animar mais rápido: é NÃO ANIMAR. Ninguém está olhando, e o que importa é que o
- * estado desenhado alcance o estado real imediatamente.
+ * The right answer is not to animate faster: it is NOT TO ANIMATE. Nobody is watching, and what matters is
+ * that the drawn state catches up with the real one immediately.
  */
 export const podeAnimar = (duracao: number, documentoVisivel: boolean): boolean =>
   duracao > 0 && documentoVisivel;
 
 /**
- * Quanto esperar antes de desistir do relógio e ir direto ao quadro final.
+ * How long to wait before giving up on the clock and going straight to the final frame.
  *
- * O `podeAnimar` cobre o caso NOMEADO (aba escondida). Isto cobre o resto: navegador que estrangula quadros
- * por bateria, aparelho que engasga, uma janela minimizada que não conta como `hidden`. Três vezes a duração
- * é folga bastante para uma animação honesta e curto o suficiente para ninguém ver o tabuleiro parado.
+ * `podeAnimar` covers the NAMED case (a hidden tab). This covers the rest: a browser throttling frames for
+ * battery, a device stuttering, a minimised window that does not count as `hidden`. Three times the duration
+ * is ample slack for an honest animation and short enough that nobody sees the board sitting still.
  *
- * ⚠️ E o socorro é o QUADRO FINAL, nunca um estado intermediário: chegar atrasado ao lugar certo é aceitável,
- * parar no meio do caminho não é.
+ * ⚠️ And the rescue is the FINAL FRAME, never an intermediate state: arriving late at the right place is
+ * acceptable, stopping halfway is not.
  */
 export const socorroMs = (duracao: number): number => duracao * 3 + 50;
 
 /**
- * A curva. `easeOut` quadrática: sai rápido e freia no fim.
+ * The curve. A quadratic `easeOut`: leaves fast and brakes at the end.
  *
- * A escolha não é estética. Numa peça que desliza para uma parede, frear na chegada é o que faz o olho
- * entender que ela ENCOSTOU em vez de ter sido teletransportada — e é o oposto de um `easeIn`, que faria a
- * peça parecer cair.
+ * The choice is not decorative. For a tile sliding into a wall, braking on arrival is what makes the eye
+ * understand that it TOUCHED rather than being teleported — and it is the opposite of an `easeIn`, which
+ * would make the tile look like it was falling.
  */
 export const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
 
-/** Onde uma peça está, em pixels lógicos, no instante `t` (0 = saída, 1 = chegada). */
+/** Where a tile is, in logical pixels, at instant `t` (0 = departure, 1 = arrival). */
 export interface Peca {
   readonly x: number;
   readonly y: number;
   readonly exponent: number;
   /**
-   * A CASA A QUE ELA PERTENCE — o destino, para quem está em voo; a própria casa, para quem está parada.
+   * THE SQUARE IT BELONGS TO — the destination for a tile in flight; its own square for one at rest.
    *
-   * ⚠️ Ela vem junto porque quem desenha precisa perguntar o PAPEL daquela casa à declaração (campo 2 do
-   * contrato), e derivar o índice de volta a partir de `x`/`y` seria desfazer a conta da geometria com
-   * divisão e arredondamento — uma segunda implementação da mesma coisa, no lugar mais fácil de errar.
+   * ⚠️ It travels along because whoever draws has to ask the declaration for that square's ROLE (field 2 of
+   * the contract), and deriving the index back from `x`/`y` would mean undoing the geometry's arithmetic with
+   * division and rounding — a second implementation of the same thing, in the easiest place to get it wrong.
    */
   readonly at: number;
 }
 
-/** Recorta `t` em [0,1]. Um `t` fora do intervalo vem de relógio que pulou, e extrapolar joga a peça fora. */
+/** Clamps `t` to [0,1]. A `t` outside the range comes from a clock that jumped, and extrapolating throws the
+ *  tile off the board. */
 const travar = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
 
-/** A posição de UMA peça no instante `t`. */
+/** The position of ONE tile at instant `t`. */
 export function posicaoDe(mov: Movimento, t: number): Peca {
   const a = cellRect(mov.from);
   const b = cellRect(mov.to);
@@ -108,29 +111,29 @@ export function posicaoDe(mov: Movimento, t: number): Peca {
 }
 
 /**
- * TODAS as peças em movimento, no instante `t`.
+ * ALL the tiles in motion, at instant `t`.
  *
- * As duas metades de uma fusão continuam sendo DUAS peças até `t = 1`, uma em cima da outra na chegada. É o
- * que se vê num 2048 bem-feito: as duas encostam e só então viram uma — e é por isso que `slide` devolve os
- * dois caminhos em vez de um.
+ * The two halves of a merge remain TWO tiles until `t = 1`, one on top of the other on arrival. It is what a
+ * well-made 2048 shows: the two meet and only then become one — and it is why `slide` returns both paths
+ * instead of one.
  */
 export const pecasNoInstante = (movimentos: readonly Movimento[], t: number): Peca[] =>
   movimentos.map((m) => posicaoDe(m, t));
 
-/* ===================== O LAÇO =====================
+/* ===================== THE LOOP =====================
  *
- * ⚠️ ELE MORAVA DENTRO DO `bootar()`, e mudou-se para cá por uma razão medida: lá dentro era INTESTÁVEL. O
- * relógio de quadros do navegador não roda num painel oculto, e a tentativa de observá-lo ao vivo devolveu
- * zero quadros três vezes seguidas — não porque o laço estivesse errado, mas porque o ambiente não o deixava
- * correr. Ficar dependendo do olho para saber se o cancelamento e o socorro funcionam é o que este projeto
- * chama de gate que nunca pôde ficar vermelho.
+ * ⚠️ IT USED TO LIVE INSIDE `bootar()`, and it moved here for a measured reason: in there it was UNTESTABLE.
+ * The browser's frame clock does not run in a hidden pane, and trying to observe it live returned zero frames
+ * three times in a row — not because the loop was wrong, but because the environment would not let it run.
+ * Depending on the eye to know whether cancellation and the rescue work is what this project calls a gate
+ * that could never go red.
  *
- * A saída é a mesma que o `core/rng` da engine já usa para o acaso: **o relógio ENTRA por parâmetro**. Com
- * ele injetado, um teste de nó avança o tempo à mão e verifica o que só acontece nas bordas — a jogada que
- * cancela a anterior, o socorro que salva o quadro final, o `t` que nunca passa de 1.
+ * The way out is the one the engine's `core/rng` already uses for randomness: **the clock ENTERS as a
+ * parameter**. With it injected, a node test advances time by hand and checks what only happens at the edges
+ * — the move that cancels the previous one, the rescue that saves the final frame, the `t` that never exceeds 1.
  */
 
-/** O relógio, injetado. No navegador são as funções nativas; num teste, um relógio de mentira. */
+/** The clock, injected. In a browser these are the native functions; in a test, a fake one. */
 export interface Relogio {
   readonly agora: () => number;
   readonly proximoQuadro: (fn: (agora: number) => void) => void;
@@ -139,15 +142,15 @@ export interface Relogio {
 }
 
 export interface Animador {
-  /** Corre uma jogada. Resolve quando o movimento acaba — por chegada, por cancelamento ou por socorro. */
+  /** Runs one move. Resolves when the motion ends — by arrival, by cancellation or by rescue. */
   correr(movimentos: readonly Movimento[], duracao: number, documentoVisivel: boolean): Promise<void>;
 }
 
 /**
- * O laço, com o relógio e o pintor injetados.
+ * The loop, with the clock and the painter injected.
  *
- * `aoQuadro` recebe as peças de cada instante e desenha as DUAS camadas com elas — é o que garante que canvas
- * e DOM andem juntos por construção, e não por disciplina.
+ * `aoQuadro` receives the tiles for each instant and draws BOTH layers with them — which is what guarantees
+ * canvas and DOM move together by construction rather than by discipline.
  */
 export function criarAnimador(relogio: Relogio, aoQuadro: (pecas: readonly Peca[]) => void): Animador {
   let atual = 0;
@@ -168,15 +171,14 @@ export function criarAnimador(relogio: Relogio, aoQuadro: (pecas: readonly Peca[
           pronto();
         };
 
-        // O SOCORRO: se o relógio de quadros parar, a promessa resolve assim mesmo e o chamador desenha o
-        // quadro final. Chegar atrasado ao lugar certo é aceitável; parar no meio do caminho não é.
+        // THE RESCUE: if the frame clock stops, the promise resolves anyway and the caller draws the final
+        // frame. Arriving late at the right place is acceptable; stopping halfway is not.
         espera = relogio.depoisDe(terminar, socorroMs(duracao));
 
         const passo = (agora: number): void => {
-          // ⚠️ UMA JOGADA NOVA CANCELA A ANTERIOR em vez de enfileirar. Uma criança que segura a seta produz
-          // jogadas mais depressa que a duração da animação, e enfileirar deixaria o tabuleiro DEVENDO
-          // animações — o estado na tela atrasado em relação ao real, que é a pior forma de um jogo de turno
-          // mentir.
+          // ⚠️ A NEW MOVE CANCELS THE PREVIOUS ONE instead of queueing. A child holding the arrow key produces
+          // moves faster than the animation lasts, and queueing would leave the board OWING animations — the
+          // state on screen lagging the real one, which is the worst way a turn-based game can lie.
           if (meu !== atual) return terminar();
           const t = (agora - inicio) / duracao;
           aoQuadro(pecasNoInstante(movimentos, t));
@@ -189,7 +191,7 @@ export function criarAnimador(relogio: Relogio, aoQuadro: (pecas: readonly Peca[
   };
 }
 
-/** O relógio de verdade. Uma linha, e é a única parte disto que um teste não consegue exercitar. */
+/** The real clock. One line, and the only part of this a test cannot exercise. */
 export const relogioDoNavegador = (win: Window): Relogio => ({
   agora: () => win.performance.now(),
   proximoQuadro: (fn) => { win.requestAnimationFrame(fn); },
@@ -197,7 +199,7 @@ export const relogioDoNavegador = (win: Window): Relogio => ({
   cancelarEspera: (id) => win.clearTimeout(id),
 });
 
-/** As peças de um tabuleiro PARADO — o quadro final, e o que se desenha quando não há animação. */
+/** The tiles of a board AT REST — the final frame, and what is drawn when there is no animation. */
 export function pecasParadas(board: Board): Peca[] {
   const out: Peca[] = [];
   for (let i = 0; i < SIZE * SIZE; i++) {

@@ -1,73 +1,75 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// pt-BR — A BASE, e o arquivo que DEFINE o conjunto de chaves.
+// pt-BR — THE BASE, and the file that DEFINES the key set.
 //
-// ========================= AS TRÊS LÍNGUAS SÃO PISO, NÃO META =========================
-// O pilar 3 do ADR-0010 pede pt-BR, inglês e espanhol como MÍNIMO. Aqui o espanhol é neutro
-// latino-americano (`computadora`, `ustedes`, sem `vosotros`) e o inglês é americano — decisões de LÉXICO,
-// tomadas dentro do dicionário. A etiqueta BCP-47 continua sendo `en`/`es` sem região, de propósito: a
-// engine deixa o navegador escolher a variante local, e fixar `en-US` imporia sotaque americano a quem
-// estivesse na Índia ou na Nigéria.
+// ========================= THREE LANGUAGES ARE A FLOOR, NOT A TARGET =========================
+// Pillar 3 of ADR-0010 asks for pt-BR, English and Spanish as a MINIMUM. Here the Spanish is neutral Latin
+// American (`computadora`, `ustedes`, no `vosotros`) and the English is American — LEXICAL decisions, taken
+// inside the dictionary. The BCP-47 tag stays a bare `en`/`es` on purpose: the engine lets the browser pick
+// the local variant, and pinning `en-US` would impose an American accent on someone in India or Nigeria.
 //
-// ========================= A FRONTEIRA, APLICADA A ESTE JOGO =========================
-// ⚠️ MATEMÁTICA NÃO É DISCIPLINA DE IDIOMA. Não há aqui nenhum conteúdo que atravesse sem traduzir: `2 + 2`
-// independe de língua, então o enunciado inteiro traduz — inclusive "dobra", "junte" e "peça". O que NÃO
-// entra em chave nenhuma é o ALGARISMO: `8` é `8` em português, inglês e espanhol, e mandá-lo pelo `t()`
-// criaria 2048 chaves para traduzir um dígito. Ver `declaration.ts`, campo 3.
+// ========================= THE BOUNDARY, APPLIED TO THIS GAME =========================
+// ⚠️ MATHEMATICS IS NOT A LANGUAGE SUBJECT. There is no content here that passes through untranslated: `2 + 2`
+// is language-independent, so the whole prompt translates — including "doubling", "merge" and "tile". What
+// enters no key at all is the DIGIT: `8` is `8` in Portuguese, English and Spanish, and sending it through
+// `t()` would create 2048 keys to translate one numeral. See `declaration.ts`, field 3.
 //
-// ========================= COMO ISTO CHEGA À ENGINE =========================
-// Por `registerDict()` (engine, `core/i18n`), no boot e antes de qualquer texto. Antes de 2026-09-05 não
-// havia porta: os locales da engine entram por um glob resolvido no build DELA, e um jogo instalado como
-// pacote não tinha como registrar as próprias chaves. O xadrez pagou esse preço escrevendo um segundo
-// sistema de i18n inteiro; este jogo usa o da engine.
+// ========================= HOW THIS REACHES THE ENGINE =========================
+// Through `registerDict()` (engine, `core/i18n`), at boot and before any text. Before 2026-09-05 there was no
+// door: the engine's locales arrive through a glob resolved in ITS build, and a game installed as a package
+// had no way to register its own keys. The chess paid that price by writing a second i18n system whole; this
+// game uses the engine's.
+//
+// ⚠️ THE VALUES BELOW STAY IN PORTUGUESE, and that is not an exception to the English-prose rule — it is the
+// rule working. This is i18n CONTENT, not prose about the code.
 
 export const pt = {
-  /* ---- identidade ---- */
+  /* ---- identity ---- */
   'game.title': '2048 · Potência de 2',
   'game.tagline': 'Junte peças iguais e dobre até 2048.',
 
-  /* ---- o que a engine pergunta pela declaração (campos 3 e 5) ---- */
+  /* ---- what the engine asks through the declaration (fields 3 and 5) ---- */
   'cell.empty': 'vazio',
   'hud.nome.dobras': 'dobras',
 
   /* ---- HUD ---- */
   'hud.score': 'Pontos',
   'hud.best': 'Maior peça',
-  // ⚠️ Sem "recorde". O ADR-0037 diz que não existe save e que o Inclusionista não guarda nada sobre uma
-  // criança; o placar vive a rodada e morre com ela. A ausência está aqui, escrita, para não ser lida como
-  // esquecimento por quem comparar com os forks.
+  // ⚠️ No "best score". ADR-0037 says there is no save and the Inclusionist keeps nothing about a child; the
+  // score lives for the round and dies with it. The absence is written down here so that anyone comparing
+  // against the forks does not read it as an oversight.
   'hud.objective': 'Chegue à peça 2048',
 
-  /* ---- a grade acessível (o DOM que fica sobre o canvas) ---- */
+  /* ---- the accessible grid (the DOM that sits over the canvas) ---- */
   'a11y.board': 'Tabuleiro de {cols} por {rows}',
   'a11y.cell': 'Linha {row}, coluna {col}: {what}',
   'a11y.cellMergeable': 'Linha {row}, coluna {col}: {what}, pode juntar',
   'a11y.instructions': 'Use as setas para empurrar o tabuleiro. Tabulação move o cursor de leitura.',
 
-  /* ---- o que se anuncia depois de uma jogada ---- */
+  /* ---- what is announced after a move ---- */
   'move.none': 'Nada se move para {dir}.',
   'move.merged': 'Juntou: {pairs}.',
   'move.pair': '{a} e {a} viraram {b}',
   'move.spawned': 'Apareceu {value} na linha {row}, coluna {col}.',
   'move.doubles': '{have} de {need} dobras.',
 
-  /* ---- direções, faladas ---- */
+  /* ---- directions, spoken ---- */
   'dir.left': 'a esquerda',
   'dir.right': 'a direita',
   'dir.up': 'cima',
   'dir.down': 'baixo',
 
-  /* ---- fim de rodada ---- */
-  // ⚠️ Sem "continuar jogando" depois do 2048 e sem caça à pontuação: é o laço de compulsão que o ADR-0006
-  // nomeia, e o ADR-0049 diz que a única celebração é o crescimento. A rodada tem um fim, e ele é dizível.
+  /* ---- end of round ---- */
+  // ⚠️ No "keep playing" past 2048 and no score chasing: that is the compulsion loop ADR-0006 names, and
+  // ADR-0049 says the only celebration is growth. The round has an end, and the end is sayable.
   'end.win': 'Você chegou a 2048. São onze dobras, do começo até aqui.',
   'end.stuck': 'Não há mais jogadas. A maior peça foi {value}, que são {doubles} dobras.',
   'end.again': 'Jogar outra vez',
 } as const;
 
-/** Toda chave deste jogo. Os outros idiomas são tipados por ela, então esquecer uma é erro de compilação. */
+/** Every key of this game. The other languages are typed from it, so forgetting one is a compile error. */
 export type Chave = keyof typeof pt;
 
-/** A forma de um dicionário: exatamente as mesmas chaves, nem uma a mais nem uma a menos. */
+/** The shape of a dictionary: exactly the same keys, not one more and not one fewer. */
 export type Dicionario = Record<Chave, string>;
 
 export default pt satisfies Dicionario;

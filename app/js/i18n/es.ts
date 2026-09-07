@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// es — español NEUTRO latinoamericano, por elección léxica y no por etiqueta.
+// es — NEUTRAL Latin American Spanish, by lexical choice rather than by tag.
 //
-// La etiqueta BCP-47 sigue siendo `es` a secas: la engine se la entrega así al navegador para que este elija
-// la variante local. Lo neutro está en las PALABRAS — se usa `ustedes` y nunca `vosotros`, y se evita el
-// vocabulario que solo se entiende en una región. Un niño en Lima, en Bogotá o en Asunción tiene que leer
-// esto sin tropezar.
+// The BCP-47 tag stays a bare `es`: the engine hands it to the browser that way so the browser picks the local
+// variant. What is neutral lives in the WORDS — `ustedes` and never `vosotros`, and no vocabulary that only
+// one region understands. A child in Lima, in Bogotá or in Asunción has to read this without stumbling.
+//
+// ⚠️ The VALUES below stay in Spanish, which is not an exception to the English-prose rule — it is the rule
+// working. This is i18n content, not prose about the code.
 import type { Dicionario } from './pt.ts';
 
 export const es: Dicionario = {

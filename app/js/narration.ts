@@ -1,40 +1,40 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// O QUE A CRIANÇA OUVE — separado do DOM, porque é o produto e não um efeito colateral dele.
+// WHAT THE CHILD HEARS — kept away from the DOM, because it is the product and not a side effect of it.
 //
-// ========================= POR QUE ISTO SAIU DO BOOT =========================
-// A frase estava montada dentro do ouvinte de teclado do `boot/main.ts`, e lá ela só podia ser verificada
-// abrindo um navegador e escutando. O `consumer-quiz` da engine já tinha resolvido esse mesmo problema do
-// jeito certo — `respostaTexto()` é uma função pura, exportada, com a justificativa escrita ao lado:
-// *"Separado do DOM porque é o que a criança cega RECEBE"*. Isto é a mesma decisão, aplicada aqui.
+// ========================= WHY THIS LEFT THE BOOT =========================
+// The sentence was assembled inside `boot/main.ts`'s keydown handler, and there it could only be checked by
+// opening a browser and listening. The engine's `consumer-quiz` had already solved the same problem the right
+// way — `respostaTexto()` is a pure, exported function, with the justification written beside it:
+// *"kept away from the DOM because it is what the blind child RECEIVES"*. This is that decision, applied here.
 //
-// O ganho é concreto e foi medido: uma tentativa de conferir o anúncio no navegador ficou presa porque o
-// `srSay` da engine escreve no QUADRO SEGUINTE (`requestAnimationFrame`, de propósito — é o que força o
-// leitor a reanunciar texto repetido), e num painel oculto não há quadro seguinte. A frase, aqui, não
-// depende de quadro nenhum.
+// The gain is concrete and it was measured: an attempt to check the announcement in the browser hung, because
+// the engine's `srSay` writes on the NEXT FRAME (`requestAnimationFrame`, on purpose — that is what forces a
+// screen reader to re-announce repeated text), and in a hidden pane there is no next frame. The sentence, here,
+// depends on no frame at all.
 //
-// ========================= UMA FRASE, TRÊS PARTES, NESTA ORDEM =========================
-// O que fundiu · o que apareceu · como está a rodada. A ordem não é gosto: quem ouve precisa primeiro do
-// RESULTADO da própria ação, depois da mudança que não pediu, e por último do estado. Invertida, a criança
-// ouve o placar antes de saber se a jogada dela deu certo.
+// ========================= ONE SENTENCE, THREE PARTS, IN THIS ORDER =========================
+// What merged · what appeared · how the round stands. The order is not taste: whoever is listening needs the
+// RESULT of their own action first, then the change they did not ask for, and the state last. Inverted, the
+// child hears the score before knowing whether her move worked.
 import type { Merge, Spawn } from './board.ts';
 import { SIZE } from './board.ts';
 
-/** A tradução, injetada. Um teste passa um `t` que marca a chave e mede QUAL foi pedida. */
+/** The translator, injected. A test passes a `t` that marks the key and measures WHICH one was asked for. */
 export type Traduz = (chave: string, params?: Record<string, string | number>) => string;
 
 export interface Jogada {
   readonly merges: readonly Merge[];
   readonly nascida: Spawn | null;
-  /** `null` quando a rodada continua; a chave do fim quando ela acabou. */
+  /** `null` while the round continues; the end key once it is over. */
   readonly fim: { readonly chave: 'end.win' | 'end.stuck'; readonly maior: number } | null;
 }
 
 /**
- * A frase de uma jogada que MUDOU alguma coisa.
+ * The sentence for a move that CHANGED something.
  *
- * ⚠️ CADA FUSÃO É DITA COM OS DOIS PARCELAS E O RESULTADO — "2 e 2 viraram 4" — e não só com o resultado.
- * É a diferença entre narrar um jogo e ENSINAR o que ele é sobre: a criança que não vê a tela recebe a conta
- * inteira, que é exatamente o conteúdo curricular que este jogo carrega.
+ * ⚠️ EACH MERGE IS SPOKEN WITH BOTH ADDENDS AND THE RESULT — "2 and 2 became 4" — and not with the result
+ * alone. It is the difference between narrating a game and TEACHING what it is about: the child who cannot
+ * see the screen receives the whole sum, which is exactly the curricular content this game carries.
  */
 export function narrarJogada(j: Jogada, t: Traduz): string {
   const partes: string[] = [];
@@ -63,6 +63,6 @@ export function narrarJogada(j: Jogada, t: Traduz): string {
   return partes.join(' ');
 }
 
-/** A frase de uma jogada que NÃO mudou nada. Curta de propósito: é resposta a uma tentativa, não um evento. */
+/** The sentence for a move that changed NOTHING. Short on purpose: it answers an attempt, it is not an event. */
 export const narrarSemMovimento = (dir: string, t: Traduz): string =>
   t('move.none', { dir: t(`dir.${dir}`) });

@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// AS PEÇAS QUE SE MEXEM — em DOM, com os números dentro delas.
+// THE TILES THAT MOVE — in the DOM, with the numbers inside them.
 //
-// ========================= POR QUE A PEÇA SAIU DE DENTRO DA CÉLULA =========================
-// Antes da animação, o número morava dentro do `gridcell`: célula e peça eram a mesma coisa. Uma peça que
-// desliza não pode ser isso, porque a CÉLULA não se move — ela é uma casa do tabuleiro, com posição fixa,
-// foco e rótulo. O que se move é a peça, e ela atravessa várias casas no caminho.
+// ========================= WHY THE TILE LEFT THE CELL =========================
+// Before the animation, the number lived inside the `gridcell`: cell and tile were the same thing. A tile that
+// slides cannot be that, because the CELL does not move — it is a square of the board, with a fixed position,
+// focus and a label. What moves is the tile, and it crosses several squares on the way.
 //
-// Então são duas camadas, e cada uma tem um dono:
-//   · `ui/board-dom` — as 16 casas: `role="grid"`, foco, `aria-label`. NÃO se movem, nunca.
-//   · este arquivo   — as peças: cor, número, e a posição que muda. `aria-hidden="true"`.
+// So there are two layers, each with an owner:
+//   · `ui/board-dom` — the 16 squares: `role="grid"`, focus, `aria-label`. They NEVER move.
+//   · this file      — the tiles: the number and the position that changes. `aria-hidden="true"`.
 //
-// ⚠️ E O `aria-hidden` NÃO ESCONDE INFORMAÇÃO DE NINGUÉM, o que é o único jeito de ele ser legítimo. O nome
-// acessível de uma casa já vinha do `aria-label` — "Linha 2, coluna 2: 4" —, e um `aria-label` sempre
-// substituiu o conteúdo da célula: nenhum leitor de tela lia o algarismo solto antes, e nenhum deixa de ler
-// o número agora. O que muda é só QUEM desenha o glifo.
+// ⚠️ AND THE `aria-hidden` HIDES INFORMATION FROM NOBODY, which is the only way it can be legitimate. A
+// square's accessible name already came from its `aria-label` — "Row 2, column 2: 4" — and an `aria-label` has
+// always replaced the cell's content: no screen reader read the bare digit before, and none stops reading the
+// number now. What changed is only WHO draws the glyph.
 //
-// ⚠️ E O NÚMERO CONTINUA SENDO TEXTO DE VERDADE NO DOM, que é o que o pilar 2 exige. Ele é selecionável,
-// cresce com o painel de tipografia da engine, e é o mesmo dado que o VLibras traduziria. Pintá-lo no canvas
-// para poder animá-lo teria sido a saída fácil e a errada.
+// ⚠️ AND THE NUMBER IS STILL REAL TEXT IN THE DOM, which is what pillar 2 requires. It is selectable, it grows
+// with the engine's typography panel, and it is the same data VLibras would translate. Painting it on the
+// canvas so it could be animated would have been the easy way out and the wrong one.
 import { SIZE } from '../board.ts';
 import type { Peca } from '../animation.ts';
 import { BOARD, BOARD_X, BOARD_Y, TILE, fontFor } from '../geometry.ts';
@@ -26,11 +26,11 @@ import { HC_POR_PAPEL, fundoDe, inkFor } from '../render/palette.ts';
 export interface CamadaDePecas {
   readonly raiz: HTMLElement;
   /**
-   * Redesenha a camada inteira. Chamado a cada quadro da animação e uma vez no fim.
+   * Redraws the whole layer. Called on every animation frame and once at the end.
    *
-   * O PAPEL entra como FUNÇÃO e não como campo em cada peça, pela mesma razão que no canvas: a peça já sabe
-   * a casa a que pertence, e um campo que o chamador precisa lembrar de preencher é um campo que um dia ele
-   * esquece — e o modo de falhar é o alto contraste desligar sozinho, calado.
+   * The ROLE comes in as a FUNCTION rather than as a field on each tile, for the same reason as on the canvas:
+   * the tile already knows the square it belongs to, and a field the caller has to remember to fill in is a
+   * field they eventually forget — and the failure mode is high contrast switching itself off, silently.
    */
   desenhar(pecas: readonly Peca[], altoContraste: boolean, papel: (i: number) => string): void;
 }
@@ -39,33 +39,33 @@ const px = (n: number) => `calc(${n} * var(--px))`;
 const cor = (c: number) => '#' + c.toString(16).padStart(6, '0');
 
 /**
- * A camada, com um POOL de elementos reusados.
+ * The layer, with a POOL of reused elements.
  *
- * ⚠️ RECRIAR OS NÓS A CADA QUADRO seria o defeito óbvio: numa animação de 110 ms são umas sete passagens, e
- * cada uma jogaria fora dezesseis elementos para criar dezesseis iguais. Pior que o custo, porém, é o efeito
- * no navegador: nó novo não tem estado anterior, então qualquer transição de CSS que viesse a existir nunca
- * dispararia, e o texto piscaria em leitores que observam mutação do DOM.
+ * ⚠️ RECREATING THE NODES EVERY FRAME would be the obvious defect: a 110 ms animation is about seven passes,
+ * and each one would throw away sixteen elements to create sixteen identical ones. Worse than the cost is the
+ * effect on the browser: a new node has no previous state, so any CSS transition that came to exist would
+ * never fire, and the text would flicker in readers that watch DOM mutations.
  *
- * O pool nasce com uma folga sobre 16 porque uma jogada com fusões tem MAIS peças em voo do que casas: as
- * duas metades de cada fusão viajam juntas até se encontrarem. O pior caso é oito fusões simultâneas — as
- * dezesseis casas cheias de pares —, e aí são dezesseis peças em voo. Dezesseis basta, e a folga é para o
- * dia em que o tabuleiro deixar de ser 4×4.
+ * The pool is born with room above 16 because a move with merges has MORE tiles in flight than there are
+ * squares: the two halves of each merge travel together until they meet. The worst case is eight simultaneous
+ * merges — the sixteen squares full of pairs — and that is sixteen tiles in flight. Sixteen is enough, and the
+ * slack is for the day the board stops being 4×4.
  */
 export function criarCamadaDePecas(doc: Document): CamadaDePecas {
   const raiz = doc.createElement('div');
   raiz.id = 'p2-tiles';
   raiz.className = 'p2-tiles';
-  // A camada inteira sai da árvore de acessibilidade: quem responde por ela é a grade de `board-dom`.
+  // The whole layer leaves the accessibility tree: what answers for it is `board-dom`'s grid.
   raiz.setAttribute('aria-hidden', 'true');
 
-  // ⚠️ ELA POSICIONA A SI MESMA, sobre o tabuleiro — e isto FALTAVA. Sem estas quatro linhas a camada cobria
-  // a região inteira, enquanto as transformadas das peças são relativas ao canto do TABULEIRO: os números
-  // apareciam deslocados 164 por 16 pixels lógicos, flutuando à esquerda do tabuleiro, longe das peças que
-  // deviam nomear. Visível de imediato numa captura de tela e invisível para todo teste que eu tinha.
+  // ⚠️ IT POSITIONS ITSELF over the board — and this was MISSING. Without these four lines the layer covered
+  // the whole region, while the tiles' transforms are relative to the corner of the BOARD: the numbers showed
+  // up 164 by 16 logical pixels off, floating to the left of the board, far from the tiles they name. Obvious
+  // in a screenshot and invisible to every test I had.
   //
-  // ⚠️ E O TESTE DE NAVEGADOR ESCONDIA O DEFEITO porque ELE fazia este trabalho: posicionava a camada à mão
-  // antes de medir. Um teste que faz a parte que o código de produção esqueceu não mede nada — passou verde
-  // enquanto a tela estava errada, e essa é a pior espécie de verde.
+  // ⚠️ AND THE BROWSER TEST WAS HIDING THE DEFECT, because IT did this work: it positioned the layer by hand
+  // before measuring. A test that does the part production code forgot measures nothing — it stayed green
+  // while the screen was wrong, and that is the worst kind of green there is.
   raiz.style.left = px(BOARD_X);
   raiz.style.top = px(BOARD_Y);
   raiz.style.width = px(BOARD);
@@ -90,17 +90,17 @@ export function criarCamadaDePecas(doc: Document): CamadaDePecas {
       pecas.forEach((p, n) => {
         const el = pegar(n + 1);
         const texto = String(2 ** p.exponent);
-        // `translate` e não `left`/`top`: a posição muda a cada quadro, e é a transformada que o navegador
-        // consegue compor sem refazer o layout da página inteira dezesseis vezes por quadro.
+        // `translate` and not `left`/`top`: the position changes every frame, and the transform is what the
+        // browser can compose without redoing the whole page's layout sixteen times per frame.
         el.style.transform = `translate(${px(p.x - BOARD_X)}, ${px(p.y - BOARD_Y)})`;
 
-        // ⚠️ SEM FUNDO. A peça COLORIDA é pintada pelo canvas, por baixo — é ele que dá a cara de pixel-art
-        // integral da família, e um `div` com cantos arredondados no lugar faria isto parecer uma página web
-        // em vez de um jogo de 320×180. O que este elemento carrega é SÓ O NÚMERO.
+        // ⚠️ NO BACKGROUND. The COLOURED tile is painted by the canvas underneath — that is what gives the
+        // family's integer-scaled pixel-art look, and a `div` with rounded corners in its place would make
+        // this read as a web page instead of a 320×180 game. What this element carries is ONLY THE NUMBER.
         //
-        // A TINTA, porém, ainda é calculada a partir da cor de baixo: `inkFor` responde qual das duas dá mais
-        // contraste sobre o fundo que o canvas vai desenhar naquela mesma posição. As duas camadas leem a
-        // mesma paleta, então o algarismo nunca fica ilegível sobre a própria peça.
+        // The INK, however, is still computed from the colour below: `inkFor` answers which of the two gives
+        // more contrast over the background the canvas will draw at that same position. Both layers read the
+        // same palette, so the digit is never illegible over its own tile.
         const papelDaCasa = papel(p.at);
         const fundo = altoContraste
           ? (HC_POR_PAPEL[papelDaCasa] ?? HC_POR_PAPEL.free)
@@ -117,5 +117,5 @@ export function criarCamadaDePecas(doc: Document): CamadaDePecas {
   };
 }
 
-/** Quantas peças cabem em voo ao mesmo tempo — o pior caso é o tabuleiro cheio de pares. */
+/** How many tiles can be in flight at once — the worst case is a board full of pairs. */
 export const MAX_PECAS_EM_VOO = SIZE * SIZE;

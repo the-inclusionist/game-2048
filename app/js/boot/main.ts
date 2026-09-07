@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// O BOOT — a ordem de ligar as coisas, e quase nada além disso.
+// THE BOOT — the order in which things are switched on, and almost nothing else.
 //
-// ========================= UMA CHAMADA, E NÃO NOVE =========================
-// `createGame()` liga idioma, leitor de tela, mixer, voz, pilha de diálogos, filtros de daltonismo, teclado
-// remapeável, navegação de menu, sonar e pilha de cenas. O `consumer-quiz` escreveu essas nove inicializações
-// à mão e mediu o preço: uma delas tem ORDEM obrigatória que nenhum tipo declara (o mixer antes da voz), e
-// errá-la faz a narração desistir CALADA. Aqui quem chama não tem como inverter.
+// ========================= ONE CALL, NOT NINE =========================
+// `createGame()` wires up language, screen reader, mixer, voice, dialog stack, colour-vision filters,
+// remappable keyboard, menu navigation, sonar and the scene stack. The `consumer-quiz` wrote those nine
+// initialisations by hand and measured the price: one of them has a mandatory ORDER that no type declares (the
+// mixer before the voice), and getting it wrong makes the narration give up SILENTLY. Here the caller has no
+// way to invert them.
 //
-// ========================= O QUE ESTE ARQUIVO FAZ QUE É DESTE JOGO =========================
-// O estado da rodada, o PixiJS, a grade de DOM por cima, e o mapeamento de tecla para jogada. Só.
+// ========================= WHAT THIS FILE DOES THAT IS THIS GAME'S =========================
+// The round's state, the PixiJS surface, the DOM grid over it, and the mapping from key to move. That is all.
 import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
 import { t } from '@the-inclusionist/engine/core/i18n.js';
 import { reseed, rnd } from '@the-inclusionist/engine/core/rng.js';
@@ -33,21 +34,21 @@ import { criarGradeDom } from '../ui/board-dom.ts';
 import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
 
 /**
- * A criança pediu menos movimento? Então nenhuma animação — não uma mais rápida.
+ * Has the child asked for less motion? Then no animation — not a faster one.
  *
- * Lido do SISTEMA e não de um menu do jogo: quem precisa disto já configurou no aparelho, e obrigá-la a
- * achar uma opção dentro de cada jogo é transferir para ela um trabalho que o navegador já fez. É a WCAG
- * 2.3.3, e é também por que este jogo não acrescenta um interruptor próprio: dois lugares para a mesma
- * decisão é um lugar para eles discordarem.
+ * Read from the SYSTEM and not from a menu of ours: whoever needs this has already configured it on the
+ * device, and making them find an option inside each game hands them work the browser has already done. It is
+ * WCAG 2.3.3, and it is also why this game adds no switch of its own: two places for the same decision is one
+ * place for them to disagree.
  */
 const movimentoReduzido = (win: Window): boolean =>
   win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-/* ===================== O ESTADO DA RODADA =====================
+/* ===================== THE ROUND'S STATE =====================
  *
- * ⚠️ TUDO AQUI MORRE COM A PARTIDA, e isso é o ADR-0037 em código e não em prosa: não existe save, e o
- * Inclusionista não guarda nada sobre uma criança. Não há `localStorage`, não há recorde e não há "continuar
- * de onde parou" — a ausência é a decisão. Os forks do 2048 guardam o melhor placar; este não pode.
+ * ⚠️ EVERYTHING HERE DIES WITH THE ROUND, and that is ADR-0037 in code rather than in prose: there is no save,
+ * and the Inclusionist keeps nothing about a child. No `localStorage`, no best score, no "continue where you
+ * left off" — the absence is the decision. The 2048 forks keep the best score; this one cannot.
  */
 let board: Board = emptyBoard();
 let pontos = 0;
@@ -57,7 +58,7 @@ let acabou = false;
 const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', up: 'n', down: 's' };
 const ACAO_PARA_DIRECAO: Record<string, Direction> = { left: 'left', right: 'right', up: 'up', down: 'down' };
 
-/** O sorteio da rodada. Semeado pelo relógio no boot; a MESMA semente dá a MESMA partida (ADR-0049). */
+/** The round's draw. Seeded from the clock at boot; the SAME seed gives the SAME round (ADR-0049). */
 function novaRodada(): void {
   reseed(Date.now() & 0x7fffffff);
   board = emptyBoard();
@@ -71,7 +72,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   const região = doc.querySelector<HTMLElement>('#game-region');
   if (!região) return null;
 
-  // 1. OS IDIOMAS ANTES DE TUDO — antes até do `createGame`, que já traduz markup no primeiro passo.
+  // 1. LANGUAGES BEFORE ANYTHING — even before `createGame`, which already translates markup on its first step.
   registrarIdiomas();
 
   novaRodada();
@@ -79,7 +80,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   const grade = criarGradeDom(doc);
   const camadaDePecas = criarCamadaDePecas(doc);
 
-  // 2. A DECLARAÇÃO. Ela OBSERVA o estado; não o possui. Ver o cabeçalho de `declaration.ts`.
+  // 2. THE DECLARATION. It OBSERVES the state; it does not own it. See the header of `declaration.ts`.
   const declaration = criarDeclaracao({
     board: () => board,
     cursor: () => ({ x: grade.cursor() % 4, y: Math.floor(grade.cursor() / 4) }),
@@ -87,32 +88,32 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     t,
   });
 
-  // 3. A ENGINE INTEIRA. Um jogo de tabuleiro não tem menu de pausa por tela, nem assistente de pad, nem
-  //    "ator da pausa" — e declinar é DECLARAR, não devolver null de um getter e torcer.
+  // 3. THE WHOLE ENGINE. A board game has no per-screen pause menu, no pad wizard and no "pause actor" — and
+  //    declining is DECLARING, not returning null from a getter and hoping.
   const motor = createGame({
     declaration,
     host: { doc, win, cvdHost: doc.querySelector('#cvd') },
     declines: { semMenuDePausa: true, semAssistenteDePad: true, semAtorDePausa: true },
     isNavigable: () => true,
-    // ⚠️ SEM `carregarVozNeural`, E ISSO É ESCOLHA E NÃO ESQUECIMENTO. A porta existe (ADR-0094) e ligá-la é
-    //    uma linha: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. A narração cai na voz
-    //    do NAVEGADOR, que fala o idioma certo.
+    // ⚠️ NO `carregarVozNeural`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port exists (ADR-0094) and
+    //    switching it on is one line: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. The
+    //    narration falls back to the BROWSER's voice, which speaks the right language.
     //
-    //    O que ela custaria, medido neste repositório em 2026-09-06 ao trocar a engine 6.36.1 pela 7.0.1:
-    //    o `dist/` passou de **28,9 MB para 1,6 MB**. Os 27 MB eram o runtime ONNX que vem junto — e o
-    //    pilar 1 é o tablet de escola, enquanto o pilar 8 é o PWA offline, cujo orçamento de precache é a
-    //    razão de o ADR-0068 §2 fazer o catálogo ESCOLHER jogos em vez de mandar todos.
+    //    What it would cost, measured in this repository on 2026-09-06 while upgrading the engine from 6.36.1
+    //    to 7.0.1: `dist/` went from **28.9 MB to 1.6 MB**. The 27 MB was the ONNX runtime riding along — and
+    //    pillar 1 is a school tablet, while pillar 8 is an offline PWA whose precache budget is the reason
+    //    ADR-0068 §2 has the catalogue SELECT games instead of shipping them all.
     //
-    //    ⚠️ E O QUE SE PERDE É REAL, não é zero: a voz do navegador pode não existir offline no aparelho da
-    //    escola, e é justamente offline que este jogo tem de funcionar. Um 2048 é jogável sem voz — o
-    //    tabuleiro inteiro está em `aria-label` e o leitor de tela do sistema o lê. A troca seria outra num
-    //    jogo de alfabetização, onde a fala É o conteúdo. Aqui é escolha de ORÇAMENTO, e fica escrita para
-    //    ser revista quando o hardware-alvo existir de verdade.
+    //    ⚠️ AND WHAT IS LOST IS REAL, not nothing: the browser's voice may not exist offline on that tablet,
+    //    and offline is exactly where this game has to work. A 2048 is playable without speech — the whole
+    //    board is in `aria-label` and the system's screen reader reads it. The trade would be different in a
+    //    literacy game, where speech IS the content. Here it is a BUDGET choice, written down so it can be
+    //    revisited once the target hardware actually exists.
   });
-  if (motor.problems.length) console.warn('[2048] lacunas do hospedeiro:', motor.problems);
+  if (motor.problems.length) console.warn('[2048] host gaps:', motor.problems);
 
-  // 4. O CANVAS, por baixo dos números e ESCONDIDO DA ÁRVORE DE ACESSIBILIDADE. É a ilustração; o tabuleiro
-  //    de verdade é a grade de DOM (pilar 2). Sem o `aria-hidden`, o leitor de tela anunciaria uma imagem.
+  // 4. THE CANVAS, under the numbers and HIDDEN FROM THE ACCESSIBILITY TREE. It is the illustration; the real
+  //    board is the DOM grid (pillar 2). Without `aria-hidden`, the screen reader would announce an image.
   const pixi = new PIXI.Application({
     width: LOGICAL_W, height: LOGICAL_H, backgroundColor: FUNDO_DA_TELA,
     antialias: false, resolution: 1, powerPreference: 'low-power',
@@ -120,45 +121,46 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   const tela = pixi.view as HTMLCanvasElement;
   tela.id = 'p2-canvas';
   tela.setAttribute('aria-hidden', 'true');
-  // ⚠️ O CANVAS VAI NA FRENTE DE TUDO NO DOM, o que o põe ATRÁS de tudo na tela. `append` o colocava depois
-  // do HUD e dos botões de toque — e como todos são posicionados, ele os PINTAVA POR CIMA: a coluna de
-  // objetivo e placar simplesmente sumia da tela. Ninguém percebe isso lendo o código, e nenhum teste de
-  // asserção percebia: o HUD continuava no DOM, com o texto certo, coberto por uma tela de pintura.
+  // ⚠️ THE CANVAS GOES FIRST IN THE DOM, which puts it BEHIND everything on screen. `append` used to place it
+  //    after the HUD and the touch targets — and since all of them are positioned, it PAINTED OVER THEM: the
+  //    objective and score column simply disappeared. Nobody notices that reading the code, and no assertion
+  //    noticed either: the HUD was still in the DOM, with the right text, covered by a painting surface.
   região.prepend(tela);
   região.append(camadaDePecas.raiz, grade.raiz);
   const figura = new PIXI.Graphics();
   pixi.stage.addChild(figura);
 
-  // 5. ESCALA. O `ui/layout` da engine trava o `#game-region` num múltiplo INTEIRO de pixels reais de
-  //    320×180 (ADR-0001) e publica `--ui-fs = 8·k`. O CSS deriva `--px` daí, e é isso que mantém o número
-  //    de DOM exatamente em cima da casa desenhada, em qualquer dpr.
+  // 5. SCALE. The engine's `ui/layout` locks `#game-region` to an INTEGER multiple of 320×180 in real pixels
+  //    (ADR-0001) and publishes `--ui-fs = 8·k`. The stylesheet derives `--px` from it, and that is what keeps
+  //    the DOM number exactly on top of the painted square at any device pixel ratio.
   initLayout({ numJogadores: () => 1 });
   layout();
   win.addEventListener('resize', () => layout());
 
-  // ⚠️ VOLTAR A APARECER RECONCILIA A TELA COM O MODELO. Enquanto o documento está escondido não se anima
-  // (ver `podeAnimar`), e o socorro garante que o quadro final chegue — mas uma aba que passou minutos
-  // escondida pode ter perdido quadros por outras razões. Redesenhar ao reaparecer é barato e fecha a
-  // categoria inteira: seja qual for o motivo de a tela ter ficado para trás, ela alcança o estado ao voltar.
+  // ⚠️ BECOMING VISIBLE AGAIN RECONCILES THE SCREEN WITH THE MODEL. While the document is hidden nothing is
+  // animated (see `podeAnimar`), and the rescue guarantees the final frame arrives — but a tab that spent
+  // minutes hidden may have lost frames for other reasons. Redrawing on return is cheap and closes the whole
+  // category: whatever the reason the screen fell behind, it catches up on the way back.
   doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'visible') desenhar(); });
 
   const altoContraste = () => doc.documentElement.dataset.hc === '1';
   const papelDa = (i: number) => declaration.roleAt({ x: i % SIZE, y: Math.floor(i / SIZE) });
 
   /**
-   * UM QUADRO — as duas camadas pintadas a partir das MESMAS peças.
+   * ONE FRAME — both layers painted from the SAME tiles.
    *
-   * ⚠️ É a única função que desenha, e é por isso que as camadas não podem descolar. O canvas recebe as
-   * posições e o DOM recebe as mesmas posições, na mesma chamada. Se cada uma tivesse a própria animação —
-   * uma em `requestAnimationFrame`, outra numa transição de CSS —, andariam com relógios diferentes e o
-   * número descolaria da peça no meio do movimento. Já custou uma tarde vê-las descoladas PARADAS.
+   * ⚠️ It is the only function that draws, and that is why the layers cannot come apart. The canvas receives
+   * the positions and the DOM receives the same positions, in the same call. If each had its own animation —
+   * one in `requestAnimationFrame`, the other in a CSS transition — they would run on different clocks and the
+   * number would come unstuck from its tile mid-motion. Seeing them unstuck while STANDING STILL already cost
+   * an afternoon.
    */
   function quadro(pecas: readonly Peca[]): void {
     pintarTabuleiro(figura, { papel: papelDa, altoContraste: altoContraste(), pecas });
     camadaDePecas.desenhar(pecas, altoContraste(), papelDa);
   }
 
-  /** O tabuleiro PARADO: o que se vê entre jogadas, e o quadro final de toda animação. */
+  /** The board AT REST: what is seen between moves, and the final frame of every animation. */
   function desenhar(): void {
     quadro(pecasParadas(board));
     grade.atualizar(declaration, t);
@@ -170,39 +172,40 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   }
 
   /**
-   * O LAÇO, montado — e ele NÃO mora mais aqui.
+   * THE LOOP, assembled — and it no longer lives here.
    *
-   * ⚠️ Morava, e era intestável: o relógio de quadros do navegador não roda num painel oculto, e tentar
-   * observá-lo ao vivo devolveu zero quadros três vezes seguidas. O laço não estava errado; o ambiente não o
-   * deixava correr. Depender do olho para saber se o CANCELAMENTO e o SOCORRO funcionam é exatamente o gate
-   * que nunca pôde ficar vermelho.
+   * ⚠️ It did, and it was untestable: the browser's frame clock does not run in a hidden pane, and trying to
+   * observe it live returned zero frames three times in a row. The loop was not wrong; the environment would
+   * not let it run. Depending on the eye to know whether CANCELLATION and the RESCUE work is exactly the gate
+   * that could never go red.
    *
-   * Ele foi para `animation.ts` com o relógio INJETADO — a mesma disciplina que o `core/rng` da engine já usa
-   * para o acaso. O que sobrou aqui são as três coisas que são deste jogo: qual relógio (o de verdade), o que
-   * desenhar a cada quadro (as duas camadas juntas), e quanto tempo (zero, sob movimento reduzido).
+   * It moved to `animation.ts` with the clock INJECTED — the same discipline the engine's `core/rng` already
+   * uses for randomness. What is left here are the three things that are this game's: which clock (the real
+   * one), what to draw each frame (both layers together), and how long (zero, under reduced motion).
    */
   const animador = criarAnimador(relogioDoNavegador(win), quadro);
   const animar = (movimentos: readonly Movimento[]): Promise<void> =>
     animador.correr(movimentos, duracaoDaJogada(movimentoReduzido(win)), doc.visibilityState !== 'hidden');
 
-  /** Uma jogada inteira: empurra, conta, sorteia, anuncia, redesenha. */
+  /** A whole move: push, count, draw a tile, announce, redraw. */
   function jogar(dir: Direction): void {
     if (acabou) return;
     const r = slide(board, dir);
     if (!r.moved) {
-      // Anúncio EDUCADO (`srSay`) e não alerta: "nada se move" é resposta a uma tentativa, não um evento
-      // que interrompa o que a criança estiver ouvindo.
+      // A POLITE announcement (`srSay`) rather than an alert: "nothing moves" answers an attempt, it is not an
+      // event that should interrupt whatever the child is listening to.
       srSay(narrarSemMovimento(dir, t));
       return;
     }
 
-    // ⚠️ O ESTADO MUDA AGORA, E A ANIMAÇÃO É SÓ A ILUSTRAÇÃO DISSO. O modelo já é o tabuleiro seguinte antes
-    // do primeiro quadro — a animação desenha o passado a caminho do presente, e nunca o contrário.
+    // ⚠️ THE STATE CHANGES NOW, AND THE ANIMATION IS ONLY THE ILLUSTRATION OF IT. The model is already the next
+    // board before the first frame — the animation draws the past on its way to the present, never the other
+    // way round.
     //
-    // A ordem importa para quem NÃO vê a animação: o leitor de tela, o teste e a criança que joga com
-    // movimento reduzido recebem o resultado imediatamente, sem esperar 110 ms de enfeite. Se o estado
-    // esperasse a animação terminar, o jogo passaria a mentir por um décimo de segundo a cada jogada — e
-    // mentiria mais quanto mais lento fosse o aparelho, que é o pilar 1 ao contrário.
+    // The order matters for whoever does NOT see the animation: the screen reader, the test, and the child
+    // playing with reduced motion get the result immediately, without waiting 110 ms of decoration. If the
+    // state waited for the animation to finish, the game would lie for a tenth of a second on every move — and
+    // lie longer the slower the device, which is pillar 1 upside down.
     board = r.board;
     pontos += r.gained;
     heading = RUMO[dir];
@@ -210,35 +213,36 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     const nascida = spawn(board, rnd);
     if (nascida) board = nascida.board;
 
-    // A animação corre com o tabuleiro ANTIGO em voo; o quadro final é `desenhar()`, com o novo.
+    // The animation runs with the OLD board in flight; the final frame is `desenhar()`, with the new one.
     void animar(r.movimentos).then(desenhar);
 
-    // FIM DE RODADA — e ele TERMINA. Sem "continuar jogando" depois do 2048 e sem caça à pontuação: é o
-    // laço de compulsão que o ADR-0006 nomeia, e o ADR-0049 diz que a única celebração é o crescimento.
+    // END OF ROUND — and it ENDS. No "keep playing" past 2048 and no score chasing: that is the compulsion
+    // loop ADR-0006 names, and ADR-0049 says the only celebration is growth.
     const maior = maxTile(board);
     const fim = maior >= OBJETIVO ? { chave: 'end.win' as const, maior }
       : !canMove(board) ? { chave: 'end.stuck' as const, maior }
         : null;
     acabou = fim !== null;
 
-    // ⚠️ A FRASE É MONTADA FORA DAQUI, em `narration.ts`, e a razão está no cabeçalho de lá: o que a criança
-    // cega recebe é o produto, e produto se testa. Aqui ficou só a ESCOLHA DE CANAL, que é a decisão deste
-    // arquivo: fim de rodada interrompe (`srAlert`), o resto espera a vez (`srSay`).
+    // ⚠️ THE SENTENCE IS ASSEMBLED ELSEWHERE, in `narration.ts`, and the reason is in that file's header: what
+    // the blind child receives is the product, and a product gets tested. What stayed here is only the CHOICE
+    // OF CHANNEL, which is this file's decision: the end of a round interrupts (`srAlert`), everything else
+    // waits its turn (`srSay`).
     const dito = narrarJogada({ merges: r.merges, nascida, fim }, t);
     if (acabou) srAlert(dito); else srSay(dito);
     motor.tts.narrate(dito);
   }
 
-  // 6. TECLADO, PELA CAMADA REMAPEÁVEL DA ENGINE. Nada de `e.code === 'ArrowLeft'` cru: `actionOf` traduz a
-  //    tecla em INTENÇÃO, respeita ABNT/QWERTY/alternativos e o remapeamento que a criança fez no menu.
+  // 6. KEYBOARD, THROUGH THE ENGINE'S REMAPPABLE LAYER. No raw `e.code === 'ArrowLeft'`: `actionOf` translates
+  //    a key into INTENT, respects ABNT/QWERTY/alternative layouts and whatever remapping the child has made.
   //
-  //    ⚠️ SHIFT MUDA O VERBO, e é aqui que o desvio do APG declarado em `ui/board-dom` acontece: a seta
-  //    sozinha JOGA, a seta com Shift move o cursor de LEITURA e anuncia onde ele parou.
+  //    ⚠️ SHIFT CHANGES THE VERB, and this is where the APG deviation declared in `ui/board-dom` happens: an
+  //    arrow on its own PLAYS, an arrow with Shift moves the READING cursor and announces where it stopped.
   região.addEventListener('keydown', (e: KeyboardEvent) => {
     const acao = motor.keyboard.actionOf(e.code, 0);
     const dir = acao ? ACAO_PARA_DIRECAO[acao] : undefined;
 
-    if (e.code === 'KeyS' && e.altKey) { // sonar: onde há uma fusão possível
+    if (e.code === 'KeyS' && e.altKey) { // sonar: where a merge is available
       const f = declaration.focusOf(0);
       if (f) motor.sonar.sonar({ i: 0, x: f.at.x, y: f.at.y, viz: 'cego' });
       e.preventDefault();
@@ -257,8 +261,8 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     jogar(dir);
   });
 
-  // 7. TOQUE: deslizar o dedo, e quatro alvos grandes para quem não desliza. Os botões existem no markup;
-  //    aqui eles só ganham a intenção. `padPxPerMm` da engine já os dimensiona em milímetros REAIS.
+  // 7. TOUCH: a swipe, and four large targets for whoever does not swipe. The buttons exist in the markup;
+  //    here they only gain the intent. The engine's `padPxPerMm` already sizes them in REAL millimetres.
   let toqueX = 0, toqueY = 0;
   região.addEventListener('touchstart', (e: TouchEvent) => {
     toqueX = e.changedTouches[0].clientX; toqueY = e.changedTouches[0].clientY;
@@ -266,7 +270,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   região.addEventListener('touchend', (e: TouchEvent) => {
     const dx = e.changedTouches[0].clientX - toqueX;
     const dy = e.changedTouches[0].clientY - toqueY;
-    if (Math.hypot(dx, dy) < 24) return; // um toque não é um deslize
+    if (Math.hypot(dx, dy) < 24) return; // a tap is not a swipe
     jogar(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
   }, { passive: true });
   for (const b of doc.querySelectorAll<HTMLButtonElement>('[data-dir]')) {
@@ -280,14 +284,14 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     srAlert(t('game.tagline'));
   });
 
-  // 8. A PILHA DE CENAS. Uma cena só, e ela não é inventada para o teste: `desenhar` já era o `draw`.
+  // 8. THE SCENE STACK. One scene, and it is not invented for the test: `desenhar` was already the `draw`.
   motor.cenas.push({ nome: 'tabuleiro', draw: () => desenhar(), input: () => false });
   motor.nav.attach();
   motor.cenas.draw();
   grade.focar();
   srSay(t('a11y.instructions'));
 
-  // O gancho de verificação do projeto: conferir o boot é conferir que isto existe, e ler daqui.
+  // The project's verification hook: checking the boot means checking this exists, and reading from it.
   (win as Window & { __incl2048?: unknown }).__incl2048 = {
     get board() { return board; },
     get pontos() { return pontos; },
@@ -297,15 +301,15 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   return motor;
 }
 
-// ⚠️ NENHUM AUTO-BOOT AQUI, e a linha que havia era um defeito medido no navegador em 2026-09-05.
+// ⚠️ NO AUTO-BOOT HERE, and the line that used to be here was a defect measured in the browser on 2026-09-05.
 //
-// Este arquivo tinha, copiado do `consumer-quiz` da engine, um
+// This file carried, copied from the engine's `consumer-quiz`, an
 //     `if (document.getElementById('game-region')) bootar();`
-// no fim. Lá ele é correto, porque o quiz é a própria entrada da página. Aqui não: quem entra é o
-// `boot/boot.ts`, que importa este módulo E chama `bootar()` — então o jogo bootava DUAS VEZES. Medido:
-// dois `<canvas>` e 32 células de `role="gridcell"` numa grade de dezesseis, dois ouvintes de teclado, e
-// cada seta jogando duas jogadas.
+// at the end. There it is correct, because the quiz is the page's own entry point. Here it is not: the entry
+// is `boot/boot.ts`, which imports this module AND calls `bootar()` — so the game booted TWICE. Measured: two
+// `<canvas>` elements and 32 `role="gridcell"` cells in a grid of sixteen, two keyboard listeners, and every
+// arrow key playing two moves.
 //
-// Nada disso aparece em teste de lógica, e nada disso aparece numa captura de tela — os dois tabuleiros
-// ficam exatamente um em cima do outro. Apareceu porque a verificação de boot deste projeto conta
-// `canvas` e lê o objeto global em vez de olhar a imagem, que é a razão de a regra existir.
+// None of that shows in a logic test, and none of it shows in a screenshot — the two boards sit exactly on top
+// of each other. It showed up because this project's boot check counts `canvas` elements and reads the global
+// object instead of looking at the image, which is the reason that rule exists.

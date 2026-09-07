@@ -1,51 +1,52 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A GEOMETRIA, EM UM LUGAR SÓ — porque duas camadas desenham o mesmo tabuleiro e elas não podem divergir.
+// THE GEOMETRY, IN ONE PLACE — because two layers draw the same board and they must not drift apart.
 //
-// ========================= AS DUAS CAMADAS, E POR QUE SÃO DUAS =========================
-// O tabuleiro é desenhado DUAS VEZES, uma por cima da outra, e isso é decisão e não redundância:
+// ========================= THE TWO LAYERS, AND WHY THERE ARE TWO =========================
+// The board is drawn TWICE, one on top of the other, and that is a decision rather than redundancy:
 //
-//   · o CANVAS (PixiJS, 320×180) desenha a figura — moldura, casas, peças, a animação de deslizar;
-//   · o DOM desenha os NÚMEROS, e é ele que tem `role="grid"`, foco e `aria-label`.
+//   · the CANVAS (PixiJS, 320×180) draws the picture — frame, squares, tiles, the slide animation;
+//   · the DOM draws the NUMBERS, and it is the one carrying `role="grid"`, focus and `aria-label`.
 //
-// O pilar 2 do ADR-0010 diz "text always in the DOM". Um algarismo pintado no canvas some para o leitor de
-// tela e some para o VLibras, que traduz TEXTO — então a camada acessível não é uma legenda do desenho: ela
-// É o tabuleiro, e o canvas é a ilustração dele. `aria-hidden` no canvas diz isso à máquina.
+// Pillar 2 of ADR-0010 says "text always in the DOM". A digit painted on the canvas disappears for the screen
+// reader and for VLibras, which translates TEXT — so the accessible layer is not a caption of the drawing:
+// it IS the board, and the canvas is its illustration. `aria-hidden` on the canvas says so to the machine.
 //
-// ========================= O QUE MANTÉM AS DUAS ALINHADAS =========================
-// Este arquivo. Ambas leem daqui, em PIXELS LÓGICOS da grade 320×180, e o CSS converte um pixel lógico em
-// pixels de tela pela MESMA escala inteira que o `ui/layout` da engine já calcula (ADR-0001): a folha define
-// `--px: calc(var(--ui-fs) / 8)`, e `--ui-fs` é `8 · k`. Um pixel lógico é `k` pixels de CSS, sempre inteiro
-// em pixels REAIS, então o número nunca fica meio pixel fora da casa em nenhum dpr.
+// ========================= WHAT KEEPS THE TWO ALIGNED =========================
+// This file. Both read from here, in LOGICAL PIXELS of the 320×180 grid, and CSS converts one logical pixel
+// into screen pixels by the SAME integer scale the engine's `ui/layout` already computes (ADR-0001): the
+// stylesheet defines `--px: calc(var(--ui-fs) / 8)`, and `--ui-fs` is `8 · k`. One logical pixel is `k` CSS
+// pixels, always an integer in REAL pixels, so a number never ends up half a pixel outside its square at any
+// device pixel ratio.
 //
-// ========================= AS MEDIDAS, E DE ONDE ELAS SAEM =========================
-// 320×180 é apertado para um tabuleiro 4×4 com números de até quatro algarismos. A conta:
-//   peça 32 + vão 4 → 4·32 + 5·4 = 148 de lado. Sobram 172 de largura, que é a coluna do HUD.
-// O tabuleiro fica à DIREITA e o HUD à esquerda de propósito: quem lê da esquerda para a direita encontra
-// primeiro o que a rodada pede e depois o tabuleiro, e é a mesma ordem em que o leitor de tela narra.
+// ========================= THE MEASUREMENTS, AND WHERE THEY COME FROM =========================
+// 320×180 is tight for a 4×4 board with numbers of up to four digits. The arithmetic:
+//   tile 32 + gap 4 → 4·32 + 5·4 = 148 on a side. That leaves 172 of width, which is the HUD column.
+// The board sits on the RIGHT and the HUD on the left on purpose: somebody reading left to right meets what
+// the round asks before meeting the board, and it is the same order in which the screen reader narrates.
 import { SIZE } from './board.ts';
 
-/** A grade lógica da engine (pilar 5). Não é escolha deste jogo — é a constante que todo jogo herda. */
+/** The engine's logical grid (pillar 5). Not this game's choice — it is the constant every game inherits. */
 export const LOGICAL_W = 320;
 export const LOGICAL_H = 180;
 
-/** Lado de uma peça, e o vão entre elas. Em pixels lógicos. */
+/** Side of one tile, and the gap between them. In logical pixels. */
 export const TILE = 32;
 export const GAP = 4;
 
-/** Lado do tabuleiro inteiro, moldura incluída: `4·32 + 5·4 = 148`. */
+/** Side of the whole board, frame included: `4·32 + 5·4 = 148`. */
 export const BOARD = SIZE * TILE + (SIZE + 1) * GAP;
 
-/** Canto superior esquerdo do tabuleiro. Encostado à direita, com uma margem igual à do topo. */
+/** Top-left corner of the board. Pushed against the right, with a margin equal to the top one. */
 export const BOARD_X = LOGICAL_W - BOARD - 8;
 export const BOARD_Y = Math.round((LOGICAL_H - BOARD) / 2);
 
-/** A coluna do HUD: tudo que sobra à esquerda do tabuleiro, com a mesma margem. */
+/** The HUD column: everything left over to the left of the board, with the same margin. */
 export const HUD_X = 8;
 export const HUD_W = BOARD_X - HUD_X - 8;
 
 export interface Rect { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
 
-/** O retângulo de uma casa, em pixels lógicos, a partir do índice do tabuleiro. */
+/** The rectangle of one square, in logical pixels, from the board index. */
 export function cellRect(i: number): Rect {
   const x = i % SIZE;
   const y = Math.floor(i / SIZE);
@@ -58,11 +59,11 @@ export function cellRect(i: number): Rect {
 }
 
 /**
- * O tamanho de letra que cabe num número dentro da peça, em pixels lógicos.
+ * The type size that fits a number inside a tile, in logical pixels.
  *
- * ⚠️ ENCOLHE COM O NÚMERO DE ALGARISMOS, e é isso que faz `2048` caber onde `2` sobra espaço. Uma medida só
- * para todos os casos teria de servir ao pior deles — cinco algarismos —, e aí o `2` de uma criança de seis
- * anos apareceria minúsculo no começo da partida, que é exatamente quando ela mais precisa enxergá-lo.
+ * ⚠️ IT SHRINKS WITH THE DIGIT COUNT, and that is what makes `2048` fit where `2` has room to spare. A single
+ * measurement for every case would have to serve the worst one — five digits — and then the `2` a six-year-old
+ * sees would appear tiny at the start of the round, which is exactly when she most needs to read it.
  */
 export function fontFor(digits: number): number {
   if (digits <= 2) return 16;

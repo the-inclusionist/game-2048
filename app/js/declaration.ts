@@ -1,37 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// OS SETE CAMPOS — a única coisa que a pilha de acessibilidade da engine sabe sobre este jogo.
+// THE SEVEN FIELDS — the only thing the engine's accessibility stack knows about this game.
 //
-// ========================= O QUE ESTE ARQUIVO COMPRA =========================
-// Respondendo a estas sete perguntas, o jogo ganha leitor de tela, navegação sonora, alto contraste por
-// papel, varredura e Libras sem escrever uma linha de nenhum deles. É o produto do ADR-0027, e é a razão de
-// existir uma engine em vez de "mais um motor 2D".
+// ========================= WHAT THIS FILE BUYS =========================
+// By answering these seven questions, the game gets a screen reader, sonar navigation, high contrast by role,
+// scanning and Libras without writing a line of any of them. That is ADR-0027's product, and it is the reason
+// an engine exists here instead of "one more 2D engine".
 //
-// ========================= E O QUE ELE PAGA DE VOLTA =========================
-// O ADR-0030 diz que "o contrato basta" só deixa de ser hipótese quando DOIS presets existirem. Existia um —
-// o `consumer-quiz`, topologia `hotspots`, uma lista sem espaço nenhum. Este é o segundo, e é `grid`.
+// ========================= AND WHAT IT PAYS BACK =========================
+// ADR-0030 says "the contract is enough" stops being a hypothesis only when TWO presets exist. There was one —
+// the `consumer-quiz`, topology `hotspots`, a list with no space at all. This is the second, and it is `grid`.
 //
-// A diferença é o campo 5. No quiz, o próprio consumidor registrou que ali o sonar ficou "correto e inútil":
-// num questionário linear o único alvo é a pergunta em que a criança já está, e apontar a alternativa certa
-// seria colar. Numa grade há distância, vizinhança e direção — então `targetsOf` passa a responder ONDE HÁ
-// UMA FUSÃO POSSÍVEL, que para quem não vê a tela é a mecânica inteira do jogo, e não um enfeite.
+// The difference is field 5. In the quiz, the consumer itself recorded that its sonar came out "correct and
+// useless": in a linear questionnaire the only target is the question the child is already on, and pointing at
+// the right answer would be cheating. On a grid there is distance, neighbourhood and direction — so
+// `targetsOf` starts answering WHERE A MERGE IS AVAILABLE, which for someone who cannot see the screen is the
+// whole mechanic of the game and not an ornament.
 //
-// ========================= SEM ESTADO PRÓPRIO, DE PROPÓSITO =========================
-// Este módulo não guarda tabuleiro nem cursor: ele OBSERVA. Os campos são funções porque a resposta muda a
-// cada jogada, e quem é dono do estado é quem joga. Guardar uma cópia aqui criaria a segunda versão da
-// verdade que diverge no primeiro `undo`.
+// ========================= NO STATE OF ITS OWN, ON PURPOSE =========================
+// This module keeps neither board nor cursor: it OBSERVES. The fields are functions because the answer changes
+// with every move, and the owner of the state is whoever plays. Keeping a copy here would create the second
+// version of the truth that drifts on the first `undo`.
 import type {
   Focus, GameDeclaration, Heading, Objective, Role, Speakable, Spot, Topology, WorldScope,
 } from '@the-inclusionist/engine/core/contract.js';
 import { OBJETIVO, SIZE, maxTile, mergeSpots, type Board } from './board.ts';
 
-/** O que a declaração precisa PERGUNTAR ao jogo. Nada além disto, e nada de escrita. */
+/** What the declaration needs to ASK the game. Nothing beyond this, and nothing that writes. */
 export interface Observado {
   board(): Board;
-  /** Onde o cursor do teclado está — o campo 4 responde "onde a criança está" com isto. */
+  /** Where the keyboard cursor is — field 4 answers "where the child is" with this. */
   cursor(): Spot;
-  /** A última direção jogada. `'none'` antes da primeira jogada, que é a verdade e não um valor de enchimento. */
+  /** The last direction played. `'none'` before the first move, which is the truth and not a filler value. */
   heading(): Heading;
-  /** O `t()` da engine, INJETADO: um teste passa um `t` que devolve a chave e mede qual chave foi pedida. */
+  /** The engine's `t()`, INJECTED: a test passes a `t` that returns the key and measures which was asked for. */
   t(key: string): string;
 }
 
@@ -41,52 +42,55 @@ const casa = (i: number): Spot => ({ x: i % SIZE, y: Math.floor(i / SIZE) });
 
 export function criarDeclaracao(o: Observado): GameDeclaration {
   return {
-    // 1 · TOPOLOGIA. Com métrica, e é a métrica que faz o sonar existir: numa grade a distância é em
-    //     CÉLULAS e o passo é de rei, então "duas casas para a esquerda" é dizível sem falar em pixel.
+    // 1 · TOPOLOGY. With a metric, and it is the metric that makes the sonar possible: on a grid the distance
+    //     is in SQUARES, so "two squares to the left" is sayable without mentioning a pixel.
     //
-    //     ⚠️ É UMA FUNÇÃO, e virou uma na engine publicada. Este jogo devolve sempre a mesma grade, então a
-    //     forma parece cerimônia — não é: o `game-15puzzle` tem tabuleiro 3×3, 4×4 ou 5×5 na mesma partida, e
-    //     com o campo constante ele só cabia no tipo por um GETTER, o que o contrato da engine chama de
-    //     "coincidência do TypeScript, não contrato". A porta do sonar sempre pediu `() => Topology`.
+    //     ⚠️ IT IS A FUNCTION, and it became one in the published engine. This game always returns the same
+    //     grid, so the shape looks like ceremony — it is not: `game-15puzzle` has a 3×3, 4×4 or 5×5 board in
+    //     the same session, and with a constant field it only fitted the type through a GETTER, which the
+    //     engine's contract calls "a TypeScript coincidence, not a contract". The sonar's port always asked
+    //     for `() => Topology`.
     topology(): Topology {
       return {
         kind: 'grid',
         size: [SIZE, SIZE],
-        // ⚠️ ORTOGONAL, e a escolha muda o que o sonar DIZ. No 2048 uma peça anda em linha reta e nunca na
-        //    diagonal, então a casa na diagonal está a DOIS passos e não a um. A engine usa isto como métrica
-        //    (L¹ para ortogonal, L∞ para diagonal), e declarar `diagonal` aqui faria o sonar dizer "bem perto"
-        //    de um lugar para onde a peça não tem como ir. A regra de movimento do jogo É a régua da narração.
+        // ⚠️ ORTHOGONAL, and the choice changes what the sonar SAYS. In 2048 a tile travels in a straight line
+        //    and never diagonally, so the diagonal square is TWO steps away and not one. The engine uses this
+        //    as the metric (L¹ for orthogonal, L∞ for diagonal), and declaring `diagonal` here would have the
+        //    sonar call "very close" a place the tile cannot reach. The game's movement rule IS the ruler the
+        //    narration measures with.
         move: 'orthogonal',
-        // Bússola, e não relógio: isto é um tabuleiro visto de cima, onde linha e coluna são norte e leste.
-        // O relógio é o referencial da PLATAFORMA, vista de lado, onde "norte" não quer dizer nada.
+        // Compass, not clock: this is a board seen from above, where row and column are north and east. The
+        // clock is the PLATFORMER's frame of reference, seen from the side, where "north" means nothing.
         frame: 'compass',
       };
     },
 
-    // 1b · QUAL ELEMENTO É O MUNDO — campo novo da engine publicada, e obrigatório de propósito.
+    // 1b · WHICH ELEMENT IS THE WORLD — a new field in the published engine, and required on purpose.
     //
-    //      É onde a engine aplica o que é DO MUNDO e só ali: correção de daltonismo, alto contraste,
-    //      simulações de empatia. Aqui é o `#game-region` — o mesmo elemento que o `ui/layout` trava em
-    //      320×180 e o mesmo em que este jogo já aplicava o filtro de visão à mão, em `boot/boot.ts`.
+    //      It is where the engine applies what belongs to the WORLD and only there: colour-vision correction,
+    //      high contrast, empathy simulations. Here it is `#game-region` — the same element `ui/layout` locks
+    //      to 320×180, and the same one this game already applied the vision filter to by hand, in
+    //      `boot/boot.ts`.
     //
-    //      ⚠️ E NÃO É `none`. O contrato avisa que `none` não pode ser o que acontece quando alguém esquece:
-    //      é para atividade SEM espaço — uma tela de pintura, um formulário —, onde não há alvo para o sonar
-    //      apontar. Um tabuleiro 4×4 tem espaço, distância e vizinhança; declarar `none` aqui desligaria o
-    //      sonar e a empatia num jogo em que eles são a mecânica.
+    //      ⚠️ AND IT IS NOT `none`. The contract warns that `none` must not be what happens when somebody
+    //      forgets: it is for an activity WITHOUT space — a painting canvas, a form — where there is no target
+    //      for the sonar to point at. A 4×4 board has space, distance and neighbourhood; declaring `none` here
+    //      would switch off the sonar and empathy in a game where they are the mechanic.
     world(): WorldScope {
       return { kind: 'element', selector: '#game-region' };
     },
 
-    // 6 · DE QUEM É O TURNO. Do jogador — e isto não é detalhe: com o turno do jogador o tempo não pressiona,
-    //     a varredura pode esperar, e a WCAG 2.2.1 (Timing Adjustable) é satisfeita por CONSTRUÇÃO em vez de
-    //     por uma opção que alguém precisa achar no menu.
+    // 6 · WHOSE TURN IT IS. The player's — and this is not a detail: with the player's turn, time does not
+    //     press, scanning can wait, and WCAG 2.2.1 (Timing Adjustable) is satisfied BY CONSTRUCTION rather
+    //     than by an option somebody has to find in a menu.
     tick: 'player',
 
-    // 2 · PAPEL SEMÂNTICO, e é daqui que o alto contraste tira as cores em vez de uma tabela de tiles.
+    // 2 · SEMANTIC ROLE, and this is where high contrast takes its colours from instead of a tile table.
     //
-    //     ⚠️ `goal` é a peça que PODE FUNDIR AGORA, não a peça de maior valor. É a leitura certa do campo —
-    //     "o que a rodada pede" — e é o que faz o realce de alto contraste apontar a jogada disponível para
-    //     uma criança com baixa visão, em vez de decorar o tabuleiro por tamanho.
+    //     ⚠️ `goal` is the tile that CAN MERGE NOW, not the highest-valued one. That is the field read
+    //     correctly — "what the round asks" — and it is what makes the high-contrast highlight point at the
+    //     available move for a child with low vision, rather than decorating the board by size.
     roleAt(at: Spot): Role {
       if (!dentro(at)) return 'free';
       const b = o.board();
@@ -95,12 +99,12 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
       return mergeSpots(b).includes(i) ? 'goal' : 'structure';
     },
 
-    // 3 · NOME FALÁVEL — o mesmo dado que o leitor de tela diz e que a Libras traduz.
+    // 3 · SPEAKABLE NAME — the same data the screen reader says and Libras translates.
     //
-    //     ⚠️ O NÚMERO NÃO PASSA PELO DICIONÁRIO, e a palavra passa. `8` é `8` em qualquer idioma: matemática
-    //     não é disciplina de idioma, e mandar um numeral para o `t()` só criaria 2048 chaves para traduzir
-    //     um algarismo. "Vazio" é palavra, então é chave. A regra é a mesma que o pilar 3 usa: a moldura mora
-    //     na chave, o conteúdo atravessa.
+    //     ⚠️ THE NUMBER DOES NOT GO THROUGH THE DICTIONARY, and the word does. `8` is `8` in any language:
+    //     mathematics is not a language subject, and sending a numeral to `t()` would only create 2048 keys to
+    //     translate a digit. "Empty" is a word, so it is a key. The rule is the one pillar 3 uses: the frame
+    //     lives in the key, the content passes through.
     nameAt(at: Spot): Speakable | null {
       if (!dentro(at)) return null;
       const e = o.board()[indice(at)];
@@ -108,18 +112,19 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
       return { text: String(2 ** e), gender: 'm', plural: false };
     },
 
-    // 4 · FOCO. Sem corpo e sem física: quem tem o foco é o cursor do teclado, e "para onde aponta" é a
-    //     última direção empurrada — que é o que a bengala e a varredura precisam saber.
+    // 4 · FOCUS. No body and no physics: what holds the focus is the keyboard cursor, and "where it points" is
+    //     the last direction pushed — which is what the cane and the scanning need to know.
     focusOf(): Focus | null {
       return { id: 'p0', at: o.cursor(), heading: o.heading() };
     },
 
-    // 5a · OBJETIVO, EM DOBRAS — e esta é a decisão de que mais me orgulho neste arquivo.
+    // 5a · THE OBJECTIVE, IN DOUBLINGS — and this is the decision in this file I am proudest of.
     //
-    //      A moldura do HUD da engine é `'{have} de {need} {nome}'`. Com VALORES daria "16 de 2048": verdade,
-    //      e não ensina nada. Com EXPOENTES dá **"4 de 11 dobras"**, e 11 é exatamente o que 2048 É — onze
-    //      duplicações. O contador passa a enunciar a matéria em vez de marcar pontos, e não custou nem um
-    //      campo novo na engine nem uma linha de condicional: é o mesmo `have`/`need` que contava moeda.
+    //      The engine's HUD frame is `'{have} de {need} {nome}'`. With VALUES it would read "16 of 2048": true,
+    //      and teaching nothing. With EXPONENTS it reads **"4 of 11 doublings"**, and 11 is exactly what 2048
+    //      IS — eleven doublings. The counter starts stating the subject instead of marking points, and it
+    //      cost neither a new field in the engine nor a line of conditional: it is the same `have`/`need` that
+    //      used to count coins.
     objectiveOf(): Objective {
       return {
         name: { text: o.t('hud.nome.dobras'), gender: 'f', plural: true },
@@ -128,10 +133,10 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
       };
     },
 
-    // 5b · ONDE ESTÃO OS ALVOS. A metade que o sonar usa, e a que o quiz não tinha como exercer.
+    // 5b · WHERE THE TARGETS ARE. The half the sonar uses, and the one the quiz had no way to exercise.
     //
-    //      Vazio quando não há fusão possível, e vazio é RESPOSTA: significa "não há para onde apontar", que
-    //      no fim de uma partida é a informação mais honesta que existe.
+    //      Empty when no merge is available, and empty is an ANSWER: it means "there is nowhere to point",
+    //      which at the end of a round is the most honest information there is.
     targetsOf(): readonly Spot[] {
       return mergeSpots(o.board()).map(casa);
     },

@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>2048 · Potência de 2</title>
 <!--
-  A CASCA, e ela é um contrato antes de ser uma página.
+  THE SHELL, and it is a contract before it is a page.
 
-  A engine EXIGE marcação com ids fixos e, quando ela falta, os painéis abrem VAZIOS — sem erro. Foi o
-  achado 6 do segundo consumidor da engine, e a correção do lado dela foi devolver a lista em `problems`
-  em vez de deixar cada jogo redescobri-la. O que este arquivo entrega:
+  The engine REQUIRES markup with fixed ids and, when it is missing, the panels open EMPTY — with no error.
+  That was the second consumer's finding 6, and the fix on the engine's side was to return the list in
+  `problems` instead of leaving every game to rediscover it. What this file delivers:
 
-    · `#sr-status` / `#sr-alert` — o par de regiões vivas que `core/a11y-sr` procura. Educado e assertivo.
-    · `#stage-wrap` / `#stage` / `#game-region` — o que `ui/layout` mede e escala.
-    · `#cvd` — um `<svg>` VAZIO. `installCvdFilters()` o preenche em tempo de execução, então este jogo não
-      copia uma linha de markup da engine (achado 7).
-    · os ids do painel de tipografia, que é emprestado inteiro.
+    · `#sr-status` / `#sr-alert` — the pair of live regions `core/a11y-sr` looks for. Polite and assertive.
+    · `#stage-wrap` / `#stage` / `#game-region` — what `ui/layout` measures and scales.
+    · `#cvd` — an EMPTY `<svg>`. `installCvdFilters()` fills it at run time, so this game copies not one line
+      of the engine's markup (finding 7).
+    · the ids of the typography panel, which is borrowed whole.
 
-  ⚠️ E o `#game-region` NÃO CONTÉM O TABULEIRO NO HTML. O canvas e a grade de `role="grid"` são montados por
-  `boot/main.ts`, porque as duas camadas leem a MESMA geometria (`app/js/geometry.ts`) e duplicá-la aqui
-  criaria a segunda versão que diverge no primeiro ajuste.
+  ⚠️ AND `#game-region` DOES NOT CONTAIN THE BOARD IN THE HTML. The canvas and the `role="grid"` grid are built
+  by `boot/main.ts`, because both layers read the SAME geometry (`app/js/geometry.ts`) and duplicating it here
+  would create the second version that drifts on the first adjustment.
 -->
 <link rel="stylesheet" href="/vendor/fonts.css">
 <link rel="stylesheet" href="./css/game.css">
@@ -32,8 +32,8 @@
     <div id="stage-wrap" class="stage-wrap">
       <div id="stage" class="stage">
         <section id="game-region" class="game-region" tabindex="-1" aria-label="2048 · Potência de 2">
-          <!-- A COLUNA DO HUD, à esquerda do tabuleiro. Quem lê da esquerda para a direita encontra primeiro
-               o que a rodada pede — e é a mesma ordem em que o leitor de tela narra. -->
+          <!-- THE HUD COLUMN, to the left of the board. Somebody reading left to right meets what the round
+               asks first — and it is the same order in which the screen reader narrates. -->
           <div id="p2-hud" class="p2-hud">
             <h1 class="p2-hud__title" data-i18n="game.title">2048 · Potência de 2</h1>
             <p class="p2-hud__line"><span data-i18n="hud.objective">Chegue à peça 2048</span></p>
@@ -42,8 +42,8 @@
             <button id="p2-again" class="p2-btn" type="button" data-i18n="end.again">Jogar outra vez</button>
           </div>
 
-          <!-- OS QUATRO ALVOS DE TOQUE. Existem para quem não desliza o dedo e para quem joga com um
-               apontador só; `padPxPerMm` da engine os dimensiona em milímetros REAIS (WCAG 2.5.5). -->
+          <!-- THE FOUR TOUCH TARGETS. They exist for whoever does not swipe and for whoever plays with a
+               single pointer; the engine's `padPxPerMm` sizes them in REAL millimetres (WCAG 2.5.5). -->
           <div class="p2-pad" aria-hidden="false">
             <button class="p2-pad-btn p2-pad-btn--up" type="button" data-dir="up" aria-label="Empurrar para cima">▲</button>
             <button class="p2-pad-btn p2-pad-btn--left" type="button" data-dir="left" aria-label="Empurrar para a esquerda">◀</button>
@@ -54,8 +54,8 @@
       </div>
     </div>
 
-    <!-- FORA do #game-region, então NÃO escala com o k: texto sempre 16px e toque 44px, como o `ui/layout`
-         da engine decidiu para tudo que não é o mundo do jogo. -->
+    <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the engine's
+         `ui/layout` decided for everything that is not the game's world. -->
     <div class="p2-tools">
       <button id="open-typo" class="p2-btn" type="button">🔤 Tipografia</button>
       <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ Alto contraste</button>
