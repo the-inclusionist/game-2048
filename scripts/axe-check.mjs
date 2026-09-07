@@ -28,6 +28,18 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(URL, { waitUntil: 'networkidle' });
+
+  // ⚠️ FIRST CHECK THAT THIS IS THIS GAME. Measured on 2026-09-07: the default port 4173 is Vite's, so any
+  // other project previewing at the same time owns it — a sibling game was answering there, and the gate died
+  // waiting fifteen seconds for a `gridcell` that page was never going to have. The failure read like a boot
+  // defect in the 2048 and was nothing of the sort. A gate that cannot say WHICH application it looked at can
+  // neither pass nor fail meaningfully, so the address is verified before anything is asserted about it.
+  const titulo = await page.title();
+  if (!titulo.includes('2048')) {
+    console.error(`✗ axe: ${URL} is serving "${titulo}", not this game. Point AXE_URL at the 2048's preview.`);
+    process.exit(2);
+  }
+
   await page.waitForSelector('[role="gridcell"][aria-label]', { timeout: 15_000 });
 
   const results = await new AxeBuilder({ page })
