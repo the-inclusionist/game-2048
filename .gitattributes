@@ -1,0 +1,32 @@
+# LINE ENDINGS ARE LF, IN THE REPOSITORY AND IN THE WORKING TREE.
+#
+# Not a style preference. This repository is developed on Windows and read by contributors who are meant to be
+# anywhere, and CRLF has already cost real time here twice:
+#
+#   · LICENSE and app/index.html drifted to CRLF, and the document that described grafting this history onto
+#     the remote's had to argue about which copy of the LICENSE should win the conflict — 661 lines that
+#     differed in nothing but their line endings;
+#   · a multi-line search-and-replace written with `\n` matches ZERO lines in a CRLF file. It does not fail; it
+#     reports success having changed nothing. A mutation that is never applied leaves the test suite green, and
+#     the green means nothing.
+#
+# `text=auto eol=lf` normalises on commit AND checks out LF, so the second failure cannot come back. If it ever
+# has to be relaxed for one path, relax it for that path and say why here — not by deleting this line.
+* text=auto eol=lf
+
+# Binary types that must never be normalised. None is tracked today (the engine's fonts and the browser
+# tests' screenshots are both gitignored), and they are declared in advance because the day one arrives is the
+# day somebody notices it was corrupted.
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.mp3  binary
+*.ogg  binary
+*.wav  binary
+*.onnx binary
