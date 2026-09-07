@@ -18,7 +18,7 @@ descend from its.
 | Remote `origin/main` | 2 commits · `README.md`, `LICENSE` |
 | Local `main` | the whole game — `git rev-list --count main` says how many, and it grows with every commit made before you run this |
 | Common ancestor | **none** |
-| Safety net | branch **`backup-before-the-graft`**, pointing at `main` as it was before any rewrite |
+| Safety net | branch **`backup-before-the-graft`** — refresh it yourself as step zero, below |
 
 ## The repair
 
@@ -27,6 +27,15 @@ Rewriting history was blocked for me, and it is a state change — one of those 
 ⚠️ **Nothing is lost on either side.** My commits were never pushed, so rewriting them affects nobody; and
 the remote's 2 commits become the ROOT rather than being discarded.
 
+Step zero, the net. It costs nothing, and it is the only thing standing between a bad rebase and the whole
+game — do it yourself, because the branch goes one commit stale as soon as anything else is committed:
+
+```bash
+git branch -f backup-before-the-graft main
+```
+
+Then the rebase itself:
+
 ```bash
 cd /c/Users/candi/Claude/SP-the-inclusionist-2048 && git rebase --onto origin/main --root main
 ```
@@ -34,7 +43,7 @@ cd /c/Users/candi/Claude/SP-the-inclusionist-2048 && git rebase --onto origin/ma
 ### The conflict: two files, once only
 
 It happens **on the first replayed commit** (`302fa4b — chore: the repository is born`), the only one of mine
-that creates `LICENSE` and `README.md`. Resolved there, the other thirteen replay cleanly.
+that creates `LICENSE` and `README.md`. Resolved there, every other commit replays cleanly.
 
 ```bash
 git checkout origin/main -- LICENSE && git checkout 302fa4b -- README.md && git add LICENSE README.md && git rebase --continue
