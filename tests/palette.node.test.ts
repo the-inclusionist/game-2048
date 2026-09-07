@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// O CONTRASTE É GATE — não é revisão de design, é a WCAG 1.4.3 medida a cada `npm test`.
+// CONTRAST IS A GATE — not a design review, but WCAG 1.4.3 measured on every `npm test`.
 //
-// ========================= POR QUE ISTO PODE SER TESTADO SEM NAVEGADOR =========================
-// Porque `render/palette` é aritmética. A razão de contraste da WCAG é uma fórmula fechada sobre os canais
-// da cor, e o número que ela devolve é o mesmo no Chromium e aqui. Um teste de navegador para isto seria
-// mais lento e não mediria nada a mais.
+// ========================= WHY THIS CAN BE TESTED WITHOUT A BROWSER =========================
+// Because `render/palette` is arithmetic. WCAG's contrast ratio is a closed formula over the colour's
+// channels, and the number it returns is the same in Chromium as it is here. A browser test for this would be
+// slower and would measure nothing more.
 //
-// ========================= A HONESTIDADE QUE O ADR-0010 PEDE =========================
-// O pilar 2 manda marcar onde só dá AA, e a §1 do CLAUDE.md da engine é explícita: "nunca vender AAA em
-// bloco". Então a asserção dura é a **AA (4,5:1)**, que é obrigação; a AAA (7:1) é CONTADA e relatada, não
-// exigida — 1.4.6 briga com cor viva, e vender o que não se cumpre é pior que cumprir menos.
+// ========================= THE HONESTY ADR-0010 ASKS FOR =========================
+// Pillar 2 requires marking where only AA is reachable, and the engine's CLAUDE.md §1 is explicit: "never sell
+// AAA in bulk". So the hard assertion is **AA (4.5:1)**, which is an obligation; AAA (7:1) is COUNTED and
+// reported, not required — 1.4.6 fights vivid colour, and selling what you do not deliver is worse than
+// delivering less.
 import { describe, expect, it } from 'vitest';
 import { OBJETIVO } from '../app/js/board.ts';
 import {
@@ -20,102 +21,102 @@ import {
 const AA = 4.5;
 const AAA = 7;
 
-describe('a fórmula de contraste é a da WCAG, e não uma aproximação', () => {
-  it('[Cross-check] preto contra branco dá 21:1, o máximo que a escala tem', () => {
+describe('the contrast formula is WCAG’s, not an approximation', () => {
+  it('[Cross-check] black against white gives 21:1, the maximum the scale has', () => {
     expect(contraste(0x000000, 0xffffff)).toBeCloseTo(21, 5);
   });
 
-  it('[Zero] uma cor contra ela mesma dá 1:1', () => {
+  it('[Zero] a colour against itself gives 1:1', () => {
     expect(contraste(0x3f7fcc, 0x3f7fcc)).toBeCloseTo(1, 10);
   });
 
-  it('[Interface] a ordem não importa — contraste é simétrico', () => {
+  it('[Interface] the order does not matter — contrast is symmetric', () => {
     expect(contraste(0x14161f, 0xd99a1f)).toBeCloseTo(contraste(0xd99a1f, 0x14161f), 10);
   });
 
-  it('[Cross-check] a luminância bate com o valor conhecido do cinza médio da sRGB', () => {
+  it('[Cross-check] the luminance matches the known value for sRGB mid grey', () => {
     expect(luminancia(0x808080)).toBeCloseTo(0.2159, 3);
   });
 });
 
-describe('cada peça é legível — a WCAG 1.4.3 como gate', () => {
-  it('[Right] TODA peça, do 2 ao 2048, alcança a AA com a tinta que o código escolhe', () => {
+describe('every tile is legible — WCAG 1.4.3 as a gate', () => {
+  it('[Right] EVERY tile, from 2 to 2048, reaches AA with the ink the code chooses', () => {
     const reprovadas: string[] = [];
     for (let e = 1; e <= OBJETIVO + 1; e++) {
       const fundo = fundoDe(e);
       const razao = contraste(fundo, inkFor(fundo));
       if (razao < AA) reprovadas.push(`2^${e} = ${2 ** e}: ${razao.toFixed(2)}:1`);
     }
-    expect(reprovadas, 'peças ilegíveis para quem tem baixa visão').toEqual([]);
+    expect(reprovadas, 'tiles illegible to a child with low vision').toEqual([]);
   });
 
-  it('[Interface] quantas alcançam a AAA — CONTADO e não exigido, porque 1.4.6 briga com cor viva', () => {
+  it('[Interface] how many reach AAA — COUNTED and not required, because 1.4.6 fights vivid colour', () => {
     const razoes = Array.from({ length: OBJETIVO + 1 }, (_, k) => {
       const fundo = fundoDe(k + 1);
       return contraste(fundo, inkFor(fundo));
     });
     const aaa = razoes.filter((r) => r >= AAA).length;
-    // A asserção é sobre a HONESTIDADE do número, não sobre ele ser alto: o que não pode acontecer é o
-    // projeto alegar AAA em bloco. Se este número cair, é informação; se a AA cair, é defeito.
+    // The assertion is about the HONESTY of the number, not about it being high: what must not happen is the
+    // project claiming AAA in bulk. If this number drops it is information; if AA drops it is a defect.
     expect(aaa).toBeGreaterThanOrEqual(0);
     expect(aaa).toBeLessThanOrEqual(razoes.length);
   });
 
-  it('[Boundary] a casa VAZIA se distingue da moldura, senão o tabuleiro vira um bloco só', () => {
-    expect(contraste(FUNDO[0], MOLDURA), 'vazio contra moldura').toBeGreaterThan(1.2);
-    expect(contraste(MOLDURA, FUNDO_DA_TELA), 'moldura contra o fundo da tela').toBeGreaterThan(1.2);
+  it('[Boundary] the EMPTY square is distinguishable from the frame, or the board becomes one block', () => {
+    expect(contraste(FUNDO[0], MOLDURA), 'empty against frame').toBeGreaterThan(1.2);
+    expect(contraste(MOLDURA, FUNDO_DA_TELA), 'frame against the screen background').toBeGreaterThan(1.2);
   });
 
-  it('[Many] duas peças VIZINHAS na rampa não são a mesma cor', () => {
+  it('[Many] two NEIGHBOURING tiles on the ramp are not the same colour', () => {
     for (let e = 1; e < FUNDO.length - 1; e++) {
-      expect(fundoDe(e), `2^${e} contra 2^${e + 1}`).not.toBe(fundoDe(e + 1));
+      expect(fundoDe(e), `2^${e} against 2^${e + 1}`).not.toBe(fundoDe(e + 1));
     }
   });
 
-  it('[Boundary] os primeiros degraus se separam por LUMINÂNCIA, para quem não distingue matiz', () => {
-    // Daltonismo não apaga claro e escuro. Nos degraus que a criança mais vê — 2, 4, 8, 16 — a escada de
-    // luminância é o que sustenta a leitura quando a cor não sustenta.
+  it('[Boundary] the first steps separate by LUMINANCE, for whoever cannot tell hues apart', () => {
+    // Colour blindness does not erase light and dark. On the steps the child sees most — 2, 4, 8, 16 — the
+    // luminance staircase is what holds the reading up when the colour does not.
     const l = [1, 2, 3, 4].map((e) => luminancia(fundoDe(e)));
     for (let i = 0; i < l.length - 1; i++) {
-      expect(l[i], `2^${i + 1} mais claro que 2^${i + 2}`).toBeGreaterThan(l[i + 1]);
+      expect(l[i], `2^${i + 1} lighter than 2^${i + 2}`).toBeGreaterThan(l[i + 1]);
     }
   });
 });
 
-describe('alto contraste POR PAPEL — o achado 8 do quiz, resolvido do lado do jogo', () => {
-  it('[Right] os três papéis que este jogo usa estão na tabela', () => {
+describe('high contrast BY ROLE — the quiz’s finding 8, solved on the game’s side', () => {
+  it('[Right] the three roles this game uses are in the table', () => {
     for (const papel of ['goal', 'structure', 'free']) {
       expect(HC_POR_PAPEL[papel], papel).toBeTypeOf('number');
     }
   });
 
-  it('[Right] os três papéis se separam entre si pela 1.4.11 — que é 3:1, e não 4,5', () => {
-    // ⚠️ ESTE LIMIAR ESTAVA ERRADO NA PRIMEIRA VERSÃO deste arquivo, e o erro vale mais escrito que apagado:
-    // eu exigia 4,5:1 entre duas COREs DE PREENCHIMENTO. 4,5 é a WCAG 1.4.3, que é sobre TEXTO. Cor de peça
-    // contra cor de peça é componente não-textual, e o critério é a **1.4.11 (Non-text Contrast), 3:1**.
-    // Não é o limiar sendo afrouxado para passar: é o critério certo substituindo o citado por engano — e a
-    // busca por um cinza que satisfizesse 4,5 contra o amarelo E 3 contra o quase-preto não tinha solução,
-    // que foi como o engano apareceu.
+  it('[Right] the three roles separate from each other by 1.4.11 — which is 3:1, not 4.5', () => {
+    // ⚠️ THIS THRESHOLD WAS WRONG IN THIS FILE'S FIRST VERSION, and the error is worth keeping written down:
+    // I required 4.5:1 between two FILL colours. 4.5 is WCAG 1.4.3, which is about TEXT. A tile colour against
+    // a tile colour is a non-text component, and the criterion is **1.4.11 (Non-text Contrast), 3:1**.
+    // This is not the bar being lowered to pass: it is the right criterion replacing one cited by mistake —
+    // and the search for a grey satisfying 4.5 against the yellow AND 3 against the near-black had no
+    // solution, which is how the mistake surfaced.
     const NAO_TEXTO = 3;
     expect(contraste(HC_POR_PAPEL.goal, HC_POR_PAPEL.structure)).toBeGreaterThanOrEqual(NAO_TEXTO);
     expect(contraste(HC_POR_PAPEL.goal, HC_POR_PAPEL.free)).toBeGreaterThanOrEqual(NAO_TEXTO);
     expect(contraste(HC_POR_PAPEL.structure, HC_POR_PAPEL.free)).toBeGreaterThanOrEqual(NAO_TEXTO);
   });
 
-  it('[Right] o número segue legível sobre qualquer cor de papel', () => {
+  it('[Right] the number stays legible over any role colour', () => {
     for (const [papel, cor] of Object.entries(HC_POR_PAPEL)) {
       expect(contraste(cor, inkFor(cor)), papel).toBeGreaterThanOrEqual(AA);
     }
   });
 });
 
-describe('inkFor escolhe, e não adivinha', () => {
-  it('[Boundary] fundo claro pede tinta escura; fundo escuro pede tinta clara', () => {
+describe('inkFor chooses, it does not guess', () => {
+  it('[Boundary] a light background asks for dark ink; a dark one asks for light ink', () => {
     expect(inkFor(0xf6f8ff)).toBe(TINTA_ESCURA);
     expect(inkFor(0x101319)).toBe(TINTA_CLARA);
   });
 
-  it('[Right] a escolha é sempre a de MAIOR contraste, sem exceção na rampa inteira', () => {
+  it('[Right] the choice is always the one with MORE contrast, with no exception across the ramp', () => {
     for (let e = 0; e < FUNDO.length; e++) {
       const fundo = FUNDO[e];
       const escolhida = inkFor(fundo);

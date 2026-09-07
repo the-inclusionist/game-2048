@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// A ANIMAÇÃO ACONTECENDO — num navegador de verdade, que é o único lugar onde ela existe.
+// THE ANIMATION ACTUALLY HAPPENING — in a real browser, which is the only place it exists.
 //
-// ========================= POR QUE ESTE ARQUIVO É NECESSÁRIO =========================
-// `tests/animation.node.test.ts` prova a CONTA: entra `t`, sai posição. Este prova a outra metade, que
-// nenhuma conta pode provar — que o `calc(N * var(--px))` escrito pelo JavaScript vira o pixel certo depois
-// de o navegador resolver a variável, e que a peça de fato ATRAVESSA o tabuleiro em vez de saltar.
+// ========================= WHY THIS FILE IS NECESSARY =========================
+// `tests/animation.node.test.ts` proves the ARITHMETIC: `t` goes in, a position comes out. This one proves
+// the other half, which no arithmetic can prove — that the `calc(N * var(--px))` written by the JavaScript
+// becomes the right pixel once the browser resolves the variable, and that the tile really CROSSES the board
+// instead of jumping.
 //
-// ⚠️ E ele existe porque a verificação manual não estava disponível: o painel de navegador desta sessão fica
-// OCULTO, e num documento escondido o `requestAnimationFrame` não roda — foi assim que o defeito da tela
-// desatualizada apareceu (ver `podeAnimar`). Aqui a página está viva, então o quadro acontece.
+// ⚠️ And it exists because manual verification was not available: this session's browser pane stays HIDDEN,
+// and in a hidden document `requestAnimationFrame` does not run — that is how the stale-screen defect turned
+// up (see `podeAnimar`). Here the page is alive, so the frame happens.
 import { beforeEach, describe, expect, it } from 'vitest';
 import { pecasNoInstante, pecasParadas, posicaoDe } from '../app/js/animation.ts';
 import { SIZE, slide, type Board } from '../app/js/board.ts';
 import { BOARD, BOARD_X, BOARD_Y, cellRect } from '../app/js/geometry.ts';
 import { criarCamadaDePecas } from '../app/js/ui/tiles-layer.ts';
 
-/** O `k` que o `ui/layout` publicaria. Fixado para a conta poder ser conferida. */
+/** The `k` that `ui/layout` would publish. Pinned so the arithmetic can be checked. */
 const K = 4;
 const grade = (...v: number[]): Board => v.map((x) => (x === 0 ? 0 : Math.log2(x)));
 const linha = (...v: number[]): Board => grade(...v, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -30,26 +31,26 @@ beforeEach(() => {
   regiao.style.position = 'relative';
   regiao.style.width = `${320 * K}px`;
   regiao.style.height = `${180 * K}px`;
-  // Exatamente o que `ui/layout` escreve, com `--px` derivado como a folha do jogo o deriva. Fixar `--px`
-  // direto passaria por cima da própria linha que este teste existe para verificar.
+  // Exactly what `ui/layout` writes, with `--px` derived the way the game's stylesheet derives it. Pinning
+  // `--px` directly would step over the very line this test exists to verify.
   regiao.style.setProperty('--ui-fs', `${8 * K}px`);
   regiao.style.setProperty('--px', 'calc(var(--ui-fs) / 8)');
   document.body.appendChild(regiao);
 
-  // ⚠️ A CAMADA NÃO É POSICIONADA AQUI, e antes era — este teste escrevia `left`/`top`/`width`/`height` na
-  // raiz dela antes de medir. Fazia, portanto, o trabalho que o código de produção tinha ESQUECIDO: a camada
-  // real cobria a região inteira e os números apareciam 164 por 16 pixels lógicos à esquerda das peças. O
-  // teste passava verde com a tela errada, e só uma captura mostrou.
+  // ⚠️ THE LAYER IS NOT POSITIONED HERE, and it used to be — this test wrote `left`/`top`/`width`/`height` on
+  // its root before measuring. It was therefore doing the work the production code had FORGOTTEN: the real
+  // layer covered the whole region and the numbers appeared 164 by 16 logical pixels to the left of the
+  // tiles. The test passed green with the screen wrong, and only a screenshot showed it.
   //
-  // Agora entra só o `position: absolute` que a folha de estilo daria — a folha real não é carregada aqui —,
-  // e TUDO o mais tem de vir do módulo.
+  // Now only the `position: absolute` the stylesheet would give goes in — the real sheet is not loaded here —
+  // and EVERYTHING else has to come from the module.
   camada = criarCamadaDePecas(document);
   camada.raiz.style.position = 'absolute';
   regiao.appendChild(camada.raiz);
   for (const el of camada.raiz.children) (el as HTMLElement).style.position = 'absolute';
 });
 
-/** A caixa de uma peça, em pixels lógicos relativos à região — desfazendo o `k`. */
+/** A tile's box, in logical pixels relative to the region — undoing the `k`. */
 function caixaLogica(el: HTMLElement) {
   const r = regiao.getBoundingClientRect();
   const b = el.getBoundingClientRect();
@@ -58,9 +59,10 @@ function caixaLogica(el: HTMLElement) {
 
 const visiveis = () => [...camada.raiz.querySelectorAll<HTMLElement>('.p2-tile')].filter((e) => !e.hidden);
 
-describe('a peça desenhada cai no pixel que a conta mandou', () => {
-  it('[Right] a CAMADA se posiciona sozinha sobre o tabuleiro — sem ninguém a ajudar', () => {
-    // O gate do defeito de 05/09: era o teste que a posicionava, então ela podia estar errada em produção.
+describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
+  it('[Right] the LAYER positions itself over the board — with nobody helping it', () => {
+    // The gate for the 2026-09-05 defect: it was the test that positioned it, so it could be wrong in
+    // production.
     const r = regiao.getBoundingClientRect();
     const b = camada.raiz.getBoundingClientRect();
     expect(Math.round(b.x - r.x), 'BOARD_X · k').toBe(BOARD_X * K);
@@ -68,12 +70,12 @@ describe('a peça desenhada cai no pixel que a conta mandou', () => {
     expect(Math.round(b.width), 'BOARD · k').toBe(BOARD * K);
   });
 
-  it('[Right] parada, ela fica exatamente sobre a casa — como o canvas a desenharia', () => {
+  it('[Right] at rest it sits exactly over the square — as the canvas would draw it', () => {
     const pecas = pecasParadas(linha(2, 0, 0, 8));
     camada.desenhar(pecas, false, papelFixo);
     for (const el of visiveis()) {
-      // ⚠️ `position: absolute` é aplicado pelo teste porque a folha real não é carregada; o que se verifica
-      // é a TRANSFORMADA que o módulo escreveu, resolvida pelo navegador.
+      // ⚠️ `position: absolute` is applied by the test because the real stylesheet is not loaded; what is
+      // being verified is the TRANSFORM the module wrote, resolved by the browser.
       el.style.position = 'absolute';
     }
     const caixas = visiveis().map(caixaLogica);
@@ -81,7 +83,7 @@ describe('a peça desenhada cai no pixel que a conta mandou', () => {
     expect(caixas[1]).toEqual({ x: cellRect(3).x, y: cellRect(3).y });
   });
 
-  it('[Many] no MEIO do deslize ela está entre duas casas, e nunca sobre uma', () => {
+  it('[Many] MID-slide it is between two squares, and never over one', () => {
     const r = slide(linha(0, 0, 0, 2), 'left');
     const casas = Array.from({ length: SIZE * SIZE }, (_, i) => cellRect(i).x);
     const vistos: number[] = [];
@@ -90,15 +92,16 @@ describe('a peça desenhada cai no pixel que a conta mandou', () => {
       for (const el of visiveis()) el.style.position = 'absolute';
       const x = caixaLogica(visiveis()[0]).x;
       vistos.push(x);
-      expect(casas, `t=${t} caiu em cima de uma casa — isso é salto, não deslize`).not.toContain(x);
+      expect(casas, `t=${t} landed on top of a square — that is a jump, not a slide`).not.toContain(x);
     }
-    // E anda sempre para o mesmo lado: a peça não volta atrás no meio do caminho.
+    // And it always travels the same way: the tile does not go backwards mid-path.
     for (let i = 1; i < vistos.length; i++) expect(vistos[i]).toBeLessThan(vistos[i - 1]);
   });
 
-  it('[Cross-check] o navegador concorda com a conta pura, pixel a pixel', () => {
-    // É a costura entre `animation.ts` (aritmética) e o CSS (resolução do `calc`). Se divergissem, a peça
-    // desenhada e a peça calculada estariam em lugares diferentes — e nenhum teste de nó veria.
+  it('[Cross-check] the browser agrees with the pure arithmetic, pixel by pixel', () => {
+    // It is the seam between `animation.ts` (arithmetic) and the CSS (resolving the `calc`). If they
+    // diverged, the drawn tile and the computed tile would be in different places — and no node test would
+    // see it.
     const r = slide(linha(0, 0, 0, 4), 'left');
     for (const t of [0, 0.35, 0.7, 1]) {
       const esperado = posicaoDe(r.movimentos[0], t);
@@ -110,24 +113,24 @@ describe('a peça desenhada cai no pixel que a conta mandou', () => {
     }
   });
 
-  it('[Zero] peças que sobraram do quadro anterior somem em vez de ficarem penduradas', () => {
+  it('[Zero] tiles left over from the previous frame disappear instead of hanging around', () => {
     camada.desenhar(pecasParadas(linha(2, 4, 8, 16)), false, papelFixo);
     expect(visiveis()).toHaveLength(4);
     camada.desenhar(pecasParadas(linha(2, 0, 0, 0)), false, papelFixo);
-    expect(visiveis(), 'três peças fantasmas ficariam na tela').toHaveLength(1);
+    expect(visiveis(), 'three ghost tiles would stay on screen').toHaveLength(1);
   });
 
-  it('[Interface] o número é TEXTO no DOM, e o elemento sai da árvore de acessibilidade', () => {
+  it('[Interface] the number is TEXT in the DOM, and the element leaves the accessibility tree', () => {
     camada.desenhar(pecasParadas(linha(2048, 0, 0, 0)), false, papelFixo);
-    expect(visiveis()[0].textContent, 'texto de verdade, não um glifo pintado').toBe('2048');
-    expect(camada.raiz.getAttribute('aria-hidden'), 'quem responde pela grade é `board-dom`').toBe('true');
+    expect(visiveis()[0].textContent, 'real text, not a painted glyph').toBe('2048');
+    expect(camada.raiz.getAttribute('aria-hidden'), '`board-dom` is what answers for the grid').toBe('true');
   });
 
-  it('[Boundary] o pool REUSA os elementos — não recria dezesseis nós por quadro', () => {
+  it('[Boundary] the pool REUSES the elements — it does not recreate sixteen nodes per frame', () => {
     camada.desenhar(pecasParadas(linha(2, 4, 0, 0)), false, papelFixo);
     const primeiro = visiveis()[0];
     camada.desenhar(pecasParadas(linha(8, 16, 0, 0)), false, papelFixo);
-    expect(visiveis()[0], 'nó novo a cada quadro perde estado e faz o texto piscar').toBe(primeiro);
+    expect(visiveis()[0], 'a new node every frame loses state and makes the text flicker').toBe(primeiro);
     expect(visiveis()[0].textContent).toBe('8');
   });
 });

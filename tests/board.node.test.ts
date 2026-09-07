@@ -1,38 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// AS REGRAS DO 2048, ESCRITAS DO ZERO — e este arquivo é a razão de elas poderem ser escritas do zero.
+// THE RULES OF 2048, WRITTEN FROM SCRATCH — and this file is the reason they CAN be written from scratch.
 //
-// ========================= POR QUE REIMPLEMENTAR, EM UMA FRASE =========================
-// As REGRAS de um jogo não são protegidas por direito autoral; uma implementação delas é. O Município tem de
-// ter titularidade do INTEIRO daquilo que possui (`docs/LICENSES.md`), e a licença MIT dos descendentes do
-// Threes! permitiria reusar com atribuição — não é obstáculo de licença que está sendo contornado, é uma
-// decisão de TITULARIDADE. O que este arquivo faz é transformar "as regras" em algo verificável, para que
-// "escrevemos do zero" seja uma propriedade medida e não uma alegação.
+// ========================= WHY REIMPLEMENT, IN ONE SENTENCE =========================
+// The RULES of a game are not protected by copyright; an implementation of them is. The Município has to own
+// the WHOLE of what it owns (`docs/LICENSES.md`), and the MIT licence of the Threes! descendants would allow
+// reuse with attribution — no licence obstacle is being worked around, this is a decision about OWNERSHIP.
+// What this file does is turn "the rules" into something verifiable, so that "we wrote it from scratch" is a
+// measured property and not a claim.
 //
-// ========================= O MODELO: EXPOENTES, NÃO VALORES =========================
-// O tabuleiro guarda `0` para vazio e `n` para 2^n — `1` é a peça 2, `11` é a peça 2048. Não é economia de
-// memória: é o que faz "potência de dois" ser o MODELO do jogo e não um rótulo colado nele depois. Fundir
-// vira `n + 1`, o objetivo vira `11`, e o enunciado da atividade ("2 elevado a quê?") lê o mesmo número que
-// a mecânica usa. Os testes escrevem VALORES, porque é assim que a criança vê.
+// ========================= THE MODEL: EXPONENTS, NOT VALUES =========================
+// The board holds `0` for empty and `n` for 2^n — `1` is the tile 2, `11` is the tile 2048. This is not memory
+// thrift: it is what makes "power of two" the MODEL of the game rather than a label stuck on afterwards.
+// Merging becomes `n + 1`, the objective becomes `11`, and the activity's wording ("two to the what?") reads
+// the same number the mechanic uses. The tests write VALUES, because that is how the child sees them.
 //
-// ========================= A REGRA QUE OS FORKS ERRAM =========================
-// Numa jogada, cada peça funde NO MÁXIMO UMA VEZ. `[2,2,2,2]` para a esquerda é `[4,4]`, nunca `[8]`. É a
-// diferença entre um jogo que termina em quinze jogadas e o 2048. Está marcada com [Many] e é o caso que
-// mais justifica este arquivo existir antes do código.
+// ========================= THE RULE THE FORKS GET WRONG =========================
+// In one move, each tile merges AT MOST ONCE. `[2,2,2,2]` to the left is `[4,4]`, never `[8]`. It is the
+// difference between a game that ends in fifteen moves and 2048. It is marked [Many] and it is the case that
+// most justifies this file existing before the code.
 import { describe, expect, it } from 'vitest';
 import {
   SIZE, canMove, maxTile, mergeSpots, slide, spawn, type Board,
 } from '../app/js/board.ts';
 
-/** Um tabuleiro escrito em VALORES (0, 2, 4, 8…) — como a criança o vê — virado em expoentes. */
+/** A board written in VALUES (0, 2, 4, 8…) — as the child sees it — turned into exponents. */
 const grade = (...valores: number[]): Board => {
-  if (valores.length !== SIZE * SIZE) throw new Error(`grade precisa de ${SIZE * SIZE} casas`);
+  if (valores.length !== SIZE * SIZE) throw new Error(`grade needs ${SIZE * SIZE} squares`);
   return valores.map((v) => (v === 0 ? 0 : Math.log2(v)));
 };
-/** De volta a valores, para o `expect` falhar dizendo `[4,4,0,0]` e não `[2,2,0,0]`. */
+/** Back to values, so that `expect` fails saying `[4,4,0,0]` and not `[2,2,0,0]`. */
 const valores = (b: Board): number[] => b.map((e) => (e === 0 ? 0 : 2 ** e));
-/** Uma linha só, com o resto vazio — a forma mais legível de testar deslizamento horizontal. */
+/** A single row, the rest empty — the most readable way to test horizontal sliding. */
 const linha = (...v: number[]): Board => grade(...v, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-/** Uma coluna só. `[a,b,c,d]` vira a primeira coluna. */
+/** A single column. `[a,b,c,d]` becomes the first column. */
 const coluna = (a: number, b: number, c: number, d: number): Board =>
   grade(a, 0, 0, 0, b, 0, 0, 0, c, 0, 0, 0, d, 0, 0, 0);
 const primeiraLinha = (b: Board): number[] => valores(b).slice(0, SIZE);
@@ -40,8 +40,8 @@ const primeiraColuna = (b: Board): number[] => [0, 1, 2, 3].map((y) => valores(b
 
 const VAZIO: Board = grade(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-describe('slide — deslizar e fundir', () => {
-  it('[Zero] tabuleiro vazio não se move em direção nenhuma', () => {
+describe('slide — sliding and merging', () => {
+  it('[Zero] an empty board does not move in any direction', () => {
     for (const dir of ['left', 'right', 'up', 'down'] as const) {
       const r = slide(VAZIO, dir);
       expect(r.moved, dir).toBe(false);
@@ -50,7 +50,7 @@ describe('slide — deslizar e fundir', () => {
     }
   });
 
-  it('[One] uma peça sozinha vai até a parede, e não funde com ninguém', () => {
+  it('[One] a lone tile travels to the wall, and merges with nobody', () => {
     const r = slide(linha(0, 0, 2, 0), 'left');
     expect(primeiraLinha(r.board)).toEqual([2, 0, 0, 0]);
     expect(r.moved).toBe(true);
@@ -58,56 +58,56 @@ describe('slide — deslizar e fundir', () => {
     expect(r.gained).toBe(0);
   });
 
-  it('[Right] duas iguais adjacentes viram uma do dobro', () => {
+  it('[Right] two adjacent equals become one of double the value', () => {
     const r = slide(linha(2, 2, 0, 0), 'left');
     expect(primeiraLinha(r.board)).toEqual([4, 0, 0, 0]);
     expect(r.gained).toBe(4);
     expect(r.merges).toEqual([{ at: 0, exponent: 2 }]);
   });
 
-  it('[Many] ⚠️ quatro iguais viram DUAS fusões, nunca uma cascata', () => {
+  it('[Many] ⚠️ four equals become TWO merges, never a cascade', () => {
     const r = slide(linha(2, 2, 2, 2), 'left');
-    expect(primeiraLinha(r.board), 'cada peça funde no máximo uma vez por jogada').toEqual([4, 4, 0, 0]);
+    expect(primeiraLinha(r.board), 'each tile merges at most once per move').toEqual([4, 4, 0, 0]);
     expect(r.gained).toBe(8);
     expect(r.merges).toHaveLength(2);
   });
 
-  it('[Exception] a peça RECÉM-FUNDIDA não funde de novo na mesma jogada', () => {
-    // 2+2 vira 4 na casa 0; o 4 que já estava ali ao lado NÃO pode se juntar a ele agora.
+  it('[Exception] the JUST-MERGED tile does not merge again in the same move', () => {
+    // 2+2 becomes 4 on square 0; the 4 that was already next to it must NOT join it now.
     const r = slide(linha(2, 2, 4, 0), 'left');
     expect(primeiraLinha(r.board)).toEqual([4, 4, 0, 0]);
     expect(r.gained).toBe(4);
   });
 
-  it('[Boundary] com três iguais, funde o par mais perto da PAREDE para onde se empurra', () => {
+  it('[Boundary] with three equals, the pair nearest the WALL being pushed towards is the one that merges', () => {
     expect(primeiraLinha(slide(linha(2, 2, 2, 0), 'left').board)).toEqual([4, 2, 0, 0]);
     expect(primeiraLinha(slide(linha(0, 2, 2, 2), 'right').board)).toEqual([0, 0, 2, 4]);
   });
 
-  it('[Boundary] um bloqueio no caminho não impede o par de trás de fundir', () => {
+  it('[Boundary] a blocker in the way does not stop the pair behind it from merging', () => {
     expect(primeiraLinha(slide(linha(4, 2, 2, 0), 'left').board)).toEqual([4, 4, 0, 0]);
   });
 
-  it('[Simple] jogada que não muda nada devolve moved:false — e é o que impede o sorteio', () => {
+  it('[Simple] a move that changes nothing returns moved:false — and that is what stops the spawn', () => {
     const encostado = linha(4, 2, 0, 0);
     const r = slide(encostado, 'left');
-    expect(r.moved, 'sem isto, cada tecla inútil ainda enche o tabuleiro').toBe(false);
+    expect(r.moved, 'without this, every useless key press still fills the board').toBe(false);
     expect(valores(r.board)).toEqual(valores(encostado));
   });
 
-  it('[Interface] as colunas obedecem à mesma regra que as linhas', () => {
+  it('[Interface] the columns obey the same rule as the rows', () => {
     expect(primeiraColuna(slide(coluna(2, 2, 2, 2), 'up').board)).toEqual([4, 4, 0, 0]);
     expect(primeiraColuna(slide(coluna(2, 2, 2, 2), 'down').board)).toEqual([0, 0, 4, 4]);
     expect(primeiraColuna(slide(coluna(0, 0, 0, 8), 'up').board)).toEqual([8, 0, 0, 0]);
   });
 
-  it('[Interface] `gained` é a soma dos valores FORMADOS, que é o placar da rodada', () => {
+  it('[Interface] `gained` is the sum of the values FORMED, which is the round’s score', () => {
     const r = slide(linha(4, 4, 8, 8), 'left');
     expect(primeiraLinha(r.board)).toEqual([8, 16, 0, 0]);
     expect(r.gained).toBe(8 + 16);
   });
 
-  it('[Right] o tabuleiro de entrada NÃO é modificado — a jogada devolve um novo', () => {
+  it('[Right] the incoming board is NOT modified — the move returns a new one', () => {
     const antes = linha(2, 2, 0, 0);
     const copia = [...antes];
     slide(antes, 'left');
@@ -115,11 +115,11 @@ describe('slide — deslizar e fundir', () => {
   });
 });
 
-describe('movimentos — de onde cada peça veio, que é o que a animação precisa saber', () => {
-  it('[Zero] jogada que não move nada não inventa caminho para as peças paradas... ', () => {
-    // ...mas TAMBÉM não as esquece: elas continuam na lista, com `from === to`. Quem desenha precisa de
-    // todas as peças, e uma lista "só das que mexeram" o obrigaria a redescobrir o resto comparando
-    // tabuleiros — que é exatamente o palpite que este campo existe para eliminar.
+describe('movements — where each tile came from, which is what the animation needs to know', () => {
+  it('[Zero] a move that shifts nothing invents no path for the tiles standing still... ', () => {
+    // ...but it does NOT forget them either: they stay in the list, with `from === to`. Whoever draws needs
+    // ALL the tiles, and a list of "only the ones that moved" would force them to rediscover the rest by
+    // comparing boards — which is exactly the guesswork this field exists to eliminate.
     const r = slide(linha(4, 2, 0, 0), 'left');
     expect(r.moved).toBe(false);
     expect(r.movimentos).toEqual([
@@ -128,14 +128,14 @@ describe('movimentos — de onde cada peça veio, que é o que a animação prec
     ]);
   });
 
-  it('[One] uma peça que desliza guarda a origem e o destino', () => {
+  it('[One] a tile that slides keeps its origin and its destination', () => {
     const r = slide(linha(0, 0, 8, 0), 'left');
     expect(r.movimentos).toEqual([{ from: 2, to: 0, exponent: 3, merged: false }]);
   });
 
-  it('[Right] numa fusão, AS DUAS peças viajam para a mesma casa e as duas morrem', () => {
-    // É o caso que um renderizador não teria como adivinhar comparando dois tabuleiros: duas origens, um
-    // destino, e a peça que aparece lá não é nenhuma das duas.
+  it('[Right] in a merge, BOTH tiles travel to the same square and both die', () => {
+    // It is the case a renderer could not guess by comparing two boards: two origins, one destination, and
+    // the tile that appears there is neither of the two.
     const r = slide(linha(2, 2, 0, 0), 'left');
     expect(r.movimentos).toEqual([
       { from: 0, to: 0, exponent: 1, merged: true },
@@ -144,19 +144,19 @@ describe('movimentos — de onde cada peça veio, que é o que a animação prec
     expect(r.merges).toEqual([{ at: 0, exponent: 2 }]);
   });
 
-  it('[Interface] o expoente que viaja é o de ANTES da fusão — é esse número que atravessa a tela', () => {
+  it('[Interface] the exponent that travels is the one from BEFORE the merge — that is the number crossing the screen', () => {
     const r = slide(linha(8, 8, 0, 0), 'left');
-    expect(r.movimentos.every((m) => m.exponent === 3), '8 = 2^3 viajando, não o 16').toBe(true);
-    expect(r.merges[0].exponent, 'o 16 nasce no destino, não viaja até ele').toBe(4);
+    expect(r.movimentos.every((m) => m.exponent === 3), '8 = 2^3 travelling, not the 16').toBe(true);
+    expect(r.merges[0].exponent, 'the 16 is born at the destination, it does not travel there').toBe(4);
   });
 
-  it('[Many] com quatro iguais são QUATRO caminhos e dois destinos, não uma cascata', () => {
+  it('[Many] with four equals there are FOUR paths and two destinations, not a cascade', () => {
     const r = slide(linha(2, 2, 2, 2), 'left');
     expect(r.movimentos.map((m) => `${m.from}->${m.to}`)).toEqual(['0->0', '1->0', '2->1', '3->1']);
     expect(r.movimentos.every((m) => m.merged)).toBe(true);
   });
 
-  it('[Boundary] nas colunas os caminhos são verticais, e o destino é o índice de verdade', () => {
+  it('[Boundary] in the columns the paths are vertical, and the destination is the real index', () => {
     const r = slide(coluna(0, 4, 0, 4), 'up');
     expect(r.movimentos).toEqual([
       { from: 4, to: 0, exponent: 2, merged: true },
@@ -164,8 +164,8 @@ describe('movimentos — de onde cada peça veio, que é o que a animação prec
     ]);
   });
 
-  it('[Cross-check] toda peça do tabuleiro de ENTRADA aparece exatamente uma vez na lista', () => {
-    // O invariante que impede a animação de perder ou duplicar uma peça na tela.
+  it('[Cross-check] every tile of the INCOMING board appears exactly once in the list', () => {
+    // The invariant that stops the animation losing or duplicating a tile on screen.
     const antes = grade(2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2);
     for (const dir of ['left', 'right', 'up', 'down'] as const) {
       const origens = slide(antes, dir).movimentos.map((m) => m.from).sort((a, b) => a - b);
@@ -174,72 +174,72 @@ describe('movimentos — de onde cada peça veio, que é o que a animação prec
     }
   });
 
-  it('[Right] todo destino da lista está ocupado no tabuleiro de SAÍDA', () => {
+  it('[Right] every destination in the list is occupied on the OUTGOING board', () => {
     const r = slide(linha(2, 2, 4, 8), 'left');
-    for (const m of r.movimentos) expect(r.board[m.to], `destino ${m.to}`).not.toBe(0);
+    for (const m of r.movimentos) expect(r.board[m.to], `destination ${m.to}`).not.toBe(0);
   });
 });
 
-describe('spawn — o sorteio, e por que ele é semeado', () => {
-  /** Um `rnd` de mentira: devolve a sequência dada, em ordem. Semente falsa é semente controlada. */
+describe('spawn — the draw, and why it is seeded', () => {
+  /** A fake `rnd`: it returns the given sequence, in order. A fake seed is a controlled seed. */
   const rndFixo = (...vs: number[]) => { let i = 0; return () => vs[i++ % vs.length]; };
 
-  it('[One] a peça nova cai numa casa VAZIA', () => {
+  it('[One] the new tile lands on an EMPTY square', () => {
     const quaseCheio = grade(2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 0);
     const r = spawn(quaseCheio, rndFixo(0.5, 0.5));
     expect(r).not.toBeNull();
-    expect(r!.at, 'só havia uma casa livre').toBe(15);
+    expect(r!.at, 'there was only one free square').toBe(15);
   });
 
-  it('[Zero] tabuleiro cheio devolve null — e null é resposta, não erro', () => {
+  it('[Zero] a full board returns null — and null is an answer, not an error', () => {
     const cheio = grade(2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2);
     expect(spawn(cheio, rndFixo(0.5))).toBeNull();
   });
 
-  it('[Right] a mesma semente dá a mesma partida — é o que o ADR-0049 pede e o que torna isto testável', () => {
+  it('[Right] the same seed gives the same game — what ADR-0049 asks for, and what makes this testable', () => {
     const semente = () => { let s = 20260905; return () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; };
     const a = spawn(VAZIO, semente());
     const b = spawn(VAZIO, semente());
     expect(a).toEqual(b);
   });
 
-  it('[Boundary] sai 4 na fatia declarada do sorteio, e 2 no resto', () => {
-    // O primeiro número escolhe a casa; o segundo escolhe o valor. 0.05 < 0.1 → peça 4; 0.5 → peça 2.
+  it('[Boundary] a 4 comes out on the declared slice of the draw, and a 2 on the rest', () => {
+    // The first number picks the square; the second picks the value. 0.05 < 0.1 → tile 4; 0.5 → tile 2.
     expect(spawn(VAZIO, rndFixo(0, 0.05))!.exponent, '2^2 = 4').toBe(2);
     expect(spawn(VAZIO, rndFixo(0, 0.5))!.exponent, '2^1 = 2').toBe(1);
   });
 
-  it('[Right] o tabuleiro de entrada NÃO é modificado', () => {
+  it('[Right] the incoming board is NOT modified', () => {
     const copia = [...VAZIO];
     spawn(VAZIO, rndFixo(0, 0.5));
     expect([...VAZIO]).toEqual(copia);
   });
 });
 
-describe('canMove, mergeSpots e maxTile — o que a declaração pergunta', () => {
-  it('[Zero] tabuleiro cheio SEM vizinhos iguais: não há jogada', () => {
+describe('canMove, mergeSpots and maxTile — what the declaration asks for', () => {
+  it('[Zero] a full board with NO equal neighbours: there is no move', () => {
     const travado = grade(2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2);
     expect(canMove(travado)).toBe(false);
     expect(mergeSpots(travado)).toEqual([]);
   });
 
-  it('[One] tabuleiro cheio COM um par vizinho: ainda há jogada, e o sonar sabe onde', () => {
+  it('[One] a full board WITH one neighbouring pair: there is still a move, and the sonar knows where', () => {
     const umPar = grade(2, 2, 4, 8, 4, 8, 2, 4, 8, 2, 4, 8, 2, 4, 8, 2);
     expect(canMove(umPar)).toBe(true);
-    expect(mergeSpots(umPar), 'as duas casas do par, para o sonar apontar').toEqual([0, 1]);
+    expect(mergeSpots(umPar), 'both squares of the pair, for the sonar to point at').toEqual([0, 1]);
   });
 
-  it('[Boundary] o par pode ser VERTICAL, e o crivo horizontal sozinho não o veria', () => {
+  it('[Boundary] the pair may be VERTICAL, and a horizontal sieve alone would not see it', () => {
     const parVertical = grade(2, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2);
     expect(mergeSpots(parVertical)).toContain(0);
     expect(mergeSpots(parVertical)).toContain(4);
   });
 
-  it('[Simple] com casa vazia sempre há jogada, mesmo sem nenhum par', () => {
+  it('[Simple] with an empty square there is always a move, even with no pair at all', () => {
     expect(canMove(linha(2, 4, 8, 16))).toBe(true);
   });
 
-  it('[Interface] maxTile devolve o EXPOENTE, que é o que o objetivo compara com 11', () => {
+  it('[Interface] maxTile returns the EXPONENT, which is what the objective compares against 11', () => {
     expect(maxTile(VAZIO)).toBe(0);
     expect(maxTile(linha(2, 4, 8, 16))).toBe(4);
     expect(maxTile(grade(2048, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)), '2^11').toBe(11);

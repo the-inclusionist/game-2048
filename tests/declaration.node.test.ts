@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// OS SETE CAMPOS, RESPONDIDOS POR UMA GRADE — e é isto que este jogo dá à engine em troca do que recebe.
+// THE SEVEN FIELDS, ANSWERED BY A GRID — and this is what this game gives the engine in return for what it gets.
 //
-// ========================= POR QUE ESTE ARQUIVO IMPORTA ALÉM DESTE JOGO =========================
-// O ADR-0030 escolheu os sete campos do `core/contract` como o eixo da engine e disse, na própria decisão,
-// que "o contrato basta" só deixa de ser hipótese QUANDO DOIS PRESETS EXISTIREM. Existia um: o
-// `consumer-quiz`, com topologia `hotspots` — uma lista ordenada, o caso mais pobre possível, sem espaço
-// nenhum. Este é o segundo, e é `grid`: o primeiro do projeto.
+// ========================= WHY THIS FILE MATTERS BEYOND THIS GAME =========================
+// ADR-0030 chose the seven fields of `core/contract` as the engine's axis and said, inside the decision
+// itself, that "the contract is enough" stops being a hypothesis ONLY WHEN TWO PRESETS EXIST. There was one:
+// the `consumer-quiz`, with the `hotspots` topology — an ordered list, the poorest case there is, with no
+// space at all. This is the second, and it is `grid`: the project's first.
 //
-// A diferença não é contagem. `hotspots` não tem para onde apontar, e o achado 9 do quiz registra que ali o
-// sonar ficou "correto e inútil". Numa grade há distância, vizinhança e direção — então os campos 1, 4 e 5
-// passam a ser exercidos de verdade, e a pergunta "a forma da pergunta está certa?" finalmente tem como ser
-// respondida por alguma coisa além de uma leitura.
+// The difference is not a count. `hotspots` has nowhere to point, and finding 9 of the quiz records that the
+// sonar there was "correct and useless". A grid has distance, neighbourhood and direction — so fields 1, 4 and
+// 5 start being exercised for real, and the question "is the shape of the question right?" can finally be
+// answered by something other than a reading.
 //
-// ========================= O OBJETIVO É EM DOBRAS, E ISSO É DECISÃO =========================
-// A moldura do HUD da engine é `'{have} de {need} {nome}'`. Com valores daria "16 de 2048", que é verdade e
-// não ensina nada. Com EXPOENTES dá **"4 de 11 dobras"** — e 11 é exatamente o que 2048 é: onze
-// duplicações. O contador do jogo passa a dizer a matéria em vez de só marcar pontos, e não custou um campo
-// novo na engine: é o mesmo `have`/`need` que contava moeda.
+// ========================= THE OBJECTIVE IS IN DOUBLINGS, AND THAT IS A DECISION =========================
+// The engine's HUD frame is `'{have} de {need} {nome}'`. With values it would say "16 of 2048", which is true
+// and teaches nothing. With EXPONENTS it says **"4 of 11 doublings"** — and 11 is exactly what 2048 is: eleven
+// doublings. The game's counter starts stating the subject matter instead of merely keeping score, and it cost
+// no new field in the engine: it is the same `have`/`need` that used to count coins.
 import {
   conformanceProblems, distance, speakableProblems, type Heading,
 } from '@the-inclusionist/engine/core/contract.js';
@@ -26,94 +26,95 @@ import { criarDeclaracao, type Observado } from '../app/js/declaration.ts';
 
 const grade = (...valores: number[]): Board => valores.map((v) => (v === 0 ? 0 : Math.log2(v)));
 /**
- * Um `t` de mentira que MARCA o que passou por ele.
+ * A fake `t` that MARKS whatever went through it.
  *
- * ⚠️ Ele devolvia a chave crua, e uma mutação atravessou esse buraco VERDE: com `t = (k) => k`, `t('8')` dá
- * `'8'`, indistinguível de não chamar `t` nenhum. O teste não conseguia separar "o numeral NÃO passa pelo
- * dicionário" — que é decisão registrada em `declaration.ts`, e cara: mandar numeral para o `t()` criaria
- * 2048 chaves para traduzir um algarismo — de "passa, e a tradução calha de ser igual". Com a marca, passar
- * pelo dicionário deixa rastro, e a decisão vira gate em vez de comentário.
+ * ⚠️ It used to return the raw key, and a mutation went through that hole GREEN: with `t = (k) => k`, `t('8')`
+ * gives `'8'`, indistinguishable from never calling `t` at all. The test could not separate "the numeral does
+ * NOT go through the dictionary" — a decision recorded in `declaration.ts`, and an expensive one: sending
+ * numerals to `t()` would create 2048 keys to translate a digit — from "it goes through, and the translation
+ * happens to be identical". With the mark, going through the dictionary leaves a trace, and the decision
+ * becomes a gate instead of a comment.
  */
 const chave = (k: string) => `t:${k}`;
 
-/** Um jogo parado, observado pela declaração. Só o que os sete campos perguntam. */
+/** A game at rest, observed by the declaration. Only what the seven fields ask for. */
 function observar(board: Board, cursor = { x: 0, y: 0 }, heading: Heading = 'none') {
   const o: Observado = { board: () => board, cursor: () => cursor, heading: () => heading, t: chave };
   return criarDeclaracao(o);
 }
 
 const VAZIO = grade(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-/** Um par de 2 no topo à esquerda; o resto sem nenhum vizinho igual. */
+/** A pair of 2s at the top left; the rest with no equal neighbour anywhere. */
 const COM_PAR = grade(2, 2, 4, 8, 4, 8, 2, 4, 8, 2, 4, 8, 2, 4, 8, 2);
-/** Xadrez de 2 e 4: cheio, e sem uma única fusão possível. */
+/** A chequerboard of 2s and 4s: full, and without a single merge available. */
 const TRAVADO = grade(2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2);
 
-describe('a declaração é bem-formada aos olhos da própria engine', () => {
-  it('[Interface] `conformanceProblems` não acha nada — em tabuleiro vazio, cheio e travado', () => {
+describe('the declaration is well formed in the engine’s own eyes', () => {
+  it('[Interface] `conformanceProblems` finds nothing — on an empty, a full and a stuck board', () => {
     for (const b of [VAZIO, COM_PAR, TRAVADO]) {
       expect(conformanceProblems(observar(b))).toEqual([]);
     }
   });
 
-  it('[Right] a topologia é uma GRADE 4×4, ortogonal e em bússola', () => {
+  it('[Right] the topology is a 4×4 GRID, orthogonal and in compass frame', () => {
     expect(observar(VAZIO).topology()).toEqual({
       kind: 'grid', size: [SIZE, SIZE], move: 'orthogonal', frame: 'compass',
     });
   });
 
-  it('[Right] o MUNDO é declarado, e não é `none`', () => {
-    // `none` existe para atividade sem espaço — pintura, formulário — e o contrato avisa que ele não pode
-    // ser o que acontece quando alguém esquece. Um tabuleiro tem espaço, e declarar `none` desligaria o
-    // sonar e a empatia num jogo em que eles são a mecânica.
+  it('[Right] the WORLD is declared, and it is not `none`', () => {
+    // `none` exists for an activity with no space — painting, a form — and the contract warns that it must not
+    // be what happens when somebody forgets. A board has space, and declaring `none` would switch off the
+    // sonar and the empathy in a game where they are the mechanic.
     expect(observar(VAZIO).world()).toEqual({ kind: 'element', selector: '#game-region' });
   });
 
-  it('[Right] o turno é do JOGADOR, então a WCAG 2.2.1 é satisfeita por construção', () => {
-    expect(observar(VAZIO).tick, 'sem relógio, nada pressiona').toBe('player');
+  it('[Right] the turn belongs to the PLAYER, so WCAG 2.2.1 is satisfied by construction', () => {
+    expect(observar(VAZIO).tick, 'with no clock, nothing presses').toBe('player');
   });
 });
 
-describe('campo 2 — o PAPEL de cada casa, que é de onde sai o alto contraste', () => {
-  it('[Zero] casa vazia é `free`: atravessável e sem significado próprio', () => {
+describe('field 2 — the ROLE of each square, which is where high contrast comes from', () => {
+  it('[Zero] an empty square is `free`: crossable and with no meaning of its own', () => {
     expect(observar(VAZIO).roleAt({ x: 2, y: 1 })).toBe('free');
   });
 
-  it('[Right] peça que PODE fundir é `goal` — é o que a rodada pede', () => {
+  it('[Right] a tile that CAN merge is `goal` — it is what the round asks for', () => {
     const d = observar(COM_PAR);
     expect(d.roleAt({ x: 0, y: 0 })).toBe('goal');
     expect(d.roleAt({ x: 1, y: 0 })).toBe('goal');
   });
 
-  it('[Boundary] peça que NÃO pode fundir é `structure`: está lá, e atrapalha', () => {
-    expect(observar(COM_PAR).roleAt({ x: 3, y: 0 }), 'o 8 sem par').toBe('structure');
-    expect(observar(TRAVADO).roleAt({ x: 1, y: 1 }), 'no travado, nenhuma é goal').toBe('structure');
+  it('[Boundary] a tile that CANNOT merge is `structure`: it is there, and it is in the way', () => {
+    expect(observar(COM_PAR).roleAt({ x: 3, y: 0 }), 'the 8 with no pair').toBe('structure');
+    expect(observar(TRAVADO).roleAt({ x: 1, y: 1 }), 'on a stuck board, none is goal').toBe('structure');
   });
 
-  it('[Exception] fora da grade é `free`, e não uma exceção — a engine varre bordas', () => {
+  it('[Exception] outside the grid is `free`, and not an exception — the engine sweeps the edges', () => {
     const d = observar(COM_PAR);
     expect(d.roleAt({ x: -1, y: 0 })).toBe('free');
     expect(d.roleAt({ x: SIZE, y: SIZE })).toBe('free');
   });
 });
 
-describe('campo 3 — o nome FALÁVEL, que é o mesmo dado que a Libras traduz', () => {
-  it('[One] a peça se chama pelo seu NÚMERO, que não depende de idioma', () => {
+describe('field 3 — the SPEAKABLE name, which is the same data Libras translates', () => {
+  it('[One] a tile is named by its NUMBER, which does not depend on a language', () => {
     const n = observar(COM_PAR).nameAt({ x: 3, y: 0 });
     expect(n?.text).toBe('8');
     expect(speakableProblems(n)).toEqual([]);
   });
 
-  it('[Zero] a casa vazia se chama por uma CHAVE — porque "vazio" é palavra e palavra traduz', () => {
+  it('[Zero] an empty square is named by a KEY — because "empty" is a word, and a word translates', () => {
     expect(observar(VAZIO).nameAt({ x: 0, y: 0 })?.text).toBe('t:cell.empty');
   });
 
-  it('[Boundary] fora da grade não há nome: `null`, que é o que o contrato pede', () => {
+  it('[Boundary] outside the grid there is no name: `null`, which is what the contract asks for', () => {
     expect(observar(VAZIO).nameAt({ x: SIZE, y: 0 })).toBeNull();
   });
 });
 
-describe('campo 5 — objetivo e alvo, as duas metades', () => {
-  it('[Interface] o objetivo conta DOBRAS: `{have} de {need}` vira "0 de 11"', () => {
+describe('field 5 — objective and target, the two halves', () => {
+  it('[Interface] the objective counts DOUBLINGS: `{have} de {need}` becomes "0 of 11"', () => {
     const o = observar(VAZIO).objectiveOf(0);
     expect(o.have).toBe(0);
     expect(o.need).toBe(OBJETIVO);
@@ -122,43 +123,45 @@ describe('campo 5 — objetivo e alvo, as duas metades', () => {
     expect(speakableProblems(o.name)).toEqual([]);
   });
 
-  it('[Right] `have` é o EXPOENTE da maior peça, não o valor dela', () => {
+  it('[Right] `have` is the EXPONENT of the largest tile, not its value', () => {
     const b = grade(64, 2, 4, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    expect(observar(b).objectiveOf(0).have, '64 = 2^6, então seis dobras').toBe(6);
+    expect(observar(b).objectiveOf(0).have, '64 = 2^6, so six doublings').toBe(6);
   });
 
-  it('[Right] `targetsOf` aponta as casas de uma fusão disponível, em coordenada de grade', () => {
+  it('[Right] `targetsOf` points at the squares of an available merge, in grid coordinates', () => {
     expect(observar(COM_PAR).targetsOf(0)).toEqual([{ x: 0, y: 0 }, { x: 1, y: 0 }]);
   });
 
-  it('[Zero] sem fusão possível, `targetsOf` é VAZIO — e vazio é resposta, não erro', () => {
+  it('[Zero] with no merge available, `targetsOf` is EMPTY — and empty is an answer, not an error', () => {
     expect(observar(TRAVADO).targetsOf(0)).toEqual([]);
   });
 });
 
-describe('campo 4 — o foco, e o que o sonar faz com ele', () => {
-  it('[One] o foco é o cursor do teclado, com a última direção jogada', () => {
+describe('field 4 — the focus, and what the sonar does with it', () => {
+  it('[One] the focus is the keyboard cursor, carrying the last direction played', () => {
     const f = observar(COM_PAR, { x: 2, y: 3 }, 'e').focusOf(0);
     expect(f).toEqual({ id: 'p0', at: { x: 2, y: 3 }, heading: 'e' });
   });
 
-  it('[Cross-check] a distância mede em CÉLULAS, e a diagonal custa DOIS passos', () => {
-    // ⚠️ Esta asserção dizia "um passo" e estava errada sobre este jogo. A engine publicada tirou a métrica
-    // de `move`, e ao declarar `orthogonal` — que é como uma peça de 2048 anda — a diagonal passa a custar
-    // dois. Não é a engine mudando de ideia: é o contrato obrigando o jogo a dizer como se anda nele, e a
-    // resposta certa fazendo o sonar parar de chamar de "bem perto" uma casa para onde a peça não vai.
+  it('[Cross-check] the distance measures in CELLS, and the diagonal costs TWO steps', () => {
+    // ⚠️ This assertion used to say "one step" and was wrong about this game. The published engine took the
+    // metric from `move`, and by declaring `orthogonal` — which is how a 2048 tile travels — the diagonal
+    // comes to cost two. This is not the engine changing its mind: it is the contract forcing the game to say
+    // how one moves inside it, and the right answer making the sonar stop calling "very close" a square the
+    // tile cannot reach.
     const t = observar(VAZIO).topology();
     expect(distance(t, { x: 0, y: 0 }, { x: 3, y: 0 })).toBe(3);
-    expect(distance(t, { x: 0, y: 0 }, { x: 1, y: 1 }), 'sem diagonal, é L¹').toBe(2);
+    expect(distance(t, { x: 0, y: 0 }, { x: 1, y: 1 }), 'with no diagonal, it is L¹').toBe(2);
   });
 
-  it('[Interface] o sonar recebe o que precisa sem nenhum tile: topologia, alvo e nome', () => {
-    // Este é o achado 9 do quiz virado do avesso. Lá, ligar o sonar teria exigido inventar tiles falsos;
-    // aqui as três perguntas têm resposta verdadeira.
+  it('[Interface] the sonar gets what it needs with no tile at all: topology, target and name', () => {
+    // This is finding 9 of the quiz turned inside out. There, switching the sonar on would have required
+    // inventing fake tiles; here the three questions have true answers.
     //
-    // ⚠️ O cursor é `(3,0)` e não um canto qualquer, e a razão é a MÉTRICA: em passos de rei, de `(3,3)` as
-    // duas casas do par ficam à MESMA distância (3), e o teste estaria medindo a estabilidade do `sort` em
-    // vez do sonar. De `(3,0)` a diferença é real — 3 contra 2 —, então há de fato uma "mais próxima".
+    // ⚠️ The cursor is `(3,0)` and not just any corner, and the reason is the METRIC: under the king steps
+    // this file was first written against, from `(3,3)` both squares of the pair sit at the SAME distance (3),
+    // and the test would have been measuring the stability of `sort` rather than the sonar. From `(3,0)` the
+    // difference is real — 3 against 2 — so there genuinely is a "nearest one".
     const de = { x: 3, y: 0 };
     const d = observar(COM_PAR, de);
     const perto = d.targetsOf(0)

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// O LAÇO DA ANIMAÇÃO, COM UM RELÓGIO DE MENTIRA — e é a única forma de provar as bordas dele.
+// THE ANIMATION LOOP, WITH A FAKE CLOCK — and it is the only way to prove its edges.
 //
-// ========================= POR QUE O RELÓGIO ENTRA POR PARÂMETRO =========================
-// O laço vivia dentro do `bootar()` e não tinha como ser verificado. O `requestAnimationFrame` do navegador
-// não roda em documento oculto, e a tentativa de observá-lo ao vivo devolveu ZERO quadros três vezes
-// seguidas — não porque estivesse errado, mas porque o ambiente não o deixava correr. Confiar no olho para
-// saber se o cancelamento e o socorro funcionam é o gate que nunca pôde ficar vermelho.
+// ========================= WHY THE CLOCK COMES IN AS A PARAMETER =========================
+// The loop used to live inside `bootar()` and there was no way to verify it. The browser's
+// `requestAnimationFrame` does not run in a hidden document, and the attempt to observe it live returned ZERO
+// frames three times in a row — not because it was wrong, but because the environment would not let it run.
+// Trusting the eye to know whether cancellation and the rescue work is the gate that could never be made red.
 //
-// A saída é a que o `core/rng` da engine já usa para o acaso: injetar. Com o relógio de mentira o tempo
-// avança à mão, e as bordas — a jogada que cancela a anterior, o socorro que salva o quadro final, o `t` que
-// nunca passa de 1 — passam a ser afirmações e não esperanças.
+// The way out is the one the engine's `core/rng` already uses for chance: inject it. With the fake clock time
+// advances by hand, and the edges — the move that cancels the previous one, the rescue that saves the final
+// frame, the `t` that never goes past 1 — become assertions instead of hopes.
 //
-// ⚠️ O QUE ELE NÃO PROVA, dito para ninguém confiar demais: que o `requestAnimationFrame` de verdade chama o
-// laço sessenta vezes por segundo. Essa linha é `relogioDoNavegador`, tem quatro linhas e nenhuma decisão.
+// ⚠️ WHAT IT DOES NOT PROVE, said so nobody trusts it too far: that the real `requestAnimationFrame` calls the
+// loop sixty times a second. That line is `relogioDoNavegador`, four lines long and with no decision in it.
 import { describe, expect, it, vi } from 'vitest';
 import { criarAnimador, socorroMs, type Peca, type Relogio } from '../app/js/animation.ts';
 import { slide, type Board, type Movimento } from '../app/js/board.ts';
@@ -22,7 +22,7 @@ const grade = (...v: number[]): Board => v.map((x) => (x === 0 ? 0 : Math.log2(x
 const linha = (...v: number[]): Board => grade(...v, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 const MOVS: readonly Movimento[] = slide(linha(0, 0, 0, 2), 'left').movimentos;
 
-/** Um relógio de mentira: o tempo só anda quando o teste manda. */
+/** A fake clock: time only moves when the test says so. */
 function relogioFalso() {
   let agora = 0;
   const quadros: ((t: number) => void)[] = [];
@@ -38,14 +38,14 @@ function relogioFalso() {
 
   return {
     relogio,
-    /** Avança `ms` e entrega UM quadro, como o navegador faria. */
+    /** Advance `ms` and deliver ONE frame, the way the browser would. */
     async passo(ms: number) {
       agora += ms;
       const fn = quadros.shift();
       if (fn) fn(agora);
       await Promise.resolve();
     },
-    /** Avança o tempo SEM entregar quadro — é o navegador com o relógio de quadros parado. */
+    /** Advance time WITHOUT delivering a frame — the browser with its frame clock stopped. */
     async congelado(ms: number) {
       agora += ms;
       for (const [id, e] of [...esperas]) if (e.quando <= agora) { esperas.delete(id); e.fn(); }
@@ -56,8 +56,8 @@ function relogioFalso() {
   };
 }
 
-describe('o laço da animação', () => {
-  it('[One] pede um quadro, desenha, e resolve quando o tempo acaba', async () => {
+describe('the animation loop', () => {
+  it('[One] it asks for a frame, draws, and resolves when the time runs out', async () => {
     const c = relogioFalso();
     const pintados: Peca[][] = [];
     const a = criarAnimador(c.relogio, (p) => pintados.push([...p]));
@@ -66,40 +66,40 @@ describe('o laço da animação', () => {
     void a.correr(MOVS, 100, true).then(() => { acabou = true; });
 
     await c.passo(50);
-    expect(pintados, 'desenhou o quadro do meio').toHaveLength(1);
-    expect(acabou, 'e ainda não terminou').toBe(false);
+    expect(pintados, 'it drew the middle frame').toHaveLength(1);
+    expect(acabou, 'and it has not finished yet').toBe(false);
 
     await c.passo(50);
     expect(acabou).toBe(true);
   });
 
-  it('[Boundary] o último quadro é desenhado com t = 1, e não é pulado', async () => {
+  it('[Boundary] the last frame is drawn with t = 1, and it is not skipped', async () => {
     const c = relogioFalso();
     const pintados: Peca[][] = [];
     const a = criarAnimador(c.relogio, (p) => pintados.push([...p]));
     void a.correr(MOVS, 100, true);
     await c.passo(100);
-    // A peça sai da casa 3 e vai para a 0: no fim tem de estar EXATAMENTE sobre a casa 0. Um laço que
-    // resolvesse antes de desenhar t=1 deixaria a peça a um pixel do lugar até o quadro de repouso a
-    // corrigir — um tremor no fim de cada jogada.
+    // The tile leaves square 3 and goes to square 0: at the end it must sit EXACTLY on square 0. A loop that
+    // resolved before drawing t=1 would leave the tile a pixel off until the resting frame corrected it — a
+    // twitch at the end of every move.
     const ultima = pintados.at(-1)![0];
     expect(ultima.at).toBe(0);
     expect({ x: ultima.x, y: ultima.y }).toEqual({ x: cellRect(0).x, y: cellRect(0).y });
   });
 
-  it('[Boundary] um relógio que PULA não joga a peça para fora: t é travado em 1', async () => {
+  it('[Boundary] a clock that JUMPS does not throw the tile off the board: t is clamped at 1', async () => {
     const c = relogioFalso();
     const pintados: Peca[][] = [];
     const a = criarAnimador(c.relogio, (p) => pintados.push([...p]));
     void a.correr(MOVS, 100, true);
-    await c.passo(5000); // a aba voltou do segundo plano e o relógio saltou cinco segundos
+    await c.passo(5000); // the tab came back from the background and the clock leapt five seconds
     expect(pintados).toHaveLength(1);
     expect(Number.isFinite(pintados[0][0].x)).toBe(true);
   });
 
-  it('[Right] UMA JOGADA NOVA CANCELA A ANTERIOR — a primeira resolve e para de desenhar', async () => {
-    // Uma criança que segura a seta produz jogadas mais depressa que a animação. Enfileirar deixaria o
-    // tabuleiro devendo animações, com a tela atrasada em relação ao modelo.
+  it('[Right] A NEW MOVE CANCELS THE PREVIOUS ONE — the first resolves and stops drawing', async () => {
+    // A child holding the arrow key down produces moves faster than the animation. Queueing them would leave
+    // the board owing animations, with the screen lagging behind the model.
     const c = relogioFalso();
     let desenhos = 0;
     const a = criarAnimador(c.relogio, () => { desenhos++; });
@@ -111,38 +111,38 @@ describe('o laço da animação', () => {
 
     void a.correr(MOVS, 100, true);
     await c.passo(10);
-    expect(primeiraAcabou, 'a primeira solta quem a esperava em vez de ficar pendurada').toBe(true);
+    expect(primeiraAcabou, 'the first releases whoever was awaiting it instead of hanging').toBe(true);
 
-    // O quadro pendente da PRIMEIRA ainda existe na fila do relógio; ao ser entregue, ela tem de desistir.
+    // The FIRST one's pending frame still exists in the clock's queue; when it is delivered, it must give up.
     await c.passo(10);
-    expect(desenhos, 'a primeira não pode continuar pintando por cima da segunda')
+    expect(desenhos, 'the first must not go on painting over the second')
       .toBeLessThanOrEqual(aposPrimeira + 3);
   });
 
-  it('[Zero] com o relógio de quadros PARADO, o socorro resolve mesmo assim', async () => {
-    // O defeito medido em 2026-09-05: sem isto a promessa nunca resolvia, o quadro final nunca chegava, e a
-    // tela ficava mostrando o tabuleiro anterior enquanto o modelo já era outro.
+  it('[Zero] with the frame clock STOPPED, the rescue resolves anyway', async () => {
+    // The defect measured on 2026-09-05: without this the promise never resolved, the final frame never
+    // arrived, and the screen kept showing the previous board while the model was already another.
     const c = relogioFalso();
     const a = criarAnimador(c.relogio, () => {});
     let acabou = false;
     void a.correr(MOVS, 100, true).then(() => { acabou = true; });
 
     await c.congelado(socorroMs(100) - 1);
-    expect(acabou, 'ainda dentro do prazo').toBe(false);
+    expect(acabou, 'still within the deadline').toBe(false);
 
     await c.congelado(2);
-    expect(acabou, 'o socorro soltou o chamador, que desenha o quadro final').toBe(true);
+    expect(acabou, 'the rescue released the caller, who draws the final frame').toBe(true);
   });
 
-  it('[Interface] terminando na hora, o socorro é CANCELADO — nada fica agendado', async () => {
+  it('[Interface] finishing on time, the rescue is CANCELLED — nothing stays scheduled', async () => {
     const c = relogioFalso();
     const a = criarAnimador(c.relogio, () => {});
     void a.correr(MOVS, 100, true);
     await c.passo(100);
-    expect(c.esperasPendentes(), 'um temporizador órfão por jogada, numa partida de 200 jogadas').toBe(0);
+    expect(c.esperasPendentes(), 'one orphan timer per move, in a game of 200 moves').toBe(0);
   });
 
-  it('[Zero] documento escondido: resolve na hora e não pede quadro nenhum', async () => {
+  it('[Zero] a hidden document: it resolves at once and asks for no frame at all', async () => {
     const c = relogioFalso();
     const desenhar = vi.fn();
     const a = criarAnimador(c.relogio, desenhar);
@@ -151,7 +151,7 @@ describe('o laço da animação', () => {
     expect(desenhar).not.toHaveBeenCalled();
   });
 
-  it('[Zero] duração zero (movimento reduzido): idem, e sem um único quadro', async () => {
+  it('[Zero] zero duration (reduced motion): the same, and without a single frame', async () => {
     const c = relogioFalso();
     const desenhar = vi.fn();
     const a = criarAnimador(c.relogio, desenhar);
@@ -159,7 +159,7 @@ describe('o laço da animação', () => {
     expect(desenhar).not.toHaveBeenCalled();
   });
 
-  it('[Zero] jogada sem movimento nenhum não anima', async () => {
+  it('[Zero] a move with no movement at all does not animate', async () => {
     const c = relogioFalso();
     const desenhar = vi.fn();
     const a = criarAnimador(c.relogio, desenhar);
