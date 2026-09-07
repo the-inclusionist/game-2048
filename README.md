@@ -22,19 +22,23 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ Animation | Tiles **slide**, and the two layers move on ONE clock: the canvas paints the piece, the DOM carries the number, both from the same `pecasNoInstante(t)` in the same frame. Zero animation under `prefers-reduced-motion` — WCAG 2.3.3, read from the system and never from a menu of ours. |
 | ⬜ Still owed | The **sonar** on a remappable binding rather than `Alt+S`; a merge **flash**; Libras; and a run on real school hardware. |
 
-**Verified**: `npm run validate` green — typecheck clean, **137 assertions** across node and browser, build
+**Verified**: `npm run validate` green — typecheck clean, **138 assertions** across node and browser, build
 passing, and the axe gate reporting zero WCAG A/AA violations with no exclusions. A full round played in a
 real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 
 ## Which record declares it
 
 **ADR-0081**, in the engine's `docs/2-Architecture/adr/`. It records the address `the-inclusionist/game-2048`
-declared by the Dev on 2026-09-06, and keeps ADR-0068 §1's `the-inclusionist-game-<slug>` pattern SUSPENDED —
-the container is already named by the organisation, so repeating it would say the word twice (ADR-0071 §1).
+declared by the Dev on 2026-09-06. It superseded **ADR-0073 whole**, which had declared `pixi-2048` the day
+before: the old address sat in that record's title, and a title is a record's identity rather than one of its
+clauses. The rename cost three strings because it happened before the repository existed — the window
+ADR-0073 had itself predicted.
 
-It superseded **ADR-0073 whole**, which had declared `pixi-2048` the day before: the old address sat in that
-record's title, and a title is a record's identity rather than one of its clauses. The rename cost three
-strings because it happened before the repository existed — the window ADR-0073 had itself predicted.
+**ADR-0082** then made the address a rule instead of an exception: a game repository is named `game-<slug>`
+and mirrors its package. It replaces ADR-0068 §1's suspended `the-inclusionist-game-<slug>` pattern — the
+container is already named by the organisation, so repeating it would say the word twice (ADR-0071 §1). It
+exists because ADR-0081 had justified leaving the rule open with a stale fact about another repository, which
+is a mistake worth naming rather than editing away.
 
 ⚠️ **A game repository holds no `adr/` folder and never will** (ADR-0068 §5). The records — the ten
 non-negotiable pillars, the accessibility contract, the licence posture — live in the engine and are
