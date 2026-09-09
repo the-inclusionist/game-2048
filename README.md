@@ -28,7 +28,10 @@ real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the
 
 ## Which record declares it
 
-**ADR-0081**, in the engine's `docs/2-Architecture/adr/`. It records the address `the-inclusionist/game-2048`
+**ADR-0081**, in [`the-inclusionist-docs`](https://github.com/the-inclusionist/the-inclusionist-docs), at
+`docs/2-Architecture/adr/`. ⚠️ This line used to say «in the engine's», and stopped being true on 2026-09-09
+(**ADR-0123**): the whole tree moved to a repository of its own, one for the project. It records the address
+`the-inclusionist/game-2048`
 declared by the Dev on 2026-09-06. It superseded **ADR-0073 whole**, which had declared `pixi-2048` the day
 before: the old address sat in that record's title, and a title is a record's identity rather than one of its
 clauses. The rename cost three strings because it happened before the repository existed — the window
