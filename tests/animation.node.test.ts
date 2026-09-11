@@ -14,7 +14,8 @@
 // eye; the second is `tests/animacao.browser.test.ts`, which runs the real thing.
 import { describe, expect, it } from 'vitest';
 import {
-  DURACAO_MS, duracaoDaJogada, easeOut, pecasNoInstante, pecasParadas, podeAnimar, posicaoDe, socorroMs,
+  DURACAO_MS, duracaoDaJogada, easeOut, pecasNoInstante, pecasParadas, podeAnimar, posicaoDe,
+  querMenosMovimento, socorroMs,
 } from '../app/js/animation.ts';
 import { SIZE, slide, type Board, type Movimento } from '../app/js/board.ts';
 import { cellRect } from '../app/js/geometry.ts';
@@ -147,6 +148,48 @@ describe('when NOT to animate — the half the browser taught', () => {
 
   it('[Boundary] and it is not so long that anybody sees the board sitting still', () => {
     expect(socorroMs(DURACAO_MS)).toBeLessThan(1000);
+  });
+});
+
+describe('the two places a child can ask for less motion', () => {
+  const CALMO = { parallax: true, decor: true, items: true, particles: true };
+  const NORMAL = { parallax: false, decor: false, items: false, particles: false };
+
+  it('[Zero] neither asking: the move animates', () => {
+    expect(querMenosMovimento(false, NORMAL)).toBe(false);
+    expect(duracaoDaJogada(querMenosMovimento(false, NORMAL))).toBe(DURACAO_MS);
+  });
+
+  it('[One] the SYSTEM asking is enough, as it always was', () => {
+    expect(querMenosMovimento(true, NORMAL)).toBe(true);
+  });
+
+  it('[One] 🔴 and so is the ENGINE’s calm mode — the half that did nothing until 2026-09-11', () => {
+    // Measured in the browser: clicking 🧩 in this game's own accessibility bar wrote exactly this object,
+    // and the tiles went on sliding because the game read only `prefers-reduced-motion`.
+    expect(querMenosMovimento(false, CALMO)).toBe(true);
+    expect(duracaoDaJogada(querMenosMovimento(false, CALMO)), 'no animation, not a faster one').toBe(0);
+  });
+
+  it('[Right] ⚠️ stored flags can never switch the SYSTEM preference off', () => {
+    // The asymmetry is the point: a child who set the preference in her operating system must not have it
+    // overruled by flags this game found in storage. WCAG 2.3.3 has one safe direction to err in.
+    expect(querMenosMovimento(true, NORMAL), 'the OS wins over stored `false`').toBe(true);
+  });
+
+  it('[Many] any single flag counts — the engine writes them together, from one level', () => {
+    // `calmMotionPlan(nivel)` returns `{ sceneReduced: nivel >= 1 }` and that one value is written into all
+    // four. Requiring all four would make a partially-written store silently mean "animate".
+    for (const k of Object.keys(NORMAL)) {
+      expect(querMenosMovimento(false, { ...NORMAL, [k]: true }), k).toBe(true);
+    }
+  });
+
+  it('[Boundary] nothing stored yet is not an answer, and must not read as one', () => {
+    expect(querMenosMovimento(false, null)).toBe(false);
+    expect(querMenosMovimento(false, undefined)).toBe(false);
+    expect(querMenosMovimento(false, {})).toBe(false);
+    expect(querMenosMovimento(true, null), 'and the system still gets through').toBe(true);
   });
 });
 

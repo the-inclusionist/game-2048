@@ -35,13 +35,41 @@ export const DURACAO_MS = 110;
  * option: whoever needs this has already configured it in the operating system, and the game has to obey
  * without being asked.
  *
- * ⚠️ AN ENGINE FINDING, noted here because this is where it hurts: the engine's `platform/storage` keeps a
- * `reducedMotion` entry, but the value is a set of flags belonging to the PLATFORMER — `parallax`, `decor`,
- * `items`, `particles`. There is no GENERAL "reduced motion" a consumer of another genre can read, and
- * picking the `items` flag to decide about board tiles would be guessing the shape of the question. It is the
- * same family as finding 2 (the dictionary): a setting modelled for one genre, which does not travel.
+ * ⚠️ THIS NOTE USED TO SAY THE ENGINE'S FLAGS COULD NOT BE READ, and it was overtaken by measurement on
+ * 2026-09-11. It argued that `reducedMotion` holds flags belonging to the PLATFORMER — `parallax`, `decor`,
+ * `items`, `particles` — so picking one of them to decide about board tiles would be guessing the shape of
+ * the question. That was true while the four looked like four independent scene layers.
+ *
+ * They are not. `calmMotionPlan(nivel)` returns `{ sceneReduced: nivel >= 1 }` and the engine writes THE SAME
+ * VALUE into all four at once, from ONE control: the 🧩 TEA/calm icon, which since 8.0.0 sits in this game's
+ * own accessibility bar. So the flags are not four genre-specific questions — they are one answer, written
+ * four times, and the answer is "reduce scene motion".
  */
 export const duracaoDaJogada = (movimentoReduzido: boolean): number => (movimentoReduzido ? 0 : DURACAO_MS);
+
+/**
+ * Has the child asked for less motion, in EITHER of the two places she can ask?
+ *
+ * 🔴 THE DEFECT THIS CLOSES, measured in the browser on 2026-09-11: clicking 🧩 in this game's accessibility
+ * bar wrote `{"parallax":true,"decor":true,"items":true,"particles":true}` into the engine's storage — the
+ * child asking, in as many words, for less motion — and the tiles went on sliding, because this game read
+ * only `prefers-reduced-motion`. The icon was half a dead control: its audio half worked and its motion half
+ * did nothing. ADR-0106 §5 is about exactly that, and the engine's own note calls a menu that offers a path
+ * and then refuses it worse than one that never offered.
+ *
+ * ⚠️ IT IS AN `OR`, AND THE ASYMMETRY IS DELIBERATE. Either source asking is enough; neither can switch the
+ * other off. A child who set the system preference and then happens to have `false` flags stored from some
+ * earlier session must not have her operating system overruled by this game — and WCAG 2.3.3 has only one
+ * safe direction to err in.
+ *
+ * 📌 READ PER MOVE, NEVER CACHED. `ui/motion-scene` warns that its flags object is shared BY REFERENCE and
+ * that holding a copy makes the switch stop working in silence. Asking fresh each move is the other side of
+ * that warning: the child flips the icon mid-game and the very next move obeys.
+ */
+export const querMenosMovimento = (
+  sistema: boolean,
+  cena: Readonly<Record<string, boolean>> | null | undefined,
+): boolean => sistema || Object.values(cena ?? {}).some(Boolean);
 
 /**
  * Is it worth animating RIGHT NOW?

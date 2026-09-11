@@ -15,6 +15,7 @@ import { t } from '@the-inclusionist/engine/core/i18n.js';
 import { reseed, rnd } from '@the-inclusionist/engine/core/rng.js';
 import { createGame, type Engine } from '@the-inclusionist/engine';
 import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
+import { lerCenaGuardada } from '@the-inclusionist/engine/ui/motion-scene.js';
 import * as PIXI from 'pixi.js';
 
 import {
@@ -22,7 +23,7 @@ import {
   type Board, type Direction, type Movimento,
 } from '../board.ts';
 import {
-  criarAnimador, duracaoDaJogada, pecasParadas, relogioDoNavegador, type Peca,
+  criarAnimador, duracaoDaJogada, pecasParadas, querMenosMovimento, relogioDoNavegador, type Peca,
 } from '../animation.ts';
 import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
 import { criarDeclaracao } from '../declaration.ts';
@@ -37,13 +38,27 @@ import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
 /**
  * Has the child asked for less motion? Then no animation — not a faster one.
  *
- * Read from the SYSTEM and not from a menu of ours: whoever needs this has already configured it on the
- * device, and making them find an option inside each game hands them work the browser has already done. It is
- * WCAG 2.3.3, and it is also why this game adds no switch of its own: two places for the same decision is one
- * place for them to disagree.
+ * TWO PLACES CAN ASK, and until 2026-09-11 this game listened to only one.
+ *
+ * · the SYSTEM (`prefers-reduced-motion`) — whoever needs this has already configured it on the device, and
+ *   making them find an option inside each game hands them work the browser has already done (WCAG 2.3.3).
+ *   It is also why this game still adds no switch of its own.
+ * · the ENGINE's 🧩 TEA/calm icon, which since 8.0.0 sits in this game's own accessibility bar. It writes
+ *   `reducedMotion` for every scene key at once, from one level.
+ *
+ * 🔴 THE SECOND WAS BEING IGNORED, measured in the browser: the click wrote
+ * `{"parallax":true,"decor":true,"items":true,"particles":true}` and the tiles went on sliding. The icon was
+ * half a dead control — audio obeyed, motion did not — which is what ADR-0106 §5 forbids.
+ *
+ * 📌 ASKED FRESH EACH MOVE, never cached: `ui/motion-scene` warns that its flags object is shared by
+ * reference and that holding a copy makes the switch stop working in silence. Reading per move is the other
+ * side of that warning — the child flips the icon mid-game and the next move already obeys.
  */
 const movimentoReduzido = (win: Window): boolean =>
-  win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  querMenosMovimento(
+    win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    lerCenaGuardada(),
+  );
 
 /* ===================== THE ROUND'S STATE =====================
  *
