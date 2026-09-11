@@ -21,7 +21,8 @@
 import { describe, expect, it } from 'vitest';
 import { isAction, presetActions, presetProblems } from '@the-inclusionist/engine/core/actions.js';
 import {
-  ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar,
+  ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, acoesComRotulo, criarPreset, direcaoDe,
+  ehAtalhoDoSistema, ehSonar,
 } from '../app/js/actions.ts';
 import pt from '../app/js/i18n/pt.ts';
 
@@ -110,6 +111,36 @@ describe('the keystrokes that are NOT the game’s', () => {
     // The cost is not "one shortcut missed": assistive technology LIVES on modifier chords, and a game that
     // calls `preventDefault()` on them takes them from the software the child needs to reach the game at all.
     expect(ehAtalhoDoSistema(mods({ ctrlKey: true, altKey: true })), 'VoiceOver-style Ctrl+Option').toBe(true);
+  });
+});
+
+describe('the rows the remapping panel shows', () => {
+  it('[Many] one row per position this game reads, each with a word', () => {
+    const linhas = acoesComRotulo(t);
+    expect(linhas.map((l) => l.acao).sort()).toEqual(ACOES_USADAS.slice().sort());
+    for (const l of linhas) expect(l.rotulo, l.acao).toBeTruthy();
+  });
+
+  it('[Cross-check] ⚠️ the rows are the PRESET read back, not a second list', () => {
+    // Two independently-built lists would drift, and the drift shows as a remapping screen naming an action
+    // the game does not read — or reading one it does not name. `labellerFrom` is the engine's own reader,
+    // so the pairing cannot come apart without this assertion noticing.
+    const preset = criarPreset(t);
+    for (const l of acoesComRotulo(t)) {
+      expect(l.rotulo, l.acao).toBe(preset[l.acao]?.label);
+    }
+  });
+
+  it('[Zero] a position with no word is DROPPED, never filled in with its key', () => {
+    // ADR-0074: `labellerFrom` returns null rather than `action1` so an abstract name cannot reach a person.
+    // A row carrying the key instead would be exactly that, in the one screen built to be read aloud.
+    const linhas = acoesComRotulo(t);
+    for (const l of linhas) expect(l.rotulo).not.toMatch(/^action\d$/);
+    expect(linhas.some((l) => l.acao === 'action2'), 'a position this game does not use').toBe(false);
+  });
+
+  it('[Interface] every word still comes from the dictionary', () => {
+    for (const l of acoesComRotulo(t)) expect(l.rotulo).toMatch(/^t:act\./);
   });
 });
 

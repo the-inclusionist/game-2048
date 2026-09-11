@@ -7,13 +7,16 @@
 // HERE, in the only half that exists solely in a browser.
 import '@the-inclusionist/engine/style.css';
 
-import { srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
+import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
 import { t } from '@the-inclusionist/engine/core/i18n.js';
 import * as store from '@the-inclusionist/engine/platform/storage.js';
 import { ROTULO_DA_CORRECAO, escolhaDoBotao, linhasDoEixo } from '@the-inclusionist/engine/ui/visual-axes-panel.js';
 import type { Correcao } from '@the-inclusionist/engine/render/viz-axes.js';
 import { CORRECOES_OFERECIDAS, ehCorrecao, filtroCssDe } from '../visual.ts';
 import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
+import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
+import { fabricaComOJogo, kb, resetKB, saveKB, setKB } from '@the-inclusionist/engine/input/keyboard.js';
+import { acoesComRotulo } from '../actions.ts';
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { bootar } from './main.ts';
@@ -37,6 +40,67 @@ if (motor) {
   const fechar = () => { const ov = $<HTMLElement>('#typo'); if (ov) ov.hidden = true; };
   $('#typo-close')?.addEventListener('click', fechar);
   motor.overlays.register('typo', { close: fechar, inEscapeChain: true });
+
+  // THE KEYBOARD-REMAP PANEL — borrowed whole, like the typography one, and for the same reason: it is the
+  // engine's screen and the game has no business rewriting the capture flow, the cross-player conflict lookup
+  // or the reset.
+  //
+  // ⚠️ THE PART-ONE CAVEAT ABOUT THIS BLAMED THE WRONG THING, and the correction matters more than the
+  // panel. The README and `main.ts` said the remapping screen was unreachable because `CreateGameOptions` had
+  // no `getPauseActs`. Measured on 2026-09-11: remapping was never behind `getPauseActs`. The pause card's
+  // options list is `caa`, `empatia`, `audio`, `motora`, `tipo`, `visual`, `anim` — none of them is the remap
+  // panel — and NOTHING in the engine opens `ui/settings-controls`, exactly as nothing opens
+  // `ui/settings-typo`. It was mountable on engine 8 and simply had not been mounted.
+  const ctrl = initSettingsControls({
+    $,
+    srSay,
+    srAlert,
+    // ⚠️ NOT the whole `platform/storage` module: `ControlsStore` is exactly `{ saveKB, resetKB }`, and both
+    //    live in `input/keyboard` beside the `kb` they persist. Passing the broad module compiled against
+    //    nothing — the narrow type is what says which two functions this panel may reach.
+    store: { saveKB, resetKB },
+    // The rows are this game's preset read back through the engine's own labeller, so the screen cannot name
+    // an action the game does not read. See `acoesComRotulo`.
+    acoesDoJogo: () => acoesComRotulo(t),
+    kb,
+    setKB,
+    kbFor: (i) => motor.keyboard.kbFor(i),
+    // ⚠️ DERIVED, because the runtime exposes no `kbPadraoFor`. `fabricaComOJogo()` is the engine's factory
+    //    WITH this game's `mapeamentoDoTeclado` already folded in — which is the right "default" to offer a
+    //    child pressing Reset: the factory as this game configured it, not the engine's bare table.
+    kbPadraoFor: (_i) => fabricaComOJogo().solo,
+    getNumPlayers: () => 1,
+    applyControls: () => { motor.keyboard.refreshControls(); },
+    assignControls: () => { motor.keyboard.assignControls(); },
+  });
+  $('#open-ctrl')?.addEventListener('click', () => {
+    const ov = $<HTMLElement>('#ctrl');
+    if (!ov) return;
+    ctrl.render(0);   // seat 0 — this game has one player, and `getNumPlayers` says so
+    ov.hidden = false;
+    motor.overlays.frontOverlay(ov);
+    ov.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+  });
+  // ⚠️ THE CAPTURED KEY HAS TO BE DELIVERED BY US, and finding out why is the second half of this work.
+  //    `settings-controls` does not listen for the key itself: the engine's `input/keydown` router does, and
+  //    calls `ctrlPanel.handleCaptureKeydown(e)` before anything else. 📏 Measured on 2026-09-11 —
+  //    `createGame` never calls `initKeydown`, so for a consumer of the composition root that router does not
+  //    exist. Without this listener the panel would enter "Pressione…" and stay there for ever, which is a
+  //    worse control than none: it would take the child's next keystroke and give nothing back.
+  //
+  // 📌 ON THE DOCUMENT, IN THE CAPTURE PHASE, and deliberately not on `#game-region`: the overlay is
+  //    OUTSIDE the region, so a key pressed with the panel open never reaches the game's own listener. It is
+  //    also the one listener this file adds to a node it does not own — G5 of the cartridge plan has to
+  //    release it, and it is written as a named function so that it can be.
+  const aoCapturar = (e: KeyboardEvent) => {
+    if (!ctrl.isCapturing()) return;
+    if (ctrl.handleCaptureKeydown(e)) e.preventDefault();
+  };
+  document.addEventListener('keydown', aoCapturar, true);
+
+  const fecharCtrl = () => { const ov = $<HTMLElement>('#ctrl'); if (ov) ov.hidden = true; };
+  $('#ctrl-close')?.addEventListener('click', fecharCtrl);
+  motor.overlays.register('ctrl', { close: fecharCtrl, inEscapeChain: true });
 
   // HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
   // `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels

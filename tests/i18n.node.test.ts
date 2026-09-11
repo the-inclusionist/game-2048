@@ -43,7 +43,14 @@ describe('pillar 3’s three languages', () => {
   it('[Boundary] no en or es sentence came out IDENTICAL to the Portuguese', () => {
     // An identical pair is almost always an oversight. Where it is legitimate, the exception goes HERE, named
     // — and a list of exceptions that grows is the signal that translation has stopped happening.
-    const LEGITIMAS: readonly Chave[] = [];
+    // ⚠️ TWO ENTRIES, BOTH SPANISH, BOTH REAL. "Alto contraste" and "Teclas" are the correct Spanish and
+    //    happen to be spelled exactly as the Portuguese — the languages share the words. They are named here
+    //    rather than worked around, which is the point of the list: an exception with a reason is a decision,
+    //    an exception without one is an oversight that learned to pass.
+    //
+    // 📌 And the list is the METER the comment above describes. Two is fine. If it reaches a dozen, the
+    //    signal is not that Spanish resembles Portuguese — it is that somebody stopped translating.
+    const LEGITIMAS: readonly Chave[] = ['tools.contrast', 'tools.keys'];
     for (const [nome, dict] of Object.entries(IDIOMAS)) {
       const iguais = chaves.filter((k) => dict[k] === pt[k] && !LEGITIMAS.includes(k));
       expect(iguais, nome).toEqual([]);

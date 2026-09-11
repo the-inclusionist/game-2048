@@ -40,6 +40,10 @@ export const en: Dicionario = {
   'act.sonar': 'Where a merge is',
   'act.sonar.hint': 'Says where a merge is available, which way, and how far.',
 
+  'tools.typography': 'Typeface',
+  'tools.contrast': 'High contrast',
+  'tools.keys': 'Keys',
+
   'end.win': 'You reached 2048. That is eleven doublings, start to finish.',
   'end.stuck': 'No moves left. The largest tile was {value}, which is {doubles} doublings.',
   'end.again': 'Play again',

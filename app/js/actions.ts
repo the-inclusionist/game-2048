@@ -15,7 +15,9 @@
 // abstract name reaching a person, and `labellerFrom` returns `null` rather than `action1` precisely so that
 // nobody can accidentally show it. A position we read but do not name would appear in the remapping screen as
 // a blank line — which, to a child using a screen reader, is a button that exists and has no name.
-import { isAction, type Action, type ActionPreset } from '@the-inclusionist/engine/core/actions.js';
+import {
+  isAction, labellerFrom, presetActions, type Action, type ActionPreset,
+} from '@the-inclusionist/engine/core/actions.js';
 import type { Direction } from './board.ts';
 
 /**
@@ -113,4 +115,24 @@ export function criarPreset(t: (chave: string) => string): ActionPreset {
     right: { label: t('act.right') },
     [ACAO_DO_SONAR]: { label: t('act.sonar'), hint: t('act.sonar.hint') },
   };
+}
+
+/**
+ * The rows the engine's keyboard-remap panel shows: one per position this game reads, with its word.
+ *
+ * ⚠️ IT IS THE PRESET, READ BACK — not a second list. `ui/settings-controls` asks for `{acao, rotulo}` and
+ * `createGame` asks for an `ActionPreset`; building the two independently would be the duplicated fact that
+ * drifts, and the drift would show as a remapping screen naming an action the game does not read, or reading
+ * one it does not name. `labellerFrom` is the engine's own reader, so the pairing cannot come apart.
+ *
+ * 📌 `labellerFrom` returns `null` for a position the preset does not name, which is ADR-0074 refusing to put
+ * `action1` in front of a child. Those are dropped rather than filled in with the key: a row with no name is
+ * a button a screen reader reads as nothing, and this list exists precisely to be read aloud.
+ */
+export function acoesComRotulo(t: (chave: string) => string): readonly { acao: Action; rotulo: string }[] {
+  const preset = criarPreset(t);
+  const rotulo = labellerFrom(preset);
+  return presetActions(preset)
+    .map((acao) => ({ acao, rotulo: rotulo(acao) }))
+    .filter((r): r is { acao: Action; rotulo: string } => typeof r.rotulo === 'string' && r.rotulo.length > 0);
 }

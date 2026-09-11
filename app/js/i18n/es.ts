@@ -43,6 +43,10 @@ export const es: Dicionario = {
   'act.sonar': 'Dónde hay una unión',
   'act.sonar.hint': 'Dice dónde hay una unión posible, hacia qué lado y a qué distancia.',
 
+  'tools.typography': 'Tipografía',
+  'tools.contrast': 'Alto contraste',
+  'tools.keys': 'Teclas',
+
   'end.win': 'Llegaste a 2048. Son once duplicaciones, de principio a fin.',
   'end.stuck': 'No quedan jugadas. La ficha más alta fue {value}, que son {doubles} duplicaciones.',
   'end.again': 'Jugar otra vez',

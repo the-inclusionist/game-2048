@@ -74,6 +74,14 @@ export const pt = {
   'act.sonar': 'Onde há fusão',
   'act.sonar.hint': 'Diz onde há uma fusão possível, para que lado e a que distância.',
 
+  /* ---- this game's own toolbar, outside the 320×180 world ---- */
+  // ⚠️ THEY WERE HARDCODED PORTUGUESE until 2026-09-11 — three buttons a child reading English or Spanish
+  // met in a language she may not read, sitting next to a touch pad whose labels were fixed the same way in
+  // part one. `#toggle-hc`'s text is also read back by `srSay`, so translating it translates the announcement.
+  'tools.typography': 'Tipografia',
+  'tools.contrast': 'Alto contraste',
+  'tools.keys': 'Teclas',
+
   /* ---- end of round ---- */
   // ⚠️ No "keep playing" past 2048 and no score chasing: that is the compulsion loop ADR-0006 names, and
   // ADR-0049 says the only celebration is growth. The round has an end, and the end is sayable.
