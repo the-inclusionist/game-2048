@@ -24,6 +24,7 @@ import {
 import {
   criarAnimador, duracaoDaJogada, pecasParadas, relogioDoNavegador, type Peca,
 } from '../animation.ts';
+import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
 import { criarDeclaracao } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
 import { LOGICAL_H, LOGICAL_W } from '../geometry.ts';
@@ -56,7 +57,6 @@ let heading: 'n' | 'e' | 's' | 'w' | 'none' = 'none';
 let acabou = false;
 
 const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', up: 'n', down: 's' };
-const ACAO_PARA_DIRECAO: Record<string, Direction> = { left: 'left', right: 'right', up: 'up', down: 'down' };
 
 /** The round's draw. Seeded from the clock at boot; the SAME seed gives the SAME round (ADR-0049). */
 function novaRodada(): void {
@@ -128,6 +128,14 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
       semVozNeural: true,
     },
     isNavigable: () => true,
+    // THE WORDS FOR THE POSITIONS THIS GAME READS (`app/js/actions.ts`).
+    //
+    // ⚠️ WITHOUT IT THE ENGINE CANNOT NAME A KEY, and `core/actions` is explicit that naming is not
+    //    decoration: `labellerFrom` returns `null` instead of `action1` precisely so an abstract name cannot
+    //    reach a child (ADR-0074). It is also what lets the engine compute whether every action this game
+    //    uses is REACHABLE on each input transport — a check it cannot make about a game that never said
+    //    which positions it uses.
+    preset: criarPreset(t),
     // ⚠️ NO HEAVY DOWNLOADS AT BOOT, and this is the SAME decision as `semVozNeural` rather than a new one.
     //    The engine's own doc says `false` is "for whoever has a reason", and that a production game turning
     //    it off decides its child goes without the neural voice offline. This game decided exactly that on
@@ -288,10 +296,28 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   //    ⚠️ SHIFT CHANGES THE VERB, and this is where the APG deviation declared in `ui/board-dom` happens: an
   //    arrow on its own PLAYS, an arrow with Shift moves the READING cursor and announces where it stopped.
   região.addEventListener('keydown', (e: KeyboardEvent) => {
-    const acao = motor.keyboard.actionOf(e.code, 0);
-    const dir = acao ? ACAO_PARA_DIRECAO[acao] : undefined;
+    // ⚠️ A CHORD IS NOT OURS. See `ehAtalhoDoSistema`: until this line, `Ctrl+S` played a move and was
+    //    swallowed, because `KeyS` is `down`. Assistive technology lives on modifier chords, so taking them
+    //    is taking the tool the child uses to reach the game. Shift is the exception, and it is a verb here.
+    if (ehAtalhoDoSistema(e)) return;
 
-    if (e.code === 'KeyS' && e.altKey) { // sonar: where a merge is available
+    const acao = motor.keyboard.actionOf(e.code, 0);
+    const dir = direcaoDe(acao);
+
+    // THE SONAR — "where is a merge available?", asked as an ACTION and no longer as a chord.
+    //
+    // ⚠️ IT WAS `e.code === 'KeyS' && e.altKey` UNTIL ENGINE 8.0.0, and three things were wrong with that.
+    //    The engine did not know the binding existed, so it could not be remapped and was not checked against
+    //    any other binding; a layout that puts `S` elsewhere moved it silently; and the README promised "in
+    //    one keystroke" while asking for two. Read through `actionOf`, it is the same path every other key in
+    //    this game already took.
+    //
+    // 📌 WHAT THIS DOES NOT YET BUY, said plainly: the child cannot REACH a remapping screen from this game.
+    //    Measured on 2026-09-11 — the engine's pause card hides every item it cannot action, and with no
+    //    `getPauseActs` (a field `CreateGameOptions` does not have) only "♿ Acessibilidade" survives, which
+    //    goes to the icon bar. The binding is now remappable by the engine's layer and will honour a mapping
+    //    stored from anywhere on this origin; the screen that writes one is not ours to open yet.
+    if (ehSonar(acao)) {
       const f = declaration.focusOf(0);
       // ⚠️ NO `viz` SINCE ENGINE 8.0.0, and the field did not move — it was DELETED. `platform/audio-sonar`
       //    used to read `ctx.VIZ_BY_KEY[pl.viz]`, a table of RENDER modes consulted from inside `platform/`;

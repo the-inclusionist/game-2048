@@ -21,9 +21,10 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ i18n | `pt-BR`, `en-US`, neutral Latin-American `es`, delivered through the engine's `registerDict()`. A browser test plays a move in Spanish and reads it back out of the live region. |
 | ✅ Animation | Tiles **slide**, and the two layers move on ONE clock: the canvas paints the piece, the DOM carries the number, both from the same `pecasNoInstante(t)` in the same frame. Zero animation under `prefers-reduced-motion` — WCAG 2.3.3, read from the system and never from a menu of ours. |
 | ✅ The accessibility bar | Since engine **8.0.0**, `createGame` writes and wires it into `#p2-a11y`: 🦯 blind mode, 🗨️ TTS, 🤟 Libras and 🧩 TEA/calm, none of which this game writes a line of — and none of which was reachable here before. The ☝️ latch is deliberately ABSENT, because `seguraTeclas()` answers `false` and a control that does nothing is worse than a missing one. |
-| ⬜ Still owed | The **sonar** on a remappable binding rather than `Alt+S`; a merge **flash**; and a run on real school hardware. |
+| ✅ Input as intent | Every key this game reads is an engine ACTION with a word of its own (`app/js/actions.ts`, declared through `preset`) — including the **sonar**, which was a hard-coded `Alt+S` until engine 8.0.0 and is now `action1`, one keystroke, remappable by the engine's layer. ⚠️ The screen that WRITES a remapping is not reachable from this game: `CreateGameOptions` has no `getPauseActs`, so the pause card correctly hides every panel it cannot action. |
+| ⬜ Still owed | A merge **flash**; a run on real school hardware; and a pause card that can reach the engine's own adjustment panels. |
 
-**Verified** on engine **8.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **141 assertions** across node and browser, build
+**Verified** on engine **8.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **158 assertions** across node and browser, build
 passing, and the axe gate reporting zero WCAG A/AA violations with no exclusions. A full round played in a
 real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 
@@ -68,6 +69,7 @@ engine before a line of the game could be written:
   play — precisely the person the pattern exists to serve. **Shift + arrows** move the reading cursor
   instead, Tab is never hijacked, every move is summarised into the live region, and the engine's sonar
   answers "where is a merge" in one keystroke. See the header of `app/js/ui/board-dom.ts`.
+- **Modifier chords are the system's, not ours.** `Ctrl`, `Alt` and `Cmd` are handed straight back — measured on 2026-09-11, `Ctrl+S` used to play a move AND swallow the browser's Save, because `KeyS` is `down` in the engine's scheme. Assistive technology lives on modifier chords (VoiceOver on `Ctrl+Option`, NVDA on `Insert` combinations), so taking them is taking the tool the child uses to reach the game. **Shift** is the one exception, and it is a verb here rather than a modifier.
 - **AAA is counted, never claimed.** Every tile clears AA (WCAG 1.4.3) as a hard gate. Seven of thirteen
   reach AAA; that number is reported and asserted only to be *honest*, because 1.4.6 fights vivid colour and
   pillar 2 says mark where only AA is reachable.

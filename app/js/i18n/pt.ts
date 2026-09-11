@@ -58,6 +58,22 @@ export const pt = {
   'dir.up': 'cima',
   'dir.down': 'baixo',
 
+  /* ---- the action vocabulary the engine shows when it has to NAME a key ---- */
+  // ⚠️ THESE EXIST BECAUSE `action1` MUST NEVER REACH A CHILD. The engine's `core/actions` numbers the four
+  // diamond positions on purpose — "what a platformer calls jump, a quiz calls confirm" — and ADR-0074 calls
+  // an abstract name in front of a person a defect in as many words. The position is the engine's; the word
+  // is ours, and this is where it lives.
+  //
+  // They double as the touch pad's `aria-label`s (`data-i18n-aria` in `index.html`), which used to be the
+  // same sentences hardcoded in Portuguese in the markup — one string in two places, and the copy in the
+  // markup could not be translated at all.
+  'act.up': 'Empurrar para cima',
+  'act.down': 'Empurrar para baixo',
+  'act.left': 'Empurrar para a esquerda',
+  'act.right': 'Empurrar para a direita',
+  'act.sonar': 'Onde há fusão',
+  'act.sonar.hint': 'Diz onde há uma fusão possível, para que lado e a que distância.',
+
   /* ---- end of round ---- */
   // ⚠️ No "keep playing" past 2048 and no score chasing: that is the compulsion loop ADR-0006 names, and
   // ADR-0049 says the only celebration is growth. The round has an end, and the end is sayable.

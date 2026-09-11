@@ -33,6 +33,13 @@ export const en: Dicionario = {
   'dir.up': 'up',
   'dir.down': 'down',
 
+  'act.up': 'Push up',
+  'act.down': 'Push down',
+  'act.left': 'Push left',
+  'act.right': 'Push right',
+  'act.sonar': 'Where a merge is',
+  'act.sonar.hint': 'Says where a merge is available, which way, and how far.',
+
   'end.win': 'You reached 2048. That is eleven doublings, start to finish.',
   'end.stuck': 'No moves left. The largest tile was {value}, which is {doubles} doublings.',
   'end.again': 'Play again',

@@ -43,12 +43,21 @@
           </div>
 
           <!-- THE FOUR TOUCH TARGETS. They exist for whoever does not swipe and for whoever plays with a
-               single pointer; the engine's `padPxPerMm` sizes them in REAL millimetres (WCAG 2.5.5). -->
+               single pointer; the engine's `padPxPerMm` sizes them in REAL millimetres (WCAG 2.5.5).
+
+               ⚠️ THE `aria-label`s ARE TRANSLATED NOW, and until 2026-09-11 they were not: the sentences were
+               hardcoded in Portuguese here, so a child playing in English or Spanish heard the touch buttons
+               in a language she may not read. `data-i18n-aria` is the engine's own hook (`core/i18n` applies
+               it alongside `data-i18n`), and the keys are the SAME ones `app/js/actions.ts` gives the engine
+               for naming the keyboard positions — one sentence, one place, two surfaces.
+
+               The Portuguese stays in the attribute as the pre-translation fallback, exactly as `data-i18n`
+               does for the visible text above. -->
           <div class="p2-pad" aria-hidden="false">
-            <button class="p2-pad-btn p2-pad-btn--up" type="button" data-dir="up" aria-label="Empurrar para cima">▲</button>
-            <button class="p2-pad-btn p2-pad-btn--left" type="button" data-dir="left" aria-label="Empurrar para a esquerda">◀</button>
-            <button class="p2-pad-btn p2-pad-btn--right" type="button" data-dir="right" aria-label="Empurrar para a direita">▶</button>
-            <button class="p2-pad-btn p2-pad-btn--down" type="button" data-dir="down" aria-label="Empurrar para baixo">▼</button>
+            <button class="p2-pad-btn p2-pad-btn--up" type="button" data-dir="up" data-i18n-aria="act.up" aria-label="Empurrar para cima">▲</button>
+            <button class="p2-pad-btn p2-pad-btn--left" type="button" data-dir="left" data-i18n-aria="act.left" aria-label="Empurrar para a esquerda">◀</button>
+            <button class="p2-pad-btn p2-pad-btn--right" type="button" data-dir="right" data-i18n-aria="act.right" aria-label="Empurrar para a direita">▶</button>
+            <button class="p2-pad-btn p2-pad-btn--down" type="button" data-dir="down" data-i18n-aria="act.down" aria-label="Empurrar para baixo">▼</button>
           </div>
         </section>
       </div>

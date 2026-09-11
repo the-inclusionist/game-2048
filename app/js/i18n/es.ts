@@ -36,6 +36,13 @@ export const es: Dicionario = {
   'dir.up': 'arriba',
   'dir.down': 'abajo',
 
+  'act.up': 'Empujar hacia arriba',
+  'act.down': 'Empujar hacia abajo',
+  'act.left': 'Empujar hacia la izquierda',
+  'act.right': 'Empujar hacia la derecha',
+  'act.sonar': 'Dónde hay una unión',
+  'act.sonar.hint': 'Dice dónde hay una unión posible, hacia qué lado y a qué distancia.',
+
   'end.win': 'Llegaste a 2048. Son once duplicaciones, de principio a fin.',
   'end.stuck': 'No quedan jugadas. La ficha más alta fue {value}, que son {doubles} duplicaciones.',
   'end.again': 'Jugar otra vez',
