@@ -25,7 +25,7 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ Offline | A real PWA since 2026-09-11: service worker, `manifest.webmanifest` (`lang: pt-BR`, scoped to this game rather than the origin) and a **vector** icon — `docs/LICENSES.md` says this repository has no drawn asset, and a PNG would have made that false in the commit that made line 5 true. 57 precache entries, 2.1 MB. ⚠️ A development and demonstration route, **never a delivery route to children** (ADR-0140 §3). |
 | ⬜ Still owed | A merge **flash**; a run on real school hardware; and a pause card that can reach the engine's own adjustment panels. |
 
-**Verified** on engine **9.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **186 assertions** across node and browser, build
+**Verified** on engine **9.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **195 assertions** across node and browser, build
 passing, and the axe gate reporting zero WCAG A/AA violations with no exclusions. A full round played in a
 real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 

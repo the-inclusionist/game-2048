@@ -12,7 +12,7 @@
 // The round's state, the PixiJS surface, the DOM grid over it, and the mapping from key to move. That is all.
 import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
 import { t } from '@the-inclusionist/engine/core/i18n.js';
-import { reseed, rnd } from '@the-inclusionist/engine/core/rng.js';
+import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
 import { createGame, type Engine } from '@the-inclusionist/engine';
 import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
 import { lerCenaGuardada } from '@the-inclusionist/engine/ui/motion-scene.js';
@@ -73,14 +73,38 @@ let acabou = false;
 
 const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', up: 'n', down: 's' };
 
-/** The round's draw. Seeded from the clock at boot; the SAME seed gives the SAME round (ADR-0049). */
+/**
+ * THIS GAME'S OWN RANDOM STREAM, and owning it is the whole of ADR-0141.
+ *
+ * ⚠️ IT USED TO BE THE ENGINE'S SHARED ONE. `core/rng` exports `rnd`, `randInt`, `shuffle` and `reseed`, all
+ * bound to a single module-level stream created at import — and the import is one word shorter than the
+ * correct one. In a standalone build that is harmless: one game, one stream. Inside the platform of ADR-0117
+ * two cartridges importing `rnd` draw from the SAME stream, so each one's draws depend on how much the other
+ * drew, and a `reseed(s)` in one repositions the other's underneath it.
+ *
+ * 📌 The engine solved this before anyone needed it. `createRng`'s own documentation says of the stream it
+ * returns: «Reposiciona ESTA corrente. Não alcança nenhuma outra.» The defect was never in the engine.
+ *
+ * 📌 AND THE SEED IS CHOSEN ONCE, not per round. When this repository becomes a cartridge the shell hands
+ * the stream in through `ctx.rng` (ADR-0139 §4) and choosing the seed becomes its job; until then the boot
+ * picks one. Either way nothing calls `reseed` again — see `novaRodada`.
+ */
+let rng: Rng = createRng(Date.now() & 0x7fffffff);
+
+/**
+ * The round's draw.
+ *
+ * ⚠️ IT NO LONGER RESEEDS, and the absence is the decision. It used to call `reseed(Date.now())` on every
+ * round, which on the shared stream repositioned whatever else was drawing from it. A new round simply
+ * CONTINUES this game's own stream, which is exactly as random and reaches nothing else. Reproducibility, when
+ * somebody wants it, comes from the seed the shell chose — which is where ADR-0141 §1 puts it.
+ */
 function novaRodada(): void {
-  reseed(Date.now() & 0x7fffffff);
   board = emptyBoard();
   pontos = 0;
   heading = 'none';
   acabou = false;
-  for (let i = 0; i < 2; i++) board = spawn(board, rnd)?.board ?? board;
+  for (let i = 0; i < 2; i++) board = spawn(board, rng.rnd)?.board ?? board;
 }
 
 export function bootar(doc: Document = document, win: Window = window): Engine | null {
@@ -282,7 +306,7 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     pontos += r.gained;
     heading = RUMO[dir];
 
-    const nascida = spawn(board, rnd);
+    const nascida = spawn(board, rng.rnd);
     if (nascida) board = nascida.board;
 
     // The animation runs with the OLD board in flight; the final frame is `desenhar()`, with the new one.
