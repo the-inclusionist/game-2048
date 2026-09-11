@@ -25,8 +25,15 @@ this paragraph exists to record honestly rather than quietly.
 [**The Inclusionist engine**](https://github.com/the-inclusionist/the-inclusionist-engine) —
 AGPL-3.0-or-later, same owner. What this game gets without writing a line of it: the screen reader layer,
 the sonar, the colour-vision filters, the remappable keyboard, the typography panel with its 18 faces, the
-neural voice, and the seven-field contract that makes all of the above work for a genre the engine has never
-seen.
+accessibility bar that arrived with engine 8.0.0 — blind mode, TTS, Libras and the TEA/calm level — and the
+seven-field contract that makes all of the above work for a genre the engine has never seen.
+
+⚠️ **The neural voice is offered and DECLINED**, and this paragraph used to list it among what the game
+receives. It does not: `boot/main.ts` declares `semVozNeural` and passes no `carregarVozNeural`, because the
+port would carry 27 MB of ONNX runtime into a school tablet's precache budget — measured, `dist/` went from
+28.9 MB to 1.6 MB when it came out. What the child gets instead is the browser's voice, which speaks the
+right language and may not exist offline. The reasoning is in `boot/main.ts`; what belongs here is that the
+engine offers it and this game says no, rather than a credits list quietly claiming a feature it refuses.
 
 ## Fonts
 

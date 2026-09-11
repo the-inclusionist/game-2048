@@ -58,7 +58,17 @@ describe('every tile is legible — WCAG 1.4.3 as a gate', () => {
     const aaa = razoes.filter((r) => r >= AAA).length;
     // The assertion is about the HONESTY of the number, not about it being high: what must not happen is the
     // project claiming AAA in bulk. If this number drops it is information; if AA drops it is a defect.
-    expect(aaa).toBeGreaterThanOrEqual(0);
+    //
+    // ⚠️ AND THE EXACT NUMBER IS PINNED SINCE 2026-09-11, which it was not before. The two bounds below said
+    // only `0 <= aaa <= 13` — true of every possible palette, including one where the count had silently
+    // fallen to zero — while the README stated "seven of thirteen reach AAA" in two places. A number quoted
+    // to a reader with nothing holding it is a claim waiting to go stale, and this project's whole argument
+    // is that its accessibility numbers are MEASURED rather than asserted.
+    //
+    // 📌 A CHANGE HERE IS NOT A FAILURE. If a colour moves for a good reason and the count changes, this line
+    // and the README change together, in the same commit — which is the point: they can no longer drift apart
+    // in silence.
+    expect(aaa, 'the count the README quotes — change both together or neither').toBe(7);
     expect(aaa).toBeLessThanOrEqual(razoes.length);
   });
 
