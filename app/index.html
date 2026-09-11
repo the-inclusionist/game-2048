@@ -88,10 +88,13 @@
          Against engine 8.0.0 `createGame` passed neither AND OFFERED NO WAY to supply them, so keeping our
          own was the only honest option.
 
-         ✅ ENGINE 9.0.0 ADDED BOTH FIELDS, so the door exists. What has not changed is the harder half:
-         the engine's contrast axis offers `hc3`/`hc45`/`hc7`, three levels named after a ratio, and this
-         game has ONE by-role palette to answer them with. Mounting it before there are three palettes
-         would put three rows on screen that all do the same thing. See G1 in the plan.
+         ✅ ENGINE 9.0.0 ADDED BOTH FIELDS, so the doors exist — and measuring them found a different wall
+         behind each. 🌗 CONTRAST: the axis offers `hc3`/`hc45`/`hc7`, three levels named after a RATIO, and
+         `hc7` is not hard but IMPOSSIBLE — three roles pairwise at 7:1 need 49:1 between the extremes and
+         the scale stops at 21. 🚥 COLOUR VISION: the write door opened, the READ door did not — the icon
+         takes its current value from `players`, typed «esquema de teclas e nada mais», so it would read the
+         default on every click and stick after one. Both are gated in `tests/visual.node.test.ts` and
+         explained in `app/js/visual.ts`.
 
          The high contrast here is also not the engine's: it repaints by the contract's ROLE (field 2), which
          is the quiz's finding 8 — the engine's `hcnew` modes repaint the platformer's tile textures, and this

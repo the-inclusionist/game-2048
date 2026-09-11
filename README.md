@@ -24,7 +24,7 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ Input as intent | Every key this game reads is an engine ACTION with a word of its own (`app/js/actions.ts`, declared through `preset`) — including the **sonar**, which was a hard-coded `Alt+S` until engine 8.0.0 and is now `action1`, one keystroke, remappable by the engine's layer. ⚠️ Until engine 9.0.0 the screen that WRITES a remapping was not reachable from this game — `CreateGameOptions` had no `getPauseActs`, so the pause card correctly hid every panel it could not action. **9.0.0 opened that door**, and until it is wired the caveat still describes what the child gets. |
 | ⬜ Still owed | A merge **flash**; a run on real school hardware; and a pause card that can reach the engine's own adjustment panels. |
 
-**Verified** on engine **9.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **174 assertions** across node and browser, build
+**Verified** on engine **9.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **178 assertions** across node and browser, build
 passing, and the axe gate reporting zero WCAG A/AA violations with no exclusions. A full round played in a
 real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 
@@ -71,6 +71,12 @@ engine before a line of the game could be written:
   answers "where is a merge" in one keystroke. See the header of `app/js/ui/board-dom.ts`.
 - **The colour-vision control is four VISIBLE rows, not a `<select>`.** The engine's own `ui/visual-axes-panel` records why: inside a closed box, a control whose reason to exist is to be *found* by someone who sees poorly is “almost the same as not having moved it”. The rows are the engine's `linhasDoEixo`, so it reads the same here as in every other game. ⚠️ Only the **correction** axis is mounted — the engine's *contrast* axis offers `hc3`/`hc45`/`hc7`, three levels it renders by repainting the platformer's textures, and this game has ONE by-role palette. Three rows that all did the same thing would be three-quarters of a dead control, so contrast stays a single button until there are three palettes to answer with.
 - **Modifier chords are the system's, not ours.** `Ctrl`, `Alt` and `Cmd` are handed straight back — measured on 2026-09-11, `Ctrl+S` used to play a move AND swallow the browser's Save, because `KeyS` is `down` in the engine's scheme. Assistive technology lives on modifier chords (VoiceOver on `Ctrl+Option`, NVDA on `Insert` combinations), so taking them is taking the tool the child uses to reach the game. **Shift** is the one exception, and it is a verb here rather than a modifier.
+- **The engine's 🌗 and 🚥 icons stay unmounted, and the reason is measured.** Engine 9.0.0 opened both
+  writer doors. 🌗 is refused by arithmetic: the axis' `hc7` asks three role colours to sit pairwise at 7:1,
+  which needs **49:1** between the extremes when the WCAG scale stops at **21** — impossible at any effort,
+  not merely unbuilt. 🚥 is refused by a half-open door: the icon READS its current value from `players`,
+  typed «esquema de teclas e nada mais», so it would read the default on every click and stick after one.
+  Gated in `tests/visual.node.test.ts`.
 - **AAA is counted, never claimed.** Every tile clears AA (WCAG 1.4.3) as a hard gate. Seven of thirteen
   reach AAA; that number is reported and asserted only to be *honest*, because 1.4.6 fights vivid colour and
   pillar 2 says mark where only AA is reachable.

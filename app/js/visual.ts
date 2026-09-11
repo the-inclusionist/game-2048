@@ -20,14 +20,33 @@
 // way to supply them. ✅ 9.0.0 added `setTemaDoJogador` and `setCorrecaoDoJogador` to the game's half. The
 // door is open.
 //
-// THE HALF THAT DID NOT: `tema` offers `hc3`, `hc45` and `hc7` — three levels named after the contrast ratio
-// they guarantee — and this game has ONE palette, repainted by the contract's ROLE (field 2), which is the
-// quiz's finding 8. Mounting three rows that all did the same single thing would be three-quarters of a dead
-// control — the defect ADR-0106 §5 names, and the one `seguraTeclas()` exists to avoid elsewhere. Having a
-// door does not supply three answers to walk through it with.
+// THE HALF THAT DID NOT, and it stopped being a matter of effort: `tema` offers `hc3`, `hc45` and `hc7` —
+// three levels named after the contrast RATIO they guarantee — and this game answers with ROLE colours, of
+// which it has three: goal, structure, free.
 //
-// So the contrast axis stays the game's own binary button until this game has three palettes to answer it
-// with. That is a colour-design decision with its own contrast gates, and it is not this module's to take.
+// 🔴 `hc7` IS NOT HARD, IT IS IMPOSSIBLE. Contrast is multiplicative across a middle value: for
+// luminances A > B > C, c(A,C) = c(A,B) · c(B,C). Demanding 7:1 on both neighbouring pairs demands **49:1**
+// end to end, and the WCAG scale stops at **21:1** (pure black against pure white). No palette anyone
+// designs later can satisfy it with three roles. `hc45` survives only as a hairline — 20.25 against 21 —
+// pinning the middle role into a luminance band about 0.008 wide.
+//
+// Mounting the axis would therefore offer a child one row that works, one that is a coincidence, and one
+// that cannot exist. That is the dead control of ADR-0106 §5 dressed as a colour choice. The arithmetic is
+// a gate in `tests/visual.node.test.ts`, so this paragraph cannot quietly stop being true.
+//
+// So the contrast axis stays the game's own binary button. Not "until we build three palettes" — two of the
+// three levels have no honest answer at any effort.
+//
+// ========================= AND THE COLOUR-VISION ICON HAS THE OPPOSITE PROBLEM =========================
+// ⚠️ MEASURED AGAINST ENGINE 9.0.0: the 🚥 icon could now be WRITTEN to — `setCorrecaoDoJogador` exists —
+// but it cannot be READ. `ui/pause-icons` takes the current value from `(P()[i] || {}).visual`, and the only
+// door a `createGame` consumer has for players is typed `Pick<ControlledPlayer,'ctrl'>`, which its own
+// comment describes as «esquema de teclas e nada mais». The read-back that would recover it from storage,
+// `lerVisualGuardado`, lives in `render/viz-setters` — the PixiJS-shaped module `createGame` never mounts.
+//
+// So a mounted 🚥 would read `PADRAO` on every click and cycle from the first value for ever: it would
+// LOOK like it worked once and then stick. 9.0.0 opened the write door and not the read door, which is why
+// the four visible rows below remain this game's own control.
 import {
   CORRECOES, PADRAO, SIMULACOES, aplicacao, type Correcao, type VisualState,
 } from '@the-inclusionist/engine/render/viz-axes.js';

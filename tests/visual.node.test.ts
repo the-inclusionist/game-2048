@@ -14,6 +14,46 @@ import { describe, expect, it } from 'vitest';
 import {
   CORRECOES_OFERECIDAS, SIMULACOES_CONHECIDAS, ehCorrecao, estadoDa, filtroCssDe,
 } from '../app/js/visual.ts';
+import { contraste } from '../app/js/render/palette.ts';
+
+describe('why the CONTRAST axis is not mounted — arithmetic, not preference', () => {
+  // Engine 9.0.0 added `setTemaDoJogador`, so the door this game once cited as missing is open. The axis is
+  // still not mounted, and the reason changed from "no door" to something a test can hold: the three themes
+  // are named after ratios — `hc3` (3:1), `hc45` (4.5:1), `hc7` (7:1) — and this game answers an axis with
+  // ROLE colours, of which it has three: goal, structure, free.
+  it('[Cross-check] the WCAG scale stops at 21:1, and that is the whole argument', () => {
+    expect(contraste(0x000000, 0xffffff)).toBeCloseTo(21, 5);
+  });
+
+  it('[Boundary] 🔴 three roles CANNOT be pairwise 7:1 — it would need 49:1 between the extremes', () => {
+    // For luminances A > B > C, contrast is multiplicative across the middle:
+    //   c(A,C) = (A+0.05)/(C+0.05) = c(A,B) · c(B,C)
+    // So demanding 7:1 on both neighbouring pairs demands 49:1 end to end, and the scale has 21.
+    // ⚠️ THIS IS NOT "HARD", IT IS IMPOSSIBLE, and the difference matters: no palette anyone designs later
+    // can satisfy `hc7` with three roles. Mounting that row would be offering the child a setting that
+    // cannot exist — the dead control of ADR-0106 §5, dressed as a colour choice.
+    const TETO = contraste(0x000000, 0xffffff);
+    expect(7 * 7).toBeGreaterThan(TETO);
+  });
+
+  it('[Boundary] and 4.5:1 pairwise survives only as a hairline', () => {
+    // 4.5 · 4.5 = 20.25 against a ceiling of 21, so the extremes are forced to very near pure black and pure
+    // white, and the middle role is pinned into a luminance band about 0.008 wide. A palette with one usable
+    // grey is not a palette; it is a coincidence waiting for someone to adjust a colour.
+    const TETO = contraste(0x000000, 0xffffff);
+    expect(4.5 * 4.5).toBeLessThan(TETO);
+    const alto = (1 + 0.05) / 4.5 - 0.05;   // the middle's highest allowed luminance
+    const baixo = 4.5 * 0.05 - 0.05;        // and its lowest
+    expect(alto - baixo, 'the whole room a third colour has').toBeLessThan(0.01);
+  });
+
+  it('[Right] 3:1 is the level this game already answers, and it is the one it offers', () => {
+    // `tests/palette.node.test.ts` asserts the three roles separate by 1.4.11's 3:1 with the real colours.
+    // Here the point is only that 3:1 is the level the arithmetic leaves room for.
+    const TETO = contraste(0x000000, 0xffffff);
+    expect(3 * 3).toBeLessThan(TETO);
+  });
+});
 
 describe('what the control offers', () => {
   it('[Many] the four values of the axis, and the default is a NAME rather than an absence', () => {
