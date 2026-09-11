@@ -227,6 +227,79 @@ export const relogioDoNavegador = (win: Window): Relogio => ({
   cancelarEspera: (id) => win.clearTimeout(id),
 });
 
+/**
+ * ONE FRAME AT SIXTY PER SECOND, in milliseconds.
+ *
+ * ⚠️ `dt` IS COUNTED IN FRAMES, NOT SECONDS, and it is the inherited convention the cartridge brief says
+ * breaks most often: "physics copied from a seconds-based tutorial runs wrong". A shell's `update(dt)` passes
+ * the ticker's `deltaTime`, where `1.0` means one frame at sixty — while `DURACAO_MS` and `depoisDe(fn, ms)`
+ * are milliseconds. This constant is the only place the two meet, so the conversion is one named number
+ * instead of a `16.7` sprinkled through a loop.
+ */
+export const MS_POR_QUADRO = 1000 / 60;
+
+/** A clock and the handle that drives it. The shell calls `avancar`; the animator only sees `relogio`. */
+export interface RelogioDeQuadros {
+  readonly relogio: Relogio;
+  /** One tick of the host's loop. `dt` in FRAMES, as the ticker gives it. */
+  readonly avancar: (dt: number) => void;
+  /** Pending timers, for a teardown to assert it left nothing running. */
+  readonly pendentes: () => number;
+}
+
+/**
+ * THE CLOCK A SHELL DRIVES, for when this game stops owning a frame loop.
+ *
+ * ⚠️ A CARTRIDGE NEVER OPENS ITS OWN `requestAnimationFrame` (ADR-0139 §3): "six cartridges each opening
+ * their own frame callback is six loops competing for one frame". The shell runs ONE loop and calls each
+ * mounted game's `update(dt)`. This is the same `Relogio` the animator already took — the injection built
+ * when a hidden pane froze `rAF` and the gate could never be made red — so the animation itself does not
+ * change by one line.
+ *
+ * 📌 TIME ONLY MOVES IN `avancar`. Nothing here reads a wall clock, which is also why it is testable
+ * without a browser: the same property that lets the shell own the loop lets a test own it.
+ */
+export function criarRelogioDeQuadros(): RelogioDeQuadros {
+  let agora = 0;
+  let proximoId = 1;
+  let quadros: ((agora: number) => void)[] = [];
+  const esperas = new Map<number, { fn: () => void; quando: number }>();
+
+  const relogio: Relogio = {
+    agora: () => agora,
+    proximoQuadro: (fn) => { quadros.push(fn); },
+    depoisDe: (fn, ms) => {
+      const id = proximoId++;
+      esperas.set(id, { fn, quando: agora + ms });
+      return id;
+    },
+    cancelarEspera: (id) => { esperas.delete(id); },
+  };
+
+  return {
+    relogio,
+    pendentes: () => esperas.size,
+    avancar: (dt) => {
+      agora += dt * MS_POR_QUADRO;
+
+      // ⚠️ TIMERS BEFORE FRAMES, and the order is the rescue's whole point: `socorroMs` exists to release a
+      //    move whose frames never arrived, so a tick that carries both must let the rescue win rather than
+      //    draw one more frame of a motion that is already over.
+      for (const [id, e] of [...esperas]) {
+        if (e.quando <= agora) { esperas.delete(id); e.fn(); }
+      }
+
+      // 📌 THE QUEUE IS TAKEN, NOT DRAINED. The animator asks for the next frame from INSIDE a frame
+      //    callback; iterating the live array would run that continuation in the same tick and spin the whole
+      //    animation out in one `update`, which is the loop-inside-a-loop this module exists to prevent.
+      const agora_ = agora;
+      const lote = quadros;
+      quadros = [];
+      for (const fn of lote) fn(agora_);
+    },
+  };
+}
+
 /** The tiles of a board AT REST — the final frame, and what is drawn when there is no animation. */
 export function pecasParadas(board: Board): Peca[] {
   const out: Peca[] = [];

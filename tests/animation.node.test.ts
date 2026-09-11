@@ -14,8 +14,8 @@
 // eye; the second is `tests/animacao.browser.test.ts`, which runs the real thing.
 import { describe, expect, it } from 'vitest';
 import {
-  DURACAO_MS, duracaoDaJogada, easeOut, pecasNoInstante, pecasParadas, podeAnimar, posicaoDe,
-  querMenosMovimento, socorroMs,
+  DURACAO_MS, MS_POR_QUADRO, criarRelogioDeQuadros, duracaoDaJogada, easeOut, pecasNoInstante,
+  pecasParadas, podeAnimar, posicaoDe, querMenosMovimento, socorroMs,
 } from '../app/js/animation.ts';
 import { SIZE, slide, type Board, type Movimento } from '../app/js/board.ts';
 import { cellRect } from '../app/js/geometry.ts';
@@ -148,6 +148,95 @@ describe('when NOT to animate — the half the browser taught', () => {
 
   it('[Boundary] and it is not so long that anybody sees the board sitting still', () => {
     expect(socorroMs(DURACAO_MS)).toBeLessThan(1000);
+  });
+});
+
+describe('the clock a SHELL drives, for when this game stops owning a loop', () => {
+  it('[Interface] ⚠️ `dt` is FRAMES and the clock is MILLISECONDS — one named conversion, not a 16.7', () => {
+    // The cartridge brief calls this the inherited convention that breaks most often: "physics copied from a
+    // seconds-based tutorial runs wrong". A ticker's `deltaTime` of 1.0 means ONE frame at sixty.
+    expect(MS_POR_QUADRO).toBeCloseTo(1000 / 60, 10);
+    const c = criarRelogioDeQuadros();
+    c.avancar(60);
+    expect(c.relogio.agora(), 'sixty frames is one second').toBeCloseTo(1000, 6);
+  });
+
+  it('[Zero] time does not move on its own — nothing here reads a wall clock', () => {
+    const c = criarRelogioDeQuadros();
+    expect(c.relogio.agora()).toBe(0);
+    expect(c.relogio.agora()).toBe(0);
+  });
+
+  it('[One] a frame callback runs on the NEXT tick, with the new time', () => {
+    const c = criarRelogioDeQuadros();
+    const vistos: number[] = [];
+    c.relogio.proximoQuadro((agora) => vistos.push(agora));
+    expect(vistos, 'not during the call that queued it').toEqual([]);
+    c.avancar(1);
+    expect(vistos).toHaveLength(1);
+    expect(vistos[0]).toBeCloseTo(MS_POR_QUADRO, 6);
+  });
+
+  it('[Right] 🔴 a callback that asks for another frame waits for the NEXT tick', () => {
+    // This is the one that would spin the whole animation out inside a single `update`. The animator asks for
+    // the next frame from INSIDE a frame callback; draining the live queue would run the continuation in the
+    // same tick, and again, and again — a loop inside the host's loop, with `t` racing to 1 in one frame.
+    const c = criarRelogioDeQuadros();
+    let voltas = 0;
+    const pedir = () => { voltas++; if (voltas < 10) c.relogio.proximoQuadro(pedir); };
+    c.relogio.proximoQuadro(pedir);
+    c.avancar(1);
+    expect(voltas, 'exactly one turn per tick').toBe(1);
+    c.avancar(1);
+    expect(voltas).toBe(2);
+  });
+
+  it('[Boundary] a timer fires when its time HAS COME, not a tick early', () => {
+    const c = criarRelogioDeQuadros();
+    let tocou = false;
+    c.relogio.depoisDe(() => { tocou = true; }, 100);
+    c.avancar(5);                       // 83.3 ms
+    expect(tocou).toBe(false);
+    c.avancar(1);                       // 100 ms
+    expect(tocou).toBe(true);
+    expect(c.pendentes(), 'and it is gone once it fired').toBe(0);
+  });
+
+  it('[Zero] a cancelled timer never fires, which is how a finished move drops its rescue', () => {
+    const c = criarRelogioDeQuadros();
+    let tocou = false;
+    const id = c.relogio.depoisDe(() => { tocou = true; }, 10);
+    c.relogio.cancelarEspera(id);
+    c.avancar(600);
+    expect(tocou).toBe(false);
+    expect(c.pendentes(), 'one orphan timer per move, in a game of 200 moves').toBe(0);
+  });
+
+  it('[Right] ⚠️ on a tick carrying both, the TIMER goes first', () => {
+    // `socorroMs` exists to release a move whose frames never arrived. A tick that carries the rescue AND a
+    // queued frame must let the rescue win, rather than draw one more frame of a motion already over.
+    const c = criarRelogioDeQuadros();
+    const ordem: string[] = [];
+    c.relogio.depoisDe(() => ordem.push('socorro'), 10);
+    c.relogio.proximoQuadro(() => ordem.push('quadro'));
+    c.avancar(1);
+    expect(ordem).toEqual(['socorro', 'quadro']);
+  });
+
+  it('[Many] a big `dt` is ONE tick, not a catch-up storm', () => {
+    // A tab returning from the background hands the shell a large delta. Replaying it as many small frames
+    // would run the whole animation at once; the clock simply jumps, and `posicaoDe` clamps `t` at 1.
+    const c = criarRelogioDeQuadros();
+    let quadros = 0;
+    // ⚠️ THE CAP IS NOT DECORATION: if the queue is ever drained LIVE instead of taken, this callback
+    //    re-queues itself inside the same tick and the loop never ends. Measured while proving this gate red
+    //    — the uncapped version ran for 3.5 seconds before failing. A gate that hangs CI instead of failing
+    //    fast is a worse gate than none, so it stops itself and lets the assertion do the talking.
+    const pedir = () => { quadros++; if (quadros < 50) c.relogio.proximoQuadro(pedir); };
+    c.relogio.proximoQuadro(pedir);
+    c.avancar(300);
+    expect(quadros).toBe(1);
+    expect(c.relogio.agora()).toBeCloseTo(300 * MS_POR_QUADRO, 6);
   });
 });
 

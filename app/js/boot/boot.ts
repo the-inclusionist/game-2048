@@ -17,6 +17,7 @@ import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
 import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
 import { fabricaComOJogo, kb, resetKB, saveKB, setKB } from '@the-inclusionist/engine/input/keyboard.js';
 import { acoesComRotulo } from '../actions.ts';
+import { MS_POR_QUADRO } from '../animation.ts';
 import { semNulos } from '../keyboard-save.ts';
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
@@ -24,8 +25,42 @@ import { bootar } from './main.ts';
 
 const $ = <T extends Element = Element>(sel: string): T | null => document.querySelector<T>(sel);
 
-const motor = bootar();
-if (motor) {
+const jogo = bootar();
+if (jogo) {
+  const motor = jogo.motor;
+
+  // ============================ THE SHELL RUNS THE LOOP ============================
+  // ⚠️ ONE LOOP, AND IT IS THIS FILE'S. ADR-0139 §3 puts it here rather than in the game: "six cartridges
+  // each opening their own frame callback is six loops competing for one frame". `boot/main.ts` no longer asks
+  // for a frame at all — it exposes `update(dt)` and the Pixi application is `autoStart: false`.
+  //
+  // 📌 `dt` IS IN FRAMES, never seconds, which is the inherited convention the cartridge brief says breaks
+  // most often. One frame at sixty is `MS_POR_QUADRO`, and dividing by it is the whole conversion.
+  //
+  // 📌 `maxDt` CAPS A RETURNING TAB. A pane that spent a minute hidden hands back an enormous delta; without
+  // the cap the animator would be told a whole minute passed in one tick. Four frames is two visible frames of
+  // slack and nothing a child can perceive.
+  const MAX_DT = 4;
+  let anterior = performance.now();
+  let vivo = true;
+  const tick = (agora: number) => {
+    if (!vivo) return;
+    const dt = Math.min((agora - anterior) / MS_POR_QUADRO, MAX_DT);
+    anterior = agora;
+    // ⚠️ THE ERROR BOUNDARY IS SPEC D16: "one broken game must stay distinguishable from a broken engine".
+    //    A cartridge that throws stops ITSELF — it does not take the loop, and it says so out loud rather than
+    //    leaving a child in front of a board that quietly stopped moving.
+    try {
+      jogo.update(dt);
+    } catch (e) {
+      vivo = false;
+      srAlert(t('a11y.instructions'));
+      console.error('[2048] the game stopped itself:', e);
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
   // TYPOGRAPHY — borrowed whole. The quiz measured that this panel serves outside its genre without a line of
   // change, and it is the strongest evidence that the menu stack belongs to the engine rather than to the
   // platformer.

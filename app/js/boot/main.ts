@@ -23,7 +23,7 @@ import {
   type Board, type Direction, type Movimento,
 } from '../board.ts';
 import {
-  criarAnimador, duracaoDaJogada, pecasParadas, querMenosMovimento, relogioDoNavegador, type Peca,
+  criarAnimador, criarRelogioDeQuadros, duracaoDaJogada, pecasParadas, querMenosMovimento, type Peca,
 } from '../animation.ts';
 import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
 import { criarDeclaracao } from '../declaration.ts';
@@ -66,10 +66,6 @@ const movimentoReduzido = (win: Window): boolean =>
  * and the Inclusionist keeps nothing about a child. No `localStorage`, no best score, no "continue where you
  * left off" — the absence is the decision. The 2048 forks keep the best score; this one cannot.
  */
-let board: Board = emptyBoard();
-let pontos = 0;
-let heading: 'n' | 'e' | 's' | 'w' | 'none' = 'none';
-let acabou = false;
 
 const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', up: 'n', down: 's' };
 
@@ -89,27 +85,56 @@ const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', 
  * the stream in through `ctx.rng` (ADR-0139 §4) and choosing the seed becomes its job; until then the boot
  * picks one. Either way nothing calls `reseed` again — see `novaRodada`.
  */
-let rng: Rng = createRng(Date.now() & 0x7fffffff);
-
 /**
- * The round's draw.
- *
- * ⚠️ IT NO LONGER RESEEDS, and the absence is the decision. It used to call `reseed(Date.now())` on every
- * round, which on the shared stream repositioned whatever else was drawing from it. A new round simply
- * CONTINUES this game's own stream, which is exactly as random and reaches nothing else. Reproducibility, when
- * somebody wants it, comes from the seed the shell chose — which is where ADR-0141 §1 puts it.
+ * WHAT A SHELL GETS BACK. It is `GameInstance` of ADR-0139 with the engine beside it, and the shape is
+ * deliberate practice for G6: `update` and `teardown` are the two members a cartridge owes, and nothing else
+ * here is reachable from outside.
  */
-function novaRodada(): void {
-  board = emptyBoard();
-  pontos = 0;
-  heading = 'none';
-  acabou = false;
-  for (let i = 0; i < 2; i++) board = spawn(board, rng.rnd)?.board ?? board;
+export interface Instancia {
+  /** The engine this game was booted with. In cartridge mode the SHELL will own this instead. */
+  readonly motor: Engine;
+  /** One tick of the host's loop. `dt` in FRAMES, as the ticker gives it (never seconds). */
+  readonly update: (dt: number) => void;
+  /** Release everything this instance created or attached. After it returns, nothing of ours is left. */
+  readonly teardown: () => void;
 }
 
-export function bootar(doc: Document = document, win: Window = window): Engine | null {
+export function bootar(doc: Document = document, win: Window = window): Instancia | null {
   const região = doc.querySelector<HTMLElement>('#game-region');
   if (!região) return null;
+
+  /* ===================== THE ROUND'S STATE, OWNED BY THIS INSTANCE =====================
+   *
+   * ⚠️ IT LIVED AT MODULE SCOPE UNTIL 2026-09-11, which is the defect spec D14 names and the cartridge brief
+   * calls one of the two that "break silently": state at module scope survives `teardown()` and leaks into the
+   * next game on the same page. It is also the engine's own user story — «I want the engine to carry no game
+   * state, so that two games on one page do not collide» — read from the game's side.
+   *
+   * ⚠️ AND EVERYTHING HERE STILL DIES WITH THE ROUND, which is ADR-0037 unchanged: no save, no best score, no
+   * "continue where you left off". What moved is WHERE it lives, not how long it lasts.
+   */
+  let board: Board = emptyBoard();
+  let pontos = 0;
+  let heading: 'n' | 'e' | 's' | 'w' | 'none' = 'none';
+  let acabou = false;
+
+  let rng: Rng = createRng(Date.now() & 0x7fffffff);
+
+  /**
+   * The round's draw.
+   *
+   * ⚠️ IT NO LONGER RESEEDS, and the absence is the decision. It used to call `reseed(Date.now())` on every
+   * round, which on the shared stream repositioned whatever else was drawing from it. A new round simply
+   * CONTINUES this game's own stream, which is exactly as random and reaches nothing else. Reproducibility, when
+   * somebody wants it, comes from the seed the shell chose — which is where ADR-0141 §1 puts it.
+   */
+  function novaRodada(): void {
+    board = emptyBoard();
+    pontos = 0;
+    heading = 'none';
+    acabou = false;
+    for (let i = 0; i < 2; i++) board = spawn(board, rng.rnd)?.board ?? board;
+  }
 
   // 1. LANGUAGES BEFORE ANYTHING — even before `createGame`, which already translates markup on its first step.
   registrarIdiomas();
@@ -210,9 +235,14 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
 
   // 4. THE CANVAS, under the numbers and HIDDEN FROM THE ACCESSIBILITY TREE. It is the illustration; the real
   //    board is the DOM grid (pillar 2). Without `aria-hidden`, the screen reader would announce an image.
+  // ⚠️ `autoStart: false` SINCE 2026-09-11, and it is the frame loop leaving this file. A `PIXI.Application`
+  //    starts a shared ticker of its own by default — a second loop beside the animator's, owned by the game.
+  //    ADR-0139 §3: "six cartridges each opening their own frame callback is six loops competing for one
+  //    frame". The host ticks `update(dt)` and this file renders there, once, on the tick it was given.
   const pixi = new PIXI.Application({
     width: LOGICAL_W, height: LOGICAL_H, backgroundColor: FUNDO_DA_TELA,
     antialias: false, resolution: 1, powerPreference: 'low-power',
+    autoStart: false,
   });
   const tela = pixi.view as HTMLCanvasElement;
   tela.id = 'p2-canvas';
@@ -231,13 +261,15 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   //    the DOM number exactly on top of the painted square at any device pixel ratio.
   initLayout({ numJogadores: () => 1 });
   layout();
-  win.addEventListener('resize', () => layout());
+  const aoRedimensionar = () => layout();
+  win.addEventListener('resize', aoRedimensionar);
 
   // ⚠️ BECOMING VISIBLE AGAIN RECONCILES THE SCREEN WITH THE MODEL. While the document is hidden nothing is
   // animated (see `podeAnimar`), and the rescue guarantees the final frame arrives — but a tab that spent
   // minutes hidden may have lost frames for other reasons. Redrawing on return is cheap and closes the whole
   // category: whatever the reason the screen fell behind, it catches up on the way back.
-  doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'visible') desenhar(); });
+  const aoVoltarAVer = () => { if (doc.visibilityState === 'visible') desenhar(); };
+  doc.addEventListener('visibilitychange', aoVoltarAVer);
 
   const altoContraste = () => doc.documentElement.dataset.hc === '1';
   const papelDa = (i: number) => declaration.roleAt({ x: i % SIZE, y: Math.floor(i / SIZE) });
@@ -279,7 +311,13 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
    * uses for randomness. What is left here are the three things that are this game's: which clock (the real
    * one), what to draw each frame (both layers together), and how long (zero, under reduced motion).
    */
-  const animador = criarAnimador(relogioDoNavegador(win), quadro);
+  // ⚠️ THE CLOCK IS THE HOST'S TICK, not `requestAnimationFrame`. `relogioDoNavegador` still exists and is
+  //    still right for a game that owns its loop; this one is driven by `update(dt)`, so the animation runs
+  //    on the frame the shell already had instead of asking for one of its own. The animator does not change
+  //    by a line — it took its clock injected from the day a hidden pane froze `rAF` and the gate could
+  //    never be made red. That seam is what makes this a swap rather than a rewrite.
+  const relogio = criarRelogioDeQuadros();
+  const animador = criarAnimador(relogio.relogio, quadro);
   const animar = (movimentos: readonly Movimento[]): Promise<void> =>
     animador.correr(movimentos, duracaoDaJogada(movimentoReduzido(win)), doc.visibilityState !== 'hidden');
 
@@ -417,13 +455,61 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
   srSay(t('a11y.instructions'));
 
   // The project's verification hook: checking the boot means checking this exists, and reading from it.
-  (win as Window & { __incl2048?: unknown }).__incl2048 = {
+  // ⚠️ IT IS A GLOBAL, so `teardown` deletes it. A verification hook that outlived the instance would answer
+  //    questions about a game that is no longer on the page — which is worse than not being there.
+  let desmontado = false;
+  const janela = win as Window & { __incl2048?: unknown };
+  janela.__incl2048 = {
     get board() { return board; },
     get pontos() { return pontos; },
     get acabou() { return acabou; },
     jogar, novaRodada: () => { novaRodada(); desenhar(); }, declaration, motor,
   };
-  return motor;
+
+  return {
+    motor,
+
+    /**
+     * ONE TICK OF THE HOST'S LOOP.
+     *
+     * 📌 `dt` IS IN FRAMES. The clock converts once, by a named constant, and `MS_POR_QUADRO` is the only
+     * place the two units meet.
+     */
+    update: (dt: number) => {
+      relogio.avancar(dt);
+      pixi.render();
+    },
+
+    /**
+     * EVERYTHING THIS INSTANCE CREATED OR ATTACHED, RELEASED.
+     *
+     * ⚠️ THE LIST IS THE POINT, and it was measured rather than remembered: three things escaped the
+     * region — a `resize` listener on the WINDOW, a `visibilitychange` listener on the DOCUMENT, and the
+     * `__incl2048` global. A cartridge that leaves those behind poisons the next game on the page, and
+     * ADR-0139 §4 is explicit that `region` exists so "anything left outside it is a defect with an address".
+     *
+     * 📌 The nodes go too. The shell empties `region` after this returns, but the three this file PUT there
+     * are this file's to take back — relying on the shell to sweep is how a teardown becomes a promise.
+     */
+    teardown: () => {
+      // ⚠️ IDEMPOTENT, AND A GATE CAUGHT THAT IT WAS NOT. The first run of
+      //    `tests/factory.browser.test.ts` failed with `TypeError: this.cancelResize is not a function` —
+      //    PixiJS's `destroy` called a second time. A shell swapping games under pressure may well call this
+      //    twice, and the second call must be a no-op rather than a stack trace in front of a child.
+      if (desmontado) return;
+      desmontado = true;
+
+      win.removeEventListener('resize', aoRedimensionar);
+      doc.removeEventListener('visibilitychange', aoVoltarAVer);
+      delete janela.__incl2048;
+      tela.remove();
+      camadaDePecas.raiz.remove();
+      grade.raiz.remove();
+      // `true` also destroys the view and the stage's children: the WebGL context is the expensive half, and
+      // a context left open per swap is how a catalogue of games runs out of them.
+      pixi.destroy(true);
+    },
+  };
 }
 
 // ⚠️ NO AUTO-BOOT HERE, and the line that used to be here was a defect measured in the browser on 2026-09-05.
