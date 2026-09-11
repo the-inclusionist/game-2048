@@ -61,7 +61,7 @@
     "`pixi.js` is pinned to the engine's EXACT version: two PixiJS in one page is a bug, not a fallback."
   ],
   "dependencies": {
-    "@the-inclusionist/engine": "8.0.0",
+    "@the-inclusionist/engine": "9.0.0",
     "pixi.js": "7.4.2"
   },
   "devDependencies": {

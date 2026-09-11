@@ -82,11 +82,16 @@
     <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the engine's
          `ui/layout` decided for everything that is not the game's world.
 
-         ⚠️ AND THESE THREE STAY OURS, which was measured rather than assumed. The engine's bar has a 🌗 and a
-         🚥 too, but `iconesQueAccionam` only mounts an icon that has somebody to action it — the contrast
-         icon needs `setTemaDoJogador`, the colour-vision icon needs `setCorrecaoDoJogador`, and `createGame`
-         passes neither, with no option for a consumer to supply them. Deleting these in favour of the bar
-         would have removed two working controls and gained nothing.
+         ⚠️ THESE THREE STAY OURS — FOR NOW, AND THE REASON CHANGED UNDER THEM. The engine's bar has a 🌗
+         and a 🚥 too, but `iconesQueAccionam` only mounts an icon that has somebody to action it: the
+         contrast icon needs `setTemaDoJogador` and the colour-vision icon needs `setCorrecaoDoJogador`.
+         Against engine 8.0.0 `createGame` passed neither AND OFFERED NO WAY to supply them, so keeping our
+         own was the only honest option.
+
+         ✅ ENGINE 9.0.0 ADDED BOTH FIELDS, so the door exists. What has not changed is the harder half:
+         the engine's contrast axis offers `hc3`/`hc45`/`hc7`, three levels named after a ratio, and this
+         game has ONE by-role palette to answer them with. Mounting it before there are three palettes
+         would put three rows on screen that all do the same thing. See G1 in the plan.
 
          The high contrast here is also not the engine's: it repaints by the contract's ROLE (field 2), which
          is the quiz's finding 8 — the engine's `hcnew` modes repaint the platformer's tile textures, and this

@@ -12,12 +12,19 @@
 // Engine 8.0.0 splits the visual state in two: `tema` (contrast) and `correcao` (colour). The panel renders
 // both, and this game mounts only the second.
 //
-// ⚠️ THE REASON IS MEASURED, NOT TASTE. `tema` offers `hc3`, `hc45` and `hc7` — three levels named after the
-// contrast ratio they guarantee — and the engine renders them by repainting the PLATFORMER's textures
-// through `render/viz-setters`, whose context asks for ~34 fields of a PixiJS render graph this game does not
-// have. Our high contrast is a different thing: one palette repainted by the contract's ROLE (field 2), which
-// is the quiz's finding 8. Mounting three rows that all did the same single thing would be three-quarters of
-// a dead control — the defect ADR-0106 §5 names, and the one `seguraTeclas()` exists to avoid elsewhere.
+// ⚠️ THE REASON IS MEASURED, NOT TASTE — AND HALF OF IT EXPIRED IN ENGINE 9.0.0, so both halves are kept
+// apart here on purpose.
+//
+// THE HALF THAT EXPIRED: against 8.0.0 the writers lived only in `render/viz-setters`, whose context asks
+// for ~34 fields of a PixiJS platformer render graph this game does not have, and `createGame` offered no
+// way to supply them. ✅ 9.0.0 added `setTemaDoJogador` and `setCorrecaoDoJogador` to the game's half. The
+// door is open.
+//
+// THE HALF THAT DID NOT: `tema` offers `hc3`, `hc45` and `hc7` — three levels named after the contrast ratio
+// they guarantee — and this game has ONE palette, repainted by the contract's ROLE (field 2), which is the
+// quiz's finding 8. Mounting three rows that all did the same single thing would be three-quarters of a dead
+// control — the defect ADR-0106 §5 names, and the one `seguraTeclas()` exists to avoid elsewhere. Having a
+// door does not supply three answers to walk through it with.
 //
 // So the contrast axis stays the game's own binary button until this game has three palettes to answer it
 // with. That is a colour-design decision with its own contrast gates, and it is not this module's to take.

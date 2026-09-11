@@ -327,11 +327,16 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     //    one keystroke" while asking for two. Read through `actionOf`, it is the same path every other key in
     //    this game already took.
     //
-    // 📌 WHAT THIS DOES NOT YET BUY, said plainly: the child cannot REACH a remapping screen from this game.
-    //    Measured on 2026-09-11 — the engine's pause card hides every item it cannot action, and with no
-    //    `getPauseActs` (a field `CreateGameOptions` does not have) only "♿ Acessibilidade" survives, which
-    //    goes to the icon bar. The binding is now remappable by the engine's layer and will honour a mapping
-    //    stored from anywhere on this origin; the screen that writes one is not ours to open yet.
+    // 📌 WHAT THIS DOES NOT YET BUY, said plainly: the child cannot REACH a remapping screen from this
+    //    game. Measured on 2026-09-11 — the engine's pause card hides every item it cannot action, and with
+    //    no `getPauseActs` only "♿ Acessibilidade" survived, which goes to the icon bar. The binding is
+    //    remappable by the engine's layer and honours a mapping stored anywhere on this origin; the screen
+    //    that writes one was not ours to open.
+    //
+    // ✅ AND THE REASON EXPIRED THE SAME DAY: engine 9.0.0 added `getPauseActs` to the game's half, so the
+    //    door exists and the panels behind it — including remapping — become reachable. Passing it is G2 in
+    //    the plan. Until that lands the sentence above still describes what the child gets, which is why it
+    //    stays here corrected rather than deleted.
     if (ehSonar(acao)) {
       const f = declaration.focusOf(0);
       // ⚠️ NO `viz` SINCE ENGINE 8.0.0, and the field did not move — it was DELETED. `platform/audio-sonar`
