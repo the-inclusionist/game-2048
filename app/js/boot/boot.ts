@@ -17,6 +17,7 @@ import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
 import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
 import { fabricaComOJogo, kb, resetKB, saveKB, setKB } from '@the-inclusionist/engine/input/keyboard.js';
 import { acoesComRotulo } from '../actions.ts';
+import { semNulos } from '../keyboard-save.ts';
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { bootar } from './main.ts';
@@ -58,7 +59,15 @@ if (motor) {
     // ⚠️ NOT the whole `platform/storage` module: `ControlsStore` is exactly `{ saveKB, resetKB }`, and both
     //    live in `input/keyboard` beside the `kb` they persist. Passing the broad module compiled against
     //    nothing — the narrow type is what says which two functions this panel may reach.
-    store: { saveKB, resetKB },
+    //
+    // 🔴 AND `saveKB` IS WRAPPED, because saving what the engine hands us LOCKED THE CHILD OUT OF THE GAME.
+    //    Measured on 2026-09-11: remap a key, reload, blank page. The engine's `p3`/`p4` schemes carry `null`
+    //    for positions a seat cannot reach, `saveKB` persists all 42, and on the next boot `migrarEsquema`
+    //    does `[...teclas]` over each one — `[...null]` throws inside `createGame`, before anything renders.
+    //    `semNulos` writes only the positions that name a key; the merge on load leaves the factory's value
+    //    for the rest, so nothing is lost. The whole chain is in `app/js/keyboard-save.ts`, and it is an
+    //    ENGINE defect reported as one, not a disagreement.
+    store: { saveKB: (esquema) => saveKB(semNulos(esquema)), resetKB },
     // The rows are this game's preset read back through the engine's own labeller, so the screen cannot name
     // an action the game does not read. See `acoesComRotulo`.
     acoesDoJogo: () => acoesComRotulo(t),
