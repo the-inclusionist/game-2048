@@ -11,9 +11,7 @@
 // ========================= WHAT THIS FILE DOES THAT IS THIS GAME'S =========================
 // The round's state, the PixiJS surface, the DOM grid over it, and the mapping from key to move. That is all.
 import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
-import { t } from '@the-inclusionist/engine/core/i18n.js';
 import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
-import { createGame, type Engine } from '@the-inclusionist/engine';
 import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
 import { lerCenaGuardada } from '@the-inclusionist/engine/ui/motion-scene.js';
 import * as PIXI from 'pixi.js';
@@ -26,10 +24,10 @@ import {
   criarAnimador, criarRelogioDeQuadros, duracaoDaJogada, pecasParadas, querMenosMovimento, type Peca,
 } from '../animation.ts';
 import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
+import type { GameCtx, GameInstance } from '../cartridge-types.ts';
 import { criarDeclaracao } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
 import { LOGICAL_H, LOGICAL_W } from '../geometry.ts';
-import { registrarIdiomas } from '../i18n/index.ts';
 import { pintarTabuleiro } from '../render/board-canvas.ts';
 import { FUNDO_DA_TELA } from '../render/palette.ts';
 import { criarGradeDom } from '../ui/board-dom.ts';
@@ -85,23 +83,11 @@ const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', 
  * the stream in through `ctx.rng` (ADR-0139 §4) and choosing the seed becomes its job; until then the boot
  * picks one. Either way nothing calls `reseed` again — see `novaRodada`.
  */
-/**
- * WHAT A SHELL GETS BACK. It is `GameInstance` of ADR-0139 with the engine beside it, and the shape is
- * deliberate practice for G6: `update` and `teardown` are the two members a cartridge owes, and nothing else
- * here is reachable from outside.
- */
-export interface Instancia {
-  /** The engine this game was booted with. In cartridge mode the SHELL will own this instead. */
-  readonly motor: Engine;
-  /** One tick of the host's loop. `dt` in FRAMES, as the ticker gives it (never seconds). */
-  readonly update: (dt: number) => void;
-  /** Release everything this instance created or attached. After it returns, nothing of ours is left. */
-  readonly teardown: () => void;
-}
-
-export function bootar(doc: Document = document, win: Window = window): Instancia | null {
-  const região = doc.querySelector<HTMLElement>('#game-region');
-  if (!região) return null;
+export function criarJogo(ctx: GameCtx): GameInstance {
+  const região = ctx.region;
+  const doc = região.ownerDocument;
+  const win = doc.defaultView ?? window;
+  const t = ctx.t;
 
   /* ===================== THE ROUND'S STATE, OWNED BY THIS INSTANCE =====================
    *
@@ -136,8 +122,9 @@ export function bootar(doc: Document = document, win: Window = window): Instanci
     for (let i = 0; i < 2; i++) board = spawn(board, rng.rnd)?.board ?? board;
   }
 
-  // 1. LANGUAGES BEFORE ANYTHING — even before `createGame`, which already translates markup on its first step.
-  registrarIdiomas();
+  // 📌 NO `registrarIdiomas()` HERE ANY MORE. A cartridge never registers its own dictionaries: it EXPORTS
+  //    them (`Cartridge.dicts`) and whichever shell loaded it registers them, once, before any text. Two
+  //    cartridges each registering would be two writes to one table in an order nobody controls.
 
   novaRodada();
 
@@ -152,85 +139,19 @@ export function bootar(doc: Document = document, win: Window = window): Instanci
     t,
   });
 
-  // 3. THE WHOLE ENGINE. A board game has no pad wizard and no "pause actor" — and declining is DECLARING,
-  //    not returning null from a getter and hoping.
+  // 3. THE ENGINE, RECEIVED RATHER THAN CREATED.
   //
-  //    ⚠️ THE PAUSE MENU IS NO LONGER DECLINABLE, and this game used to decline it. Engine 8.0.0 deleted
-  //    `semMenuDePausa` from `Declinios` — not renamed, deleted — which is the Dev's instruction of
-  //    2026-09-07 turned into a type error: «todo jogo da engine inclusionist deve ter o mesmo menu de pausa e
-  //    ícones de acessibilidade desde a primeira [tela]». Our reasoning for declining was that a turn-based
-  //    board has no phases to pause. It was reasoning about the CLOCK, and the menu is not about the clock:
-  //    it is the door to the accessibility settings, and a game without it is a game where the child cannot
-  //    find them.
-  const motor = createGame({
-    declaration,
-    host: {
-      doc,
-      win,
-      cvdHost: doc.querySelector('#cvd'),
-      // WHERE THE ACCESSIBILITY BAR GOES. Outside `#game-region` on purpose: inside it, everything scales by
-      // the integer `k` of ADR-0001 along with the 320×180 board, and these controls are not part of the
-      // picture — they are chrome, and `ui/layout` keeps chrome at 16 px text and 44 px touch.
-      //
-      // ⚠️ AND IT IS THE ENGINE THAT MOUNTS THE BAR NOW. Measured by the engine across the local catalogue:
-      // five of six games had no accessibility bar at all, this one among them, because `initPauseIcons` had
-      // to be called by each game's composition root and five roots never remembered. The child who depends
-      // on blind mode, TTS or Libras opened those five and had nowhere to go.
-      a11yBarHost: doc.querySelector('#p2-a11y'),
-      // WHERE THE PAUSE CARD HANGS. `#game-region` is the engine's own fallback, and naming it explicitly
-      // costs one line and removes a guess.
-      pauseHost: doc.querySelector('#game-region'),
-    },
-    declines: {
-      semAssistenteDePad: true,
-      semAtorDePausa: true,
-      // ⚠️ THE NEURAL VOICE IS DECLINED, and until engine 8.0.0 that refusal was invisible to the engine.
-      //    The reasoning is fifteen lines below and unchanged — 27 MB of ONNX runtime against a school
-      //    tablet's precache budget. What changed is that `Declinios` now has somewhere to say it, so a
-      //    decision stops looking like an oversight. The engine's own note still lists this game among the
-      //    three that DO declare `carregarVozNeural`; the warning it printed at us says otherwise.
-      semVozNeural: true,
-    },
-    isNavigable: () => true,
-    // THE WORDS FOR THE POSITIONS THIS GAME READS (`app/js/actions.ts`).
-    //
-    // ⚠️ WITHOUT IT THE ENGINE CANNOT NAME A KEY, and `core/actions` is explicit that naming is not
-    //    decoration: `labellerFrom` returns `null` instead of `action1` precisely so an abstract name cannot
-    //    reach a child (ADR-0074). It is also what lets the engine compute whether every action this game
-    //    uses is REACHABLE on each input transport — a check it cannot make about a game that never said
-    //    which positions it uses.
-    preset: criarPreset(t),
-    // ⚠️ NO HEAVY DOWNLOADS AT BOOT, and this is the SAME decision as `semVozNeural` rather than a new one.
-    //    The engine's own doc says `false` is "for whoever has a reason", and that a production game turning
-    //    it off decides its child goes without the neural voice offline. This game decided exactly that on
-    //    2026-09-06, for 27 MB against a school tablet's precache budget — see the note just below.
-    //
-    //    ⚠️ AND MEASURED ON 2026-09-11, ON THIS BUILD: with the downloads on, booting the 2048 makes exactly
-    //    one external request — `https://webgazer.cs.brown.edu/webgazer.js`, 1.9 MB — which fails by CORS on
-    //    every load. That is a municipally-owned children's game reaching a third-party host it cannot even
-    //    use, for the 👀 icon the bar itself labels "em construção". The engine records the same thing from
-    //    the other side: ADR-0124 is the Dev choosing MediaPipe and writing «webgazer não», and ADR-0132 names
-    //    the leftover `<script src>` as a debt. Until that debt is paid, the request happens; this line is
-    //    what stops it happening HERE.
-    //
-    //    📌 Nothing this game uses depends on it: the voices are declined, the webcam icons are unbuilt, and
-    //    the TTS the child can actually switch on is the browser's.
-    baixarPesados: false,
-    // ⚠️ NO `carregarVozNeural`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port exists (ADR-0094) and
-    //    switching it on is one line: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. The
-    //    narration falls back to the BROWSER's voice, which speaks the right language.
-    //
-    //    What it would cost, measured in this repository on 2026-09-06 while upgrading the engine from 6.36.1
-    //    to 7.0.1: `dist/` went from **28.9 MB to 1.6 MB**. The 27 MB was the ONNX runtime riding along — and
-    //    pillar 1 is a school tablet, while pillar 8 is an offline PWA whose precache budget is the reason
-    //    ADR-0068 §2 has the catalogue SELECT games instead of shipping them all.
-    //
-    //    ⚠️ AND WHAT IS LOST IS REAL, not nothing: the browser's voice may not exist offline on that tablet,
-    //    and offline is exactly where this game has to work. A 2048 is playable without speech — the whole
-    //    board is in `aria-label` and the system's screen reader reads it. The trade would be different in a
-    //    literacy game, where speech IS the content. Here it is a BUDGET choice, written down so it can be
-    //    revisited once the target hardware actually exists.
-  });
+  // ⚠️ THIS FILE CALLED `createGame` UNTIL 2026-09-11, and ADR-0139 §2 is the clause the whole contract
+  //    hangs from: a cartridge NEVER calls it. It mounts an accessibility bar, a pause card, six colour-vision
+  //    filters, the TTS, the sonar, the settings panel, the menu navigation and the keyboard runtime — so N
+  //    cartridges calling it inside one platform would deduplicate the BYTES and multiply the RUNTIME. That
+  //    failure appears as broken behaviour rather than as weight, which is the kind found late.
+  //
+  // 📌 The half of the options that is THIS GAME'S — `preset`, `isNavigable` — moved to `hooks` in
+  //    `src/index.ts`. The half that describes the PAGE — `host`, `declines`, `baixarPesados` — moved to the
+  //    shell, `src/standalone.ts`, with its reasoning intact. The split is read off `CreateGameOptions` by
+  //    asking whether a page could answer the field without knowing which game is running.
+  const motor = ctx.engine;
   if (motor.problems.length) console.warn('[2048] host gaps:', motor.problems);
 
   // 4. THE CANVAS, under the numbers and HIDDEN FROM THE ACCESSIBILITY TREE. It is the illustration; the real
@@ -467,7 +388,16 @@ export function bootar(doc: Document = document, win: Window = window): Instanci
   };
 
   return {
-    motor,
+    // 📌 THE DECLARATION TRAVELS WITH THE INSTANCE, and `cartridge-types.ts` says why at length: it OBSERVES
+    //    per-instance state, so it cannot be a module-level value without a module-level "current instance"
+    //    pointer — the very thing spec D14 forbids. The shell mounts it with `engine.mount` (ADR-0142).
+    declaration,
+
+    // 📌 AND THE HOOKS TRAVEL WITH IT, for a second reason: `preset` carries the WORDS a child reads on the
+    //    remapping screen, and `criarPreset` resolves them through `t` — which only answers once the shell has
+    //    registered the dictionaries. Built at module scope it would resolve to raw keys, and `act.sonar` in
+    //    front of a child is what ADR-0074 calls a defect in as many words.
+    hooks: { preset: criarPreset(t), isNavigable: () => true },
 
     /**
      * ONE TICK OF THE HOST'S LOOP.
