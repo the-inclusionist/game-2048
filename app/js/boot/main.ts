@@ -88,13 +88,62 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
     t,
   });
 
-  // 3. THE WHOLE ENGINE. A board game has no per-screen pause menu, no pad wizard and no "pause actor" — and
-  //    declining is DECLARING, not returning null from a getter and hoping.
+  // 3. THE WHOLE ENGINE. A board game has no pad wizard and no "pause actor" — and declining is DECLARING,
+  //    not returning null from a getter and hoping.
+  //
+  //    ⚠️ THE PAUSE MENU IS NO LONGER DECLINABLE, and this game used to decline it. Engine 8.0.0 deleted
+  //    `semMenuDePausa` from `Declinios` — not renamed, deleted — which is the Dev's instruction of
+  //    2026-09-07 turned into a type error: «todo jogo da engine inclusionist deve ter o mesmo menu de pausa e
+  //    ícones de acessibilidade desde a primeira [tela]». Our reasoning for declining was that a turn-based
+  //    board has no phases to pause. It was reasoning about the CLOCK, and the menu is not about the clock:
+  //    it is the door to the accessibility settings, and a game without it is a game where the child cannot
+  //    find them.
   const motor = createGame({
     declaration,
-    host: { doc, win, cvdHost: doc.querySelector('#cvd') },
-    declines: { semMenuDePausa: true, semAssistenteDePad: true, semAtorDePausa: true },
+    host: {
+      doc,
+      win,
+      cvdHost: doc.querySelector('#cvd'),
+      // WHERE THE ACCESSIBILITY BAR GOES. Outside `#game-region` on purpose: inside it, everything scales by
+      // the integer `k` of ADR-0001 along with the 320×180 board, and these controls are not part of the
+      // picture — they are chrome, and `ui/layout` keeps chrome at 16 px text and 44 px touch.
+      //
+      // ⚠️ AND IT IS THE ENGINE THAT MOUNTS THE BAR NOW. Measured by the engine across the local catalogue:
+      // five of six games had no accessibility bar at all, this one among them, because `initPauseIcons` had
+      // to be called by each game's composition root and five roots never remembered. The child who depends
+      // on blind mode, TTS or Libras opened those five and had nowhere to go.
+      a11yBarHost: doc.querySelector('#p2-a11y'),
+      // WHERE THE PAUSE CARD HANGS. `#game-region` is the engine's own fallback, and naming it explicitly
+      // costs one line and removes a guess.
+      pauseHost: doc.querySelector('#game-region'),
+    },
+    declines: {
+      semAssistenteDePad: true,
+      semAtorDePausa: true,
+      // ⚠️ THE NEURAL VOICE IS DECLINED, and until engine 8.0.0 that refusal was invisible to the engine.
+      //    The reasoning is fifteen lines below and unchanged — 27 MB of ONNX runtime against a school
+      //    tablet's precache budget. What changed is that `Declinios` now has somewhere to say it, so a
+      //    decision stops looking like an oversight. The engine's own note still lists this game among the
+      //    three that DO declare `carregarVozNeural`; the warning it printed at us says otherwise.
+      semVozNeural: true,
+    },
     isNavigable: () => true,
+    // ⚠️ NO HEAVY DOWNLOADS AT BOOT, and this is the SAME decision as `semVozNeural` rather than a new one.
+    //    The engine's own doc says `false` is "for whoever has a reason", and that a production game turning
+    //    it off decides its child goes without the neural voice offline. This game decided exactly that on
+    //    2026-09-06, for 27 MB against a school tablet's precache budget — see the note just below.
+    //
+    //    ⚠️ AND MEASURED ON 2026-09-11, ON THIS BUILD: with the downloads on, booting the 2048 makes exactly
+    //    one external request — `https://webgazer.cs.brown.edu/webgazer.js`, 1.9 MB — which fails by CORS on
+    //    every load. That is a municipally-owned children's game reaching a third-party host it cannot even
+    //    use, for the 👀 icon the bar itself labels "em construção". The engine records the same thing from
+    //    the other side: ADR-0124 is the Dev choosing MediaPipe and writing «webgazer não», and ADR-0132 names
+    //    the leftover `<script src>` as a debt. Until that debt is paid, the request happens; this line is
+    //    what stops it happening HERE.
+    //
+    //    📌 Nothing this game uses depends on it: the voices are declined, the webcam icons are unbuilt, and
+    //    the TTS the child can actually switch on is the browser's.
+    baixarPesados: false,
     // ⚠️ NO `carregarVozNeural`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port exists (ADR-0094) and
     //    switching it on is one line: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. The
     //    narration falls back to the BROWSER's voice, which speaks the right language.
@@ -244,7 +293,13 @@ export function bootar(doc: Document = document, win: Window = window): Engine |
 
     if (e.code === 'KeyS' && e.altKey) { // sonar: where a merge is available
       const f = declaration.focusOf(0);
-      if (f) motor.sonar.sonar({ i: 0, x: f.at.x, y: f.at.y, viz: 'cego' });
+      // ⚠️ NO `viz` SINCE ENGINE 8.0.0, and the field did not move — it was DELETED. `platform/audio-sonar`
+      //    used to read `ctx.VIZ_BY_KEY[pl.viz]`, a table of RENDER modes consulted from inside `platform/`;
+      //    issue #104 made it take the injected boolean instead, and the module got smaller rather than
+      //    migrated. Checked in the published 8.0.0-rc.1 before deleting the argument: `sonar()` does not gate
+      //    on vision at all — the gate is on the continuous GUIDE — so this keystroke sounds and speaks
+      //    exactly as it did. Passing `viz: 'cego'` was us forcing a flag that no longer has a reader.
+      if (f) motor.sonar.sonar({ i: 0, x: f.at.x, y: f.at.y });
       e.preventDefault();
       return;
     }

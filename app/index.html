@@ -54,8 +54,34 @@
       </div>
     </div>
 
+    <!-- THE ENGINE'S ACCESSIBILITY BAR HANGS HERE, and the element is EMPTY on purpose: `createGame` writes
+         and wires the buttons since engine 8.0.0. Blind mode, TTS, Libras and the TEA/calm level arrive
+         without this game writing one of them — and before that release none of the four was reachable here
+         at all.
+
+         ⚠️ AND THE ID IS OURS, NOT THE ENGINE'S `#title-icons`. Measured in the browser: the engine's
+         stylesheet styles that id as `position:absolute; top:10px; left:50%`, which is the PLATFORMER'S title
+         screen — the bar floating over the title art. Here `main` is the containing block, so the bar landed
+         on top of the HUD, and `elementFromPoint` over the score column returned a `.pi-btn`. It is the same
+         defect shape as the canvas that once painted over this HUD.
+
+         Using our own id takes the layout back and keeps everything else: `.pi-btn` is styled by class, so
+         the buttons arrive fully dressed. This is what `a11yBarHost` is for, in the engine's own words — it
+         can offer the icons, but it cannot guess where they fit in another game's design. -->
+    <div id="p2-a11y" class="p2-a11y"></div>
+
     <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the engine's
-         `ui/layout` decided for everything that is not the game's world. -->
+         `ui/layout` decided for everything that is not the game's world.
+
+         ⚠️ AND THESE THREE STAY OURS, which was measured rather than assumed. The engine's bar has a 🌗 and a
+         🚥 too, but `iconesQueAccionam` only mounts an icon that has somebody to action it — the contrast
+         icon needs `setTemaDoJogador`, the colour-vision icon needs `setCorrecaoDoJogador`, and `createGame`
+         passes neither, with no option for a consumer to supply them. Deleting these in favour of the bar
+         would have removed two working controls and gained nothing.
+
+         The high contrast here is also not the engine's: it repaints by the contract's ROLE (field 2), which
+         is the quiz's finding 8 — the engine's `hcnew` modes repaint the platformer's tile textures, and this
+         game has no such tiles. -->
     <div class="p2-tools">
       <button id="open-typo" class="p2-btn" type="button">🔤 Tipografia</button>
       <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ Alto contraste</button>

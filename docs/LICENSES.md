@@ -36,7 +36,7 @@ the rules rather than forked. See *The 2048 lineage* below.
 
 | | Licence | Note |
 |---|---|---|
-| `@the-inclusionist/engine` | AGPL-3.0-or-later | Same owner. Installed from the registry (`^7.0.1` on npmjs, per ADR-0072) since 2026-09-06; this repo is its second consumer, after the chess, and the first to consume it as a published package. |
+| `@the-inclusionist/engine` | AGPL-3.0-or-later | Same owner. Installed from the registry (per ADR-0072) since 2026-09-06, and **pinned exactly to `8.0.0`** since 2026-09-11 — no caret, because a range would have accepted a release candidate. This repo is its second consumer, after the chess, and the first to consume it as a published package. |
 | `pixi.js` 7.4.2 | MIT | Pinned to the engine's exact version — a second PixiJS in one page is a bug, not a fallback. |
 | `vite`, `vitest`, `typescript`, `playwright` | MIT / Apache-2.0 | Build and test only; not shipped. |
 

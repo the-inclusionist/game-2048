@@ -81,6 +81,43 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
       return { kind: 'element', selector: '#game-region' };
     },
 
+    // 1c · HOW MANY POSITIONS ARE HELD AT ONCE — required by the contract since engine 8.0.0 (ADR-0104 §A).
+    //
+    //      ONE. A move in 2048 is a single press that resolves completely before the next one is read: there
+    //      is no "run while walking", no charge-and-release, nothing to hold down. A child playing on a phone
+    //      that registers one finger at a time can play this game in full.
+    //
+    //      ⚠️ AND ONE IS NOT THE SAFE ANSWER TO GIVE WHEN UNSURE, which is why the contract refuses to have a
+    //      default. The engine's note records the blind spot it was built to close: the platformer declared
+    //      nine ACTIONS and had nine places on the on-screen pad, so the reach check passed — but running,
+    //      walking and jumping together are three fingers, and on a two-touch tablet the child simply cannot,
+    //      with nothing anywhere saying why. Reaching an action and holding it alongside another are different
+    //      questions. Here the answer is one because the game genuinely asks for one, and the ceiling is the
+    //      assertion `tests/declaration.node.test.ts` protects.
+    //
+    //      A FUNCTION and not a value, for the same reason as `topology`: a game whose phases differ can ask
+    //      for more in one than in another. This one cannot, and answering through a function costs nothing.
+    holdsAtOnce(): number {
+      return 1;
+    },
+
+    // 1d · DOES THIS GAME HOLD A KEY DOWN? — required since engine 8.0.0 (ADR-0115).
+    //
+    //      NO. A move is one press that resolves completely; there is nothing to hold, nothing to charge, no
+    //      direction to keep pushing. And `holdsAtOnce` above does NOT answer this, which is the finding that
+    //      forced a second field: it counts SIMULTANEOUS positions and refuses zero, so "one at a time" and
+    //      "one held" come out as the same number while meaning different things.
+    //
+    //      ⚠️ ANSWERING `false` REMOVES A CONTROL rather than hiding one, and that is the point. The latch
+    //      (☝️) exists for a child who cannot KEEP a key pressed: she presses once to start and once to stop.
+    //      In a game where nothing is held there is nothing to latch — so the engine leaves the icon out of
+    //      the accessibility bar entirely, instead of offering her a switch that does nothing. That dead
+    //      button is what ADR-0106 §5 forbids, and it is worse than a missing one: she turns on the very
+    //      adjustment she depends on and learns that it is broken.
+    seguraTeclas(): boolean {
+      return false;
+    },
+
     // 6 · WHOSE TURN IT IS. The player's — and this is not a detail: with the player's turn, time does not
     //     press, scanning can wait, and WCAG 2.2.1 (Timing Adjustable) is satisfied BY CONSTRUCTION rather
     //     than by an option somebody has to find in a menu.

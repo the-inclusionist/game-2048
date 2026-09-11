@@ -17,12 +17,13 @@ at the engine's 320×180 pixel grid, offline as a PWA.
 | ✅ The screen | PixiJS paints the figure at 320×180 (`render/board-canvas`); the numbers are real DOM text over it (`ui/board-dom`), with `role="grid"`, roving focus and labels built from the declaration. One geometry (`geometry.ts`) feeds both, and a browser test compares them cell by cell. |
 | ✅ Colour | `render/palette.ts` — the ink is *computed*, not chosen. Every tile clears WCAG 1.4.3 AA as a gate; seven of thirteen reach AAA, counted and never claimed in bulk. |
 | ✅ Speech | `narration.ts` — the sentence a blind child receives, testable without a browser. Each merge is spoken with **both addends and the result** ("2 e 2 viraram 4"), because that is the curriculum, not a status line. |
-| ✅ a11y gate | `scripts/axe-check.mjs` runs axe-core against the RUNNING game and the CI caller asks for it (`a11y: true`). **Zero WCAG A/AA violations, with no exclusions at all** — the engine excludes the third-party VLibras widget; this game does not load it, so nothing here is exempt. Proven able to fail before being trusted. |
+| ✅ a11y gate | `scripts/axe-check.mjs` runs axe-core against the RUNNING game and the CI caller asks for it (`a11y: true`). **Zero WCAG A/AA violations, with no exclusions at all** — the engine excludes the third-party VLibras widget; this game does not load it at boot, so nothing in the page the gate measures is exempt. Proven able to fail before being trusted, and it also refuses to judge a page that is not this game. |
 | ✅ i18n | `pt-BR`, `en-US`, neutral Latin-American `es`, delivered through the engine's `registerDict()`. A browser test plays a move in Spanish and reads it back out of the live region. |
 | ✅ Animation | Tiles **slide**, and the two layers move on ONE clock: the canvas paints the piece, the DOM carries the number, both from the same `pecasNoInstante(t)` in the same frame. Zero animation under `prefers-reduced-motion` — WCAG 2.3.3, read from the system and never from a menu of ours. |
-| ⬜ Still owed | The **sonar** on a remappable binding rather than `Alt+S`; a merge **flash**; Libras; and a run on real school hardware. |
+| ✅ The accessibility bar | Since engine **8.0.0**, `createGame` writes and wires it into `#p2-a11y`: 🦯 blind mode, 🗨️ TTS, 🤟 Libras and 🧩 TEA/calm, none of which this game writes a line of — and none of which was reachable here before. The ☝️ latch is deliberately ABSENT, because `seguraTeclas()` answers `false` and a control that does nothing is worse than a missing one. |
+| ⬜ Still owed | The **sonar** on a remappable binding rather than `Alt+S`; a merge **flash**; and a run on real school hardware. |
 
-**Verified**: `npm run validate` green — typecheck clean, **138 assertions** across node and browser, build
+**Verified** on engine **8.0.0**, pinned exactly: `npm run validate` green — typecheck clean, **141 assertions** across node and browser, build
 passing, and the axe gate reporting zero WCAG A/AA violations with no exclusions. A full round played in a
 real browser: 222 moves to a stuck board, largest tile 256, HUD in step with the model.
 

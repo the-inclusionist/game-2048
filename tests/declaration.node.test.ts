@@ -72,6 +72,33 @@ describe('the declaration is well formed in the engine’s own eyes', () => {
   it('[Right] the turn belongs to the PLAYER, so WCAG 2.2.1 is satisfied by construction', () => {
     expect(observar(VAZIO).tick, 'with no clock, nothing presses').toBe('player');
   });
+
+  it('[One] ONE position is held at once — a move is a press that finishes before the next is read', () => {
+    // Required by the contract since engine 8.0.0 (ADR-0104 §A), and mandatory precisely because silence
+    // would answer it: a game that forgets gets its accessibility decided by whoever did not think about it.
+    // A child on a tablet that registers one finger at a time can play this game in full.
+    expect(observar(VAZIO).holdsAtOnce()).toBe(1);
+  });
+
+  it('[Zero] NOTHING is held down — and the answer REMOVES a control rather than hiding one', () => {
+    // ⚠️ THIS IS NOT THE SAME QUESTION AS THE ONE ABOVE, which is the finding that forced a second field
+    // (ADR-0115): `holdsAtOnce` counts simultaneous positions and refuses zero, so "one at a time" and "one
+    // HELD" come out as the same number while meaning different things.
+    //
+    // The latch (☝️) exists for a child who cannot keep a key pressed: one press to start, one to stop. Here
+    // there is nothing to latch, so the engine leaves the icon out of the accessibility bar entirely instead
+    // of offering her a switch that does nothing — the dead button ADR-0106 §5 forbids, and the worse of the
+    // two failures: she turns on the adjustment she depends on and learns it is broken.
+    expect(observar(VAZIO).seguraTeclas()).toBe(false);
+  });
+
+  it('[Interface] both new answers are FUNCTIONS, not values, because a value goes stale in silence', () => {
+    // ADR-0084's defect: a memorised field cannot follow a game whose phases differ. This game's answers never
+    // change, which is exactly when the shape looks like ceremony and is not — the type is the contract's.
+    const d = observar(VAZIO);
+    expect(typeof d.holdsAtOnce).toBe('function');
+    expect(typeof d.seguraTeclas).toBe('function');
+  });
 });
 
 describe('field 2 — the ROLE of each square, which is where high contrast comes from', () => {
