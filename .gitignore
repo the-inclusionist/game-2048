@@ -9,3 +9,4 @@ test-results/
 .vitest-attachments/
 tests/__screenshots__/
 app/public/vendor/
+dist-lib/

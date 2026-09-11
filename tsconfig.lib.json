@@ -1,0 +1,27 @@
+{
+  // TYPES FOR THE PUBLISHED CARTRIDGE.
+  //
+  // `vite build --mode lib` emits JavaScript and nothing else, so a TypeScript consumer — the platform, which
+  // is the only consumer this package has — would get `any` for `create(ctx)` and for the whole contract. The
+  // engine solved the same problem the same way, with a second tsconfig beside the build (ADR-0072 §4).
+  //
+  // ⚠️ `allowImportingTsExtensions` CANNOT SURVIVE HERE. It is on in the base config because this repository's
+  // source imports `./board.ts` with the extension, and Vite resolves that; `tsc` refuses to EMIT with it on,
+  // because the emitted `.d.ts` would point at `.ts` files a consumer does not have. `rewriteRelativeImportExtensions`
+  // is what turns those into the `.js` the emitted types should name.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": false,
+    "allowImportingTsExtensions": false,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "dist-lib",
+    "rootDir": "."
+  },
+  // Only what the cartridge is built from. The tests and the shell are not part of the package: a consumer
+  // installing this should not receive a type that names `vitest`, and `src/standalone.ts` is the STANDALONE
+  // shell — the platform brings its own.
+  "include": ["src/index.ts", "app/js"]
+}

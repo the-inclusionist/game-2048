@@ -13,9 +13,36 @@ import { VitePWA } from 'vite-plugin-pwa';
 // gates do not cover — the axe check and the browser suite both run against the built output. So it stays
 // until somebody can watch `npm run dev` while deleting it, and this note is what stops the next reader
 // believing the line still earns its place.
+// ⚠️ TWO TARGETS FROM ONE SOURCE, switched by mode — ADR-0140's whole mechanism.
+//
+//   · APP (default)  — entry `app/index.html` → `src/standalone.ts`. The engine is BUNDLED, the PWA is on.
+//                      This is the standalone build: a development, test, audit and demonstration route, and
+//                      NEVER a delivery route to children (ADR-0140 §3).
+//   · LIB (`--mode lib`) — entry `src/index.ts`, the `Cartridge`. The engine and the shared render libraries
+//                      are EXTERNAL. No HTML, no service worker. This is what gets published.
+//
+// 🔴 AND CI HAS TO BUILD BOTH. ADR-0140 calls that gate "not optional" in as many words: "a change tested only
+// in the app build can break the lib build, and nothing notices until the platform installs it". `npm run
+// build` runs both, so the shared workflow's single build step covers them without the caller changing.
+const ehLib = process.env.BUILD_MODE === 'lib';
+
 export default defineConfig({
-  root: 'app',
-  build: { outDir: '../dist', emptyOutDir: true, target: 'es2022' },
+  root: ehLib ? '.' : 'app',
+  build: ehLib
+    ? {
+      outDir: 'dist-lib',
+      emptyOutDir: true,
+      target: 'es2022',
+      lib: { entry: 'src/index.ts', formats: ['es'], fileName: () => 'index.js' },
+      rollupOptions: {
+        // ⚠️ EXTERNAL IS THE POINT OF THIS TARGET. One installed engine still travels N times if N bundles
+        //    inline it; the cartridge has to emit a bare `@the-inclusionist/engine` specifier and leave the
+        //    resolution to whoever consumes it. `pixi.js` goes with it — it is a peer of the engine too, and
+        //    a second PixiJS in one page is a bug rather than a fallback.
+        external: [/^@the-inclusionist\/engine/, 'pixi.js'],
+      },
+    }
+    : { outDir: '../dist', emptyOutDir: true, target: 'es2022' },
   optimizeDeps: {
     exclude: ['@the-inclusionist/engine'],
     include: ['pixi.js'],
@@ -31,7 +58,9 @@ export default defineConfig({
   // standalone build exists so this repository can be developed, tested, audited and demonstrated with no
   // platform in existence. Deployed to children it would be a second origin, and every word of ADR-0117 would
   // apply — the cache partitions, and the child's accessibility settings stop following her between games.
-  plugins: [
+  // 📌 NO SERVICE WORKER IN THE LIB BUILD. A cartridge is not a unit of installation (ADR-0117); the platform
+  //    owns the one service worker, and a second one inside a chunk would fight it for the same origin.
+  plugins: ehLib ? [] : [
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'vendor/fonts.css'],

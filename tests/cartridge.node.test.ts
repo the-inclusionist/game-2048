@@ -71,6 +71,55 @@ describe('the slug is one word in three places', () => {
   });
 });
 
+describe('the package is installable — ADR-0140 §4', () => {
+  it('[Zero] 🔴 `private` is gone, or nothing can ever be published', () => {
+    expect((pacote as { private?: boolean }).private).toBeUndefined();
+  });
+
+  it('[Right] the engine and PixiJS are declared TWICE, and that is not redundancy', () => {
+    // ADR-0140 §4: `peerDependencies` INSTALLS NOTHING — it is a requirement addressed to whoever consumes
+    // the package, and it is what makes the platform install exactly one engine. Without a `devDependency`
+    // beside it a clean clone has no engine and does not build, which is the other half of the same record.
+    expect(pacote.peerDependencies?.['@the-inclusionist/engine']).toBeTruthy();
+    expect(pacote.devDependencies?.['@the-inclusionist/engine']).toBeTruthy();
+    expect(pacote.peerDependencies?.['pixi.js']).toBeTruthy();
+    expect(pacote.devDependencies?.['pixi.js']).toBeTruthy();
+  });
+
+  it('[Zero] ⚠️ and NEITHER is a plain `dependency` — that is what quietly ships two engines', () => {
+    // Under `dependencies`, npm is free to install a nested engine beneath each cartridge, and it will the
+    // moment two cartridges ask for versions that do not unify. The duplication is silent.
+    const deps = (pacote as { dependencies?: Record<string, string> }).dependencies ?? {};
+    expect(Object.keys(deps)).toEqual([]);
+  });
+
+  it('[Interface] the peer is a RANGE and the dev pin is EXACT, which are different questions', () => {
+    // The peer says what a consumer must supply — a range, so a patch release does not fail the platform's
+    // install. The dev pin says what THIS repository is tested against, and it is exact for the reason the
+    // 8.0.0 upgrade recorded: the `rc` dist-tag is still published, so a range would accept a candidate.
+    expect(pacote.peerDependencies!['@the-inclusionist/engine']).toMatch(/^\^/);
+    expect(pacote.devDependencies!['@the-inclusionist/engine']).toMatch(/^\d/);
+  });
+
+  it('[Cross-check] `exports` names files the lib build actually produces', () => {
+    // A package whose `exports` points at nothing installs cleanly and fails on the first import.
+    const exp = (pacote as { exports?: Record<string, { types?: string; default?: string }> }).exports ?? {};
+    for (const alvo of [exp['.']?.types, exp['.']?.default]) {
+      expect(alvo, 'declared in exports').toBeTruthy();
+      expect(alvo!.startsWith('./dist-lib/'), `${alvo} comes from the lib build`).toBe(true);
+    }
+  });
+
+  it('[Right] `files` carries the licence documents, because the licence travels with the code', () => {
+    // AGPL-3.0-or-later, and `docs/LICENSES.md` is where the Município's ownership is stated. A package that
+    // ships the code and not the statement is the one case where a missing file is a legal fact.
+    const files = (pacote as { files?: string[] }).files ?? [];
+    for (const obrigatorio of ['dist-lib', 'LICENSE', 'docs/LICENSES.md', 'docs/CREDITS.md']) {
+      expect(files, obrigatorio).toContain(obrigatorio);
+    }
+  });
+});
+
 describe('what the cartridge exports', () => {
   it('[Interface] the three languages, ready for a shell to register', () => {
     expect(Object.keys(cartridge.dicts).sort()).toEqual(['en', 'es', 'pt']);
