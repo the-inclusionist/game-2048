@@ -94,9 +94,20 @@
     <div class="p2-tools">
       <button id="open-typo" class="p2-btn" type="button">🔤 Tipografia</button>
       <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ Alto contraste</button>
-      <label class="p2-tools__label" for="viz">Visão:</label>
-      <select id="viz" aria-label="Correção de daltonismo"></select>
     </div>
+
+    <!-- COLOUR-VISION CORRECTION, AS VISIBLE ROWS. It was a `<select>` until 2026-09-11, and the engine's own
+         `ui/visual-axes-panel` records why that shape was wrong, in the Dev's words: inside a closed box, a
+         control whose reason to exist is to be FOUND by someone who sees poorly is "almost the same as not
+         having moved it".
+
+         EMPTY on purpose: `boot/boot.ts` fills it with the engine's `linhasDoEixo`, so this game does not
+         invent a second look for a control the rest of the catalogue already has. The heading's text comes
+         from the engine's dictionary too, which is why it carries `data-i18n` and not a sentence. -->
+    <section class="p2-viz" aria-labelledby="p2-viz-title">
+      <h2 class="p2-viz__title" id="p2-viz-title" data-i18n="eixo.correcao.titulo">Correção de cor</h2>
+      <div id="p2-viz" class="ctrl-list" role="radiogroup" aria-labelledby="p2-viz-title"></div>
+    </section>
     <svg id="cvd" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"></svg>
 
     <div id="typo" class="overlay" hidden>

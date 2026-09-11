@@ -173,8 +173,20 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   background: #24528f; color: #f6f8ff;
   border: 1px solid #58a0e8; border-radius: 6px; cursor: pointer;
 }
-.p2-btn:focus-visible, #viz:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
-#viz { min-height: 44px; font-size: 16px; background: #1d2130; color: #e8eef7; border: 1px solid #58a0e8; border-radius: 6px; }
+.p2-btn:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+
+/* COLOUR-VISION CORRECTION, as visible rows. The ROWS are the engine's — `.ctrl-row`, `.ctrl-list` and
+ * `.mode-btn` all come from its stylesheet, so this control reads the same here as in every other game. What
+ * is ours is where the block sits and how wide it is.
+ *
+ * ⚠️ IT REPLACED A `<select>`, whose rules used to live on these two lines. The engine's own
+ * `ui/visual-axes-panel` records why the closed box was wrong: a control that exists to be FOUND by someone
+ * who sees poorly is "almost the same as not having moved it" when it is hidden inside a dropdown. */
+.p2-viz { max-width: 420px; margin: 0 auto; padding: 0 12px 16px; }
+.p2-viz__title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+/* The engine sizes `.mode-btn` from `--tap`; outside `#game-region` that variable is not in scope, so the
+ * WCAG 2.5.5 floor is restated here rather than inherited by luck. */
+.p2-viz .mode-btn { min-height: 44px; }
 
 /* ============================ MOTION ============================
  * Everything animated disappears entirely under `prefers-reduced-motion`. It is not optional decoration: it is
