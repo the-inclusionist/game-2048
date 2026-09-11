@@ -120,6 +120,37 @@ describe('the package is installable — ADR-0140 §4', () => {
   });
 });
 
+describe('CI builds BOTH targets — ADR-0140 calls this gate "not optional"', () => {
+  const scripts = (pacote as { scripts?: Record<string, string> }).scripts ?? {};
+
+  it('[Cross-check] 🔴 `npm run build` covers the lib target, which is how CI reaches it at all', () => {
+    // ⚠️ THE SHARED WORKFLOW GIVES A GAME ONE BUILD STEP and its inputs are `node-version`, `a11y` and
+    //    `preview-port` — a caller cannot add another. So "CI builds both" is true ONLY while the `build`
+    //    script chains both, and a well-meaning simplification back to `vite build` would silently undo the
+    //    record's requirement while leaving CI green. Verified in the run for 99dfd98: the log carries
+    //    `dist-lib/index.js 19.21 kB` and the lib gate's own line.
+    expect(scripts.build, 'the app half').toMatch(/vite build/);
+    expect(scripts.build, 'the lib half').toMatch(/build-lib\.mjs/);
+  });
+
+  it('[Right] and so does `npm run validate`, so the same is true on a developer’s machine', () => {
+    expect(scripts.validate).toMatch(/npm run build/);
+  });
+
+  it('[Interface] each target is still reachable on its own, for a bisect', () => {
+    // Chaining them is right for the gate and wrong for debugging: when the lib build breaks, running the app
+    // build alone is how you find out whether the source or the target is at fault.
+    expect(scripts['build:app']).toBeTruthy();
+    expect(scripts['build:lib']).toBeTruthy();
+  });
+
+  it('[Zero] ⚠️ and `prepack` builds the cartridge, so publishing cannot ship a stale one', () => {
+    // `dist-lib/` is gitignored: it exists only where somebody built it. Without this, `npm publish` from a
+    // clean clone would pack an EMPTY `dist-lib` and the tarball's `exports` would point at nothing.
+    expect(scripts.prepack, 'npm runs this before packing').toMatch(/build:lib|build-lib/);
+  });
+});
+
 describe('what the cartridge exports', () => {
   it('[Interface] the three languages, ready for a shell to register', () => {
     expect(Object.keys(cartridge.dicts).sort()).toEqual(['en', 'es', 'pt']);
