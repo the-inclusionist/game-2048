@@ -14,6 +14,13 @@
 # ⚠️ THE GATE HAS NO EXCLUSIONS. The engine's own excludes the VLibras widget, whose markup is a third
 # party's; this game does not load it, so nothing here is exempt. Proven able to fail before being trusted:
 # a page with a missing `alt` and a 1.4:1 text pair makes it report `image-alt` and `color-contrast`.
+# ⚠️ `a11y: true` NOW RUNS TWO GATES, and the reason is this workflow's shape rather than a naming whim.
+# `npm run test:a11y` is the ONLY hook the shared workflow gives a game that runs AFTER the build, and its
+# inputs are `node-version`, `a11y` and `preview-port` — a caller cannot add a step. So the delivery gate
+# (`scripts/pwa-check.mjs`: service worker, manifest, vector icon, and the game itself precached) rides with
+# the axe gate. A gate that only ran on a developer's machine would be the kind that stops running the week
+# somebody is in a hurry.
+
 name: ci
 
 on:

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="2048 · Potência de 2">
+  <!--
+    SPDX-License-Identifier: AGPL-3.0-or-later
+
+    THE INSTALL ICON, AND IT IS STILL NOT A BITMAP.
+
+    `docs/LICENSES.md` says every surface in this game is drawn at run time and that there is no third-party
+    art to license, "because there is no drawn asset". A PWA manifest wants an icon, and a PNG would have
+    made that paragraph false. Vector keeps it true: this file is geometry, it is ours, and it is the only
+    art asset in the repository.
+
+    ⚠️ EVERY COLOUR HERE IS READ FROM `app/js/render/palette.ts`, not chosen:
+      · #0d1018 — FUNDO_DA_TELA, the screen behind the board
+      · #2b3145 — MOLDURA, the board's frame
+      · #34e29b — FUNDO[11], the 2048 tile: "the green the engine already uses for you did it"
+      · #14161f — TINTA_ESCURA, which `inkFor()` picks over that green (10.73:1, measured in the palette)
+
+    They are duplicated here because SVG cannot import a TypeScript module, and a duplicated fact rots — so
+    `tests/icon.node.test.ts` reads both and fails if they ever disagree.
+  -->
+  <rect width="512" height="512" rx="64" fill="#0d1018"/>
+  <rect x="56" y="56" width="400" height="400" rx="40" fill="#2b3145"/>
+  <rect x="96" y="96" width="320" height="320" rx="28" fill="#34e29b"/>
+  <text x="256" y="256" fill="#14161f"
+        font-family="'Atkinson Hyperlegible', system-ui, sans-serif" font-weight="700" font-size="118"
+        text-anchor="middle" dominant-baseline="central">2048</text>
+</svg>
