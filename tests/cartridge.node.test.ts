@@ -171,3 +171,29 @@ describe('what the cartridge exports', () => {
     expect(Object.isFrozen(cartridge), 'nothing may reshape it after import').toBe(true);
   });
 });
+
+describe('the package can actually be published — G10’s preconditions', () => {
+  it('[Zero] 🔴 a SCOPED package says `access: public`, or npm publishes it to nobody', () => {
+    // ⚠️ npm's default for a scoped name is `restricted`. On a free organisation `npm publish` then fails
+    //    with `402 Payment Required`; on a paid one it SUCCEEDS and the package is private, so the platform's
+    //    install 404s with nothing to read. The engine declares it — this is the one line that differs.
+    expect(pacote.name.startsWith('@'), 'the name is scoped').toBe(true);
+    const pub = (pacote as { publishConfig?: { access?: string } }).publishConfig;
+    expect(pub?.access, 'AGPL code published privately is a contradiction in terms').toBe('public');
+  });
+
+  it('[Zero] ⚠️ and the version is not the scaffold placeholder, which cannot be taken back', () => {
+    // `0.0.0` is what `npm init` leaves behind. Publishing it burns the number for ever: npm refuses to
+    // republish a version, so the first release would permanently be the one that says «nothing here yet».
+    expect(pacote.version).not.toBe('0.0.0');
+    expect(pacote.version, 'semver').toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('[Cross-check] the licence the package DECLARES is the licence the repository CARRIES', () => {
+    // The declared field is what appears on npm and in every consumer's audit; the file is what governs. A
+    // package that says MIT over an AGPL file is a licence claim nobody made.
+    expect(pacote.license).toBe('AGPL-3.0-or-later');
+    const texto = readFileSync(join(RAIZ, 'LICENSE'), 'utf8');
+    expect(texto, 'the file itself').toContain('GNU AFFERO GENERAL PUBLIC LICENSE');
+  });
+});
