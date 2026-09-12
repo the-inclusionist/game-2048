@@ -269,6 +269,34 @@ const fecharCtrl = () => { const ov = $<HTMLElement>('#ctrl'); if (ov) ov.hidden
 $('#ctrl-close')?.addEventListener('click', fecharCtrl);
 motor.overlays.register('ctrl', { close: fecharCtrl, inEscapeChain: true });
 
+// ⚠️ ESCAPE HAS TO BE ROUTED BY US TOO, and it is the SAME wall as the captured key above rather than a new
+//    one: `overlays.escapeTarget()` is walked by the engine's `input/keydown`, and `createGame` never installs
+//    that router for a consumer. 📏 Measured 2026-09-12, opening each panel in turn on the shipped build:
+//    Escape closed NONE of the three. So `inEscapeChain: true` — which every one of them passes to `register`
+//    — was a true declaration into a chain nobody walked, and this repository does not keep claims like that.
+//
+//    It was never a keyboard trap (WCAG 2.1.2): each card's «Fechar» is reachable by Tab, which is why the
+//    axe gate had nothing to say. It was the cost of leaving: a child who opens a panel by accident had to
+//    find a button instead of pressing the key every dialog on the web answers to.
+//
+// 📌 THE ORDER IS THE ENGINE'S AND NOT OURS. `escapeTarget()` walks the REGISTRATION order and returns the
+//    first dialog that is in the chain and actually visible — its own note says this is deliberately NOT
+//    "the top one". The shell routes the key and declines to decide which panel wins.
+const aoEscapar = (e: KeyboardEvent) => {
+  if (e.key !== 'Escape') return;
+  // A child mid-rebind is being asked «press a key»; Escape belongs to that flow, and `aoCapturar` has
+  // already seen it in the capture phase. Closing the panel underneath would answer the wrong question.
+  if (ctrl.isCapturing()) return;
+  const aberto = motor.overlays.escapeTarget();
+  if (!aberto) return;
+  motor.overlays.closeById(aberto);
+  // The documented pair of `frontOverlay`: the focus goes back to the button that opened the card, instead
+  // of to the top of the document. Without it, closing with the keyboard loses the child's place.
+  motor.overlays.restoreFocus(aberto);
+  e.preventDefault();
+};
+document.addEventListener('keydown', aoEscapar);
+
 // HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
 // `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels
 // is the IDEA (paint by field 2 of the contract), and it lives in `render/palette`.
@@ -294,6 +322,7 @@ hc?.addEventListener('click', () => {
 // and its context asks for ~34 fields of a PixiJS platformer render graph this game does not have.
 const caixaViz = $<HTMLElement>('#p2-viz');
 const alvo = $<HTMLElement>('#game-region');
+const abrirViz = $<HTMLButtonElement>('#open-viz');
 if (caixaViz && alvo && motor.cvdFilters > 0) {
   let atual: Correcao = 'tricro';
 
@@ -323,6 +352,28 @@ if (caixaViz && alvo && motor.cvdFilters > 0) {
     // chosen without saying what. `aria-checked` already carries the state; the announcement carries the name.
     srSay(t(ROTULO_DA_CORRECAO[atual]));
   });
+
+  // THE DOOR. Same three lines as `#open-typo` and `#open-ctrl`, and the sameness is the point: three panels
+  // that open the same way are one thing to learn instead of three.
+  abrirViz?.addEventListener('click', () => {
+    const ov = $<HTMLElement>('#viz');
+    if (!ov) return;
+    ov.hidden = false;
+    motor.overlays.frontOverlay(ov);
+    // The CHOSEN row, not the first — a child who opens this panel a second time lands on what they picked,
+    // and a screen reader reads the current state instead of the top of a list.
+    (ov.querySelector<HTMLElement>('[aria-checked="true"]') ??
+      ov.querySelector<HTMLElement>('button:not([disabled])'))?.focus();
+  });
+  const fecharViz = () => { const ov = $<HTMLElement>('#viz'); if (ov) ov.hidden = true; };
+  $('#viz-close')?.addEventListener('click', fecharViz);
+  motor.overlays.register('viz', { close: fecharViz, inEscapeChain: true });
+} else if (abrirViz) {
+  // ⚠️ NO FILTERS MEANS NO PANEL, AND THEREFORE NO BUTTON. `cvdFilters` is 0 when the engine could not mount
+  //    the SVG colour matrices, and the card would open on an empty radiogroup — a control that answers
+  //    nothing is worse than an absent one, because the child spends a press finding that out. The old
+  //    always-open section had this defect too: it showed a heading over four rows that were never painted.
+  abrirViz.hidden = true;
 }
 
 // TOUCH: the PURE half of `input/touch`. `padPxPerMm` anchors the real millimetre to the device (WCAG 2.5.5),

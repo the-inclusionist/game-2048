@@ -82,7 +82,7 @@
     <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the engine's
          `ui/layout` decided for everything that is not the game's world.
 
-         ⚠️ THESE THREE STAY OURS — FOR NOW, AND THE REASON CHANGED UNDER THEM. The engine's bar has a 🌗
+         ⚠️ THESE FOUR STAY OURS — FOR NOW, AND THE REASON CHANGED UNDER THEM. The engine's bar has a 🌗
          and a 🚥 too, but `iconesQueAccionam` only mounts an icon that has somebody to action it: the
          contrast icon needs `setTemaDoJogador` and the colour-vision icon needs `setCorrecaoDoJogador`.
          Against engine 8.0.0 `createGame` passed neither AND OFFERED NO WAY to supply them, so keeping our
@@ -98,26 +98,47 @@
 
          The high contrast here is also not the engine's: it repaints by the contract's ROLE (field 2), which
          is the quiz's finding 8 — the engine's `hcnew` modes repaint the platformer's tile textures, and this
-         game has no such tiles. -->
+         game has no such tiles.
+
+         📌 `🚥 Correção de cor` JOINED THIS ROW ON 2026-09-12, and it is the same control that used to be an
+         always-open section further down the page — see the block below for what that cost the board. It is
+         hidden by `src/standalone.ts` when `cvdFilters` is 0: a button that opens an empty card spends the
+         child's press to tell her nothing. -->
     <div class="p2-tools">
       <button id="open-typo" class="p2-btn" type="button">🔤 <span data-i18n="tools.typography">Tipografia</span></button>
       <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ <span data-i18n="tools.contrast">Alto contraste</span></button>
+      <button id="open-viz" class="p2-btn" type="button">🚥 <span data-i18n="eixo.correcao.titulo">Correção de cor</span></button>
       <button id="open-ctrl" class="p2-btn" type="button">⌨ <span data-i18n="tools.keys">Teclas</span></button>
     </div>
 
-    <!-- COLOUR-VISION CORRECTION, AS VISIBLE ROWS. It was a `<select>` until 2026-09-11, and the engine's own
-         `ui/visual-axes-panel` records why that shape was wrong, in the Dev's words: inside a closed box, a
-         control whose reason to exist is to be FOUND by someone who sees poorly is "almost the same as not
-         having moved it".
-
-         EMPTY on purpose: `boot/boot.ts` fills it with the engine's `linhasDoEixo`, so this game does not
-         invent a second look for a control the rest of the catalogue already has. The heading's text comes
-         from the engine's dictionary too, which is why it carries `data-i18n` and not a sentence. -->
-    <section class="p2-viz" aria-labelledby="p2-viz-title">
-      <h2 class="p2-viz__title" id="p2-viz-title" data-i18n="eixo.correcao.titulo">Correção de cor</h2>
-      <div id="p2-viz" class="ctrl-list" role="radiogroup" aria-labelledby="p2-viz-title"></div>
-    </section>
     <svg id="cvd" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"></svg>
+
+    <!-- COLOUR-VISION CORRECTION. The four rows are the engine's `linhasDoEixo`, so this game does not invent
+         a second look for a control the rest of the catalogue already has; `#p2-viz` is EMPTY on purpose and
+         `src/standalone.ts` fills it.
+
+         ⚠️ IT WAS AN ALWAYS-OPEN SECTION IN THE PAGE UNTIL 2026-09-12, AND THAT COST THE BOARD ITS SCREEN.
+         The reasoning for the open form was real and is recorded in the engine's `ui/visual-axes-panel`, in
+         the Dev's words: inside a closed box, a control whose reason to exist is to be FOUND by someone who
+         sees poorly is "almost the same as not having moved it". It was written against a `<select>`, and it
+         is still right about a `<select>`.
+         📏 What it did HERE, measured: `<main>` is a flex column with `overflow: hidden` and `#stage-wrap` is
+         its only flexible item, so these 311 px came out of the game's height alone. At 1280×800 it cut 103 px
+         off the top of the board; at 1024×768, 119 px; and the document does not scroll, so the cut part was
+         unreachable. A colour control the child can find, on top of a board the child cannot see, is not the
+         trade the record was asking for.
+         📌 What answers the record is the BUTTON, not the section: `🚥 Correção de cor` sits in `.p2-tools`
+         beside `◐ Alto contraste`, labelled in words and reachable in one press. A named button in a visible
+         row is not a closed box — a `<select>` was. -->
+    <div id="viz" class="overlay" hidden>
+      <div class="overlay__card" role="dialog" aria-modal="true" aria-labelledby="p2-viz-title">
+        <h2 id="p2-viz-title" data-i18n="eixo.correcao.titulo">Correção de cor</h2>
+        <div id="p2-viz" class="ctrl-list" role="radiogroup" aria-labelledby="p2-viz-title"></div>
+        <div class="overlay__actions">
+          <button id="viz-close" class="mode-btn is-on" type="button" data-i18n="menu.close">Fechar</button>
+        </div>
+      </div>
+    </div>
 
     <!-- THE KEYBOARD-REMAP PANEL, and it is the engine's whole: `ui/settings-controls` renders into these
          three ids and owns the capture flow, the conflict lookup and the reset. This game supplies the card

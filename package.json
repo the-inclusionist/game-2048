@@ -46,7 +46,7 @@
     "build": "vite build && node scripts/build-lib.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:a11y": "node scripts/pwa-check.mjs && node scripts/axe-check.mjs",
+    "test:a11y": "node scripts/pwa-check.mjs && node scripts/layout-check.mjs && node scripts/axe-check.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:node": "vitest run --project node",

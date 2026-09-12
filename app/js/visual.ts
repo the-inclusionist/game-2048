@@ -4,9 +4,17 @@
 // ========================= WHY THIS STOPPED BEING A `<select>` =========================
 // It was `<select id="viz">`, and the engine's own `ui/visual-axes-panel` records why that is the wrong
 // shape, in the Dev's words: inside a closed box, a control whose reason to exist is to be FOUND by someone
-// who sees poorly is "almost the same as not having moved it". The rows are now visible, and the markup that
-// draws them is the engine's `linhasDoEixo` — so this game does not invent a second look for a control the
-// rest of the catalogue already has.
+// who sees poorly is "almost the same as not having moved it". The rows are visible rows now, and the markup
+// that draws them is the engine's `linhasDoEixo` — so this game does not invent a second look for a control
+// the rest of the catalogue already has.
+//
+// ⚠️ AND ON 2026-09-12 THEY MOVED AGAIN, FROM THE PAGE INTO A PANEL. The sentence above is about the SHAPE of
+// the control and is unchanged; what changed is where the shape hangs. As an always-open section it was the
+// only flexible sibling's worth of height taken from `<main>`'s flex column, and the board — the one thing
+// the control exists to make visible — was clipped by up to 119 px on a school tablet, with no scrollbar to
+// reach it. The rows now open from `🚥 Correção de cor`, a labelled button in the same row as «Alto
+// contraste», which is what keeps the engine's objection answered: the objection was to a `<select>`, and a
+// named button one press away is not one. Measured by `scripts/layout-check.mjs` on four real screens.
 //
 // ========================= AND WHY ONLY ONE OF THE TWO AXES =========================
 // Engine 8.0.0 splits the visual state in two: `tema` (contrast) and `correcao` (colour). The panel renders

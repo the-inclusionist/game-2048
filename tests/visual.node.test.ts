@@ -10,6 +10,8 @@
 // `simulatesDisability` flagged. A filter is a promise someone has to keep. On the correction axis the
 // simulations are a different field of a different type, so they cannot appear at all — and the assertion
 // below is what keeps that structural difference from being quietly undone.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   CORRECOES_OFERECIDAS, SIMULACOES_CONHECIDAS, ehCorrecao, estadoDa, filtroCssDe,
@@ -125,5 +127,95 @@ describe('the value arriving from the DOM is data, not a promise', () => {
     expect(ehCorrecao(null)).toBe(false);
     expect(ehCorrecao(undefined)).toBe(false);
     expect(ehCorrecao('constructor')).toBe(false);
+  });
+});
+
+// ========================= WHERE THE CONTROL LIVES, AND WHY THAT IS A GATE =========================
+// It was an always-open section in the page until 2026-09-12, and that cost the board its screen: `<main>`
+// is a flex column with `overflow: hidden` whose only flexible item is `#stage-wrap`, so the panel's 311 px
+// came out of the game's height alone. `scripts/layout-check.mjs` measures the consequence on four real
+// screens; these two assertions hold the SHAPE that produced it, because a future panel added to the page
+// would reproduce the defect long before anyone re-ran a browser.
+describe('the colour-correction panel opens, rather than occupying the page', () => {
+  const html = readFileSync(join(import.meta.dirname, '..', 'app', 'index.html'), 'utf8');
+
+  it('[Cross-check] the rows are still there to be found at all', () => {
+    // A gate whose subject vanished is the failure it exists to catch, wearing a green tick.
+    expect(html, 'the radiogroup the engine fills').toMatch(/id="p2-viz"[^>]*role="radiogroup"/);
+  });
+
+  it('[Zero] 🔴 they sit inside an overlay that is `hidden` at rest — not in the page’s flex column', () => {
+    // The overlay is `position: fixed` in the engine's stylesheet, which is the whole point: a fixed element
+    // is out of flow and takes NO height from `<main>`, so the stage stops competing with it.
+    const bloco = html.slice(html.indexOf('<div id="viz"'), html.indexOf('id="p2-viz"'));
+    expect(bloco, 'the panel is an overlay').toContain('class="overlay"');
+    expect(bloco, 'and it is closed until asked for').toContain('hidden');
+  });
+
+  it('[Right] and a LABELLED button opens it, which is what answers the engine’s objection', () => {
+    // ⚠️ The reason the rows were open in the first place is real and recorded: `ui/visual-axes-panel` says a
+    //    control that exists to be FOUND by someone who sees poorly, hidden in a closed box, is "almost the
+    //    same as not having moved it". That was written about a `<select>`. What keeps it answered here is
+    //    that the opener is a button with WORDS in the same row as «Alto contraste» — so this asserts the
+    //    label, not merely the button.
+    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="eixo\.correcao\.titulo"/);
+    const tools = html.slice(html.indexOf('class="p2-tools"'), html.indexOf('</div>', html.indexOf('class="p2-tools"')));
+    expect(tools, 'beside the other three, not off on its own').toContain('id="open-viz"');
+  });
+});
+
+describe('Escape closes a panel, because the shell routes the key itself', () => {
+  const bruto = readFileSync(join(import.meta.dirname, '..', 'src', 'standalone.ts'), 'utf8');
+
+  /**
+   * ⚠️ THE COMMENTS HAVE TO GO BEFORE ANYTHING IS ASKED OF THE SOURCE, and this is not tidiness — it is the
+   * defect that was caught writing these very gates. The first version matched `overlays.escapeTarget(`
+   * against the whole file; deleting the CALL left the gate green, because the paragraph explaining the call
+   * says `overlays.escapeTarget()` three lines above it. In a repository that explains itself at this length,
+   * prose and code are the same characters to a regular expression, and the prose is the larger target.
+   *
+   * `tests/cartridge.node.test.ts` meets the same trap from the other side and answers it by quoting
+   * `createGame` in backticks wherever it is discussed. That works while everyone remembers; stripping the
+   * comments works without anyone remembering.
+   */
+  const codigo = bruto
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n')
+    .map((linha) => linha.replace(/(^|[^:])\/\/.*$/, '$1'))
+    .join('\n');
+  const shell = codigo;
+
+  it('[Cross-check] stripping the comments left the CODE, not an empty string', () => {
+    // A filter that ate everything would make every assertion below pass by having nothing to look at.
+    expect(shell, 'the engine call survives').toMatch(/createGame\s*\(/);
+    expect(shell.length, 'and most of the file is prose, so this is a real reduction')
+      .toBeLessThan(bruto.length * 0.6);
+    expect(shell, 'and the prose is gone').not.toContain('THE ORDER IS THE ENGINE');
+  });
+
+  it('[Zero] 🔴 every `inEscapeChain: true` is matched by something that WALKS the chain', () => {
+    // 📏 Measured 2026-09-12 on the shipped build: Escape closed none of the three panels. The engine's
+    //    `input/keydown` is what walks `overlays.escapeTarget()`, and `createGame` never installs it for a
+    //    consumer — so each `inEscapeChain: true` was a true declaration into a chain nobody walked.
+    //    Registering the flag without routing the key is a claim this repository does not keep.
+    const declara = [...shell.matchAll(/inEscapeChain:\s*true/g)].length;
+    expect(declara, 'the panels that ask to be in the chain').toBeGreaterThan(0);
+    expect(shell, 'and the shell asks the engine which one the key belongs to').toMatch(/overlays\.escapeTarget\s*\(/);
+    expect(shell, 'and closes by that id, rather than picking one itself').toMatch(/overlays\.closeById\s*\(/);
+  });
+
+  it('[Exception] ⚠️ except mid-rebind, where Escape belongs to the capture flow', () => {
+    // A child being asked «press a key» and pressing Escape is answering THAT question. Closing the panel
+    // underneath would take the keystroke and give nothing back — the same failure shape as the capture
+    // listener this guard sits beside.
+    //
+    // ⚠️ AND THE ASSERTION IS SCOPED TO `aoEscapar`, WHICH IS NOT PEDANTRY. The first version searched the
+    //    whole file for `isCapturing()) return`, and deleting the guard left it GREEN: `aoCapturar`, twenty
+    //    lines above, contains `if (!ctrl.isCapturing()) return;` and answered for it. An assertion that can
+    //    be satisfied by a different call site is measuring the file's vocabulary, not its behaviour.
+    const inicio = shell.indexOf('const aoEscapar');
+    expect(inicio, 'the handler is still called that').toBeGreaterThan(-1);
+    const corpo = shell.slice(inicio, shell.indexOf('\n};', inicio));
+    expect(corpo, 'the guard is inside the Escape handler itself').toMatch(/isCapturing\s*\(\s*\)\s*\)\s*return/);
   });
 });
