@@ -4,13 +4,13 @@
 // Measured in the browser on 2026-09-11: remap a key, reload, and the game does not boot. No board, no error
 // she could see. The chain is written out in `app/js/keyboard-save.ts`; the short version is that the engine's
 // `p3`/`p4` schemes carry `null` for positions a seat cannot reach, `saveKB` persists them, and
-// `migrarEsquema` spreads every key list with `[...teclas]` — and `[...null]` throws inside `createGame`.
+// `migrateScheme` spreads every key list with `[...teclas]` — and `[...null]` throws inside `createGame`.
 //
 // ⚠️ THE ASSERTIONS BELOW ARE WRITTEN AGAINST THE REAL ENGINE DEFAULTS, not a fixture. A fixture would let the
 // engine change its schemes and leave this file green about a shape nobody ships.
 import { describe, expect, it } from 'vitest';
 import { KB_DEFAULTS } from '@the-inclusionist/engine/input/keyboard.js';
-import { migrarEsquema } from '@the-inclusionist/engine/input/vocabulary-migration.js';
+import { migrateScheme } from '@the-inclusionist/engine/input/vocabulary-migration.js';
 import { semNulos, temNulo } from '../app/js/keyboard-save.ts';
 
 describe('the scheme the engine would have us save', () => {
@@ -20,10 +20,10 @@ describe('the scheme the engine would have us save', () => {
     expect(temNulo(KB_DEFAULTS), 'p3/p4 hold null for positions a seat cannot reach').toBe(true);
   });
 
-  it('[Exception] ⚠️ and `migrarEsquema` THROWS on one, which is what reaches the child', () => {
+  it('[Exception] ⚠️ and `migrateScheme` THROWS on one, which is what reaches the child', () => {
     // The engine's own function, called with the engine's own data. Nothing here is this game's invention.
     const comNulo = { up: ['KeyW'], leftShoulder: null } as unknown as Record<string, readonly string[]>;
-    expect(() => migrarEsquema(comNulo)).toThrow(TypeError);
+    expect(() => migrateScheme(comNulo)).toThrow(TypeError);
   });
 });
 
@@ -36,11 +36,11 @@ describe('what we write instead', () => {
     for (const [grupo, value] of Object.entries(limpo)) {
       const seats = Array.isArray(value) ? value : [value];
       for (const e of seats) {
-        // ⚠️ THE CAST IS THE EVIDENCE, not a workaround. `migrarEsquema`'s parameter type says every key
+        // ⚠️ THE CAST IS THE EVIDENCE, not a workaround. `migrateScheme`'s parameter type says every key
         //    list is `readonly string[]`, while `KB_DEFAULTS` ships 42 that are `null` — the type and the
         //    data disagree, which is exactly why nothing caught this before a child did.
         if (e && typeof e === 'object') {
-          expect(() => migrarEsquema(e as Parameters<typeof migrarEsquema>[0]), grupo).not.toThrow();
+          expect(() => migrateScheme(e as Parameters<typeof migrateScheme>[0]), grupo).not.toThrow();
         }
       }
     }

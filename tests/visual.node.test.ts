@@ -164,58 +164,46 @@ describe('the colour-correction panel opens, rather than occupying the page', ()
   });
 });
 
-describe('Escape closes a panel, because the shell routes the key itself', () => {
+describe('Escape closes a panel, because the ENGINE routes the key — since engine 11.0.0', () => {
+  // ⚠️ G11 OF PART TWO WROTE THIS BLOCK AGAINST 9.0.0, where `createGame` installed no keydown router and
+  //    the shell had to add two document-level listeners (`aoCapturar` for the capture flow and `aoEscapar`
+  //    for the Escape chain). H11 of Part Three remeasured against 11.0.0 and found both routes installed
+  //    INSIDE `createGame` — capture at `boot/create-game.js:3006`, Escape at `ui/menu-nav.js:494`. The
+  //    shell's two listeners were double delivery; H11 removed them. This gate now asserts the engine does
+  //    the routing — so a regression would be noticed.
+  //
+  // 📌 The forward gate still reads SOURCE, not behaviour: the behavioural proof is `tests/factory.
+  //    browser.test.ts` booting with the live engine. What the source read catches is somebody re-adding
+  //    the dead listeners (noise) or dropping `inEscapeChain: true` from the overlay registrations (which
+  //    is what makes a panel reachable by Escape).
   const bruto = readFileSync(join(import.meta.dirname, '..', 'src', 'standalone.ts'), 'utf8');
-
-  /**
-   * ⚠️ THE COMMENTS HAVE TO GO BEFORE ANYTHING IS ASKED OF THE SOURCE, and this is not tidiness — it is the
-   * defect that was caught writing these very gates. The first version matched `overlays.escapeTarget(`
-   * against the whole file; deleting the CALL left the gate green, because the paragraph explaining the call
-   * says `overlays.escapeTarget()` three lines above it. In a repository that explains itself at this length,
-   * prose and code are the same characters to a regular expression, and the prose is the larger target.
-   *
-   * `tests/cartridge.node.test.ts` meets the same trap from the other side and answers it by quoting
-   * `createGame` in backticks wherever it is discussed. That works while everyone remembers; stripping the
-   * comments works without anyone remembering.
-   */
-  const codigo = bruto
+  const shell = bruto
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .split('\n')
     .map((linha) => linha.replace(/(^|[^:])\/\/.*$/, '$1'))
     .join('\n');
-  const shell = codigo;
 
   it('[Cross-check] stripping the comments left the CODE, not an empty string', () => {
-    // A filter that ate everything would make every assertion below pass by having nothing to look at.
     expect(shell, 'the engine call survives').toMatch(/createGame\s*\(/);
-    expect(shell.length, 'and most of the file is prose, so this is a real reduction')
-      .toBeLessThan(bruto.length * 0.6);
-    expect(shell, 'and the prose is gone').not.toContain('THE ORDER IS THE ENGINE');
+    expect(shell.length).toBeLessThan(bruto.length * 0.6);
   });
 
-  it('[Zero] 🔴 every `inEscapeChain: true` is matched by something that WALKS the chain', () => {
-    // 📏 Measured 2026-09-12 on the shipped build: Escape closed none of the three panels. The engine's
-    //    `input/keydown` is what walks `overlays.escapeTarget()`, and `createGame` never installs it for a
-    //    consumer — so each `inEscapeChain: true` was a true declaration into a chain nobody walked.
-    //    Registering the flag without routing the key is a claim this repository does not keep.
-    const declara = [...shell.matchAll(/inEscapeChain:\s*true/g)].length;
-    expect(declara, 'the panels that ask to be in the chain').toBeGreaterThan(0);
-    expect(shell, 'and the shell asks the engine which one the key belongs to').toMatch(/overlays\.escapeTarget\s*\(/);
-    expect(shell, 'and closes by that id, rather than picking one itself').toMatch(/overlays\.closeById\s*\(/);
+  it('[Zero] 🔴 every overlay this file registers asks to be in the escape chain', () => {
+    // The engine's menu-nav walks `escapeTarget()` and closes by id — but only overlays that opted in with
+    // `inEscapeChain: true` are candidates. A panel registered without the flag would open and have no
+    // door to Escape, which is the defect the WCAG community calls «the quiet trap».
+    const registers = [...shell.matchAll(/overlays\.register\s*\(/g)].length;
+    const chainEntries = [...shell.matchAll(/inEscapeChain:\s*true/g)].length;
+    expect(registers, 'the shell registers overlays').toBeGreaterThan(0);
+    expect(chainEntries, 'every one of them opts into the engine’s chain').toBe(registers);
   });
 
-  it('[Exception] ⚠️ except mid-rebind, where Escape belongs to the capture flow', () => {
-    // A child being asked «press a key» and pressing Escape is answering THAT question. Closing the panel
-    // underneath would take the keystroke and give nothing back — the same failure shape as the capture
-    // listener this guard sits beside.
-    //
-    // ⚠️ AND THE ASSERTION IS SCOPED TO `aoEscapar`, WHICH IS NOT PEDANTRY. The first version searched the
-    //    whole file for `isCapturing()) return`, and deleting the guard left it GREEN: `aoCapturar`, twenty
-    //    lines above, contains `if (!ctrl.isCapturing()) return;` and answered for it. An assertion that can
-    //    be satisfied by a different call site is measuring the file's vocabulary, not its behaviour.
-    const inicio = shell.indexOf('const aoEscapar');
-    expect(inicio, 'the handler is still called that').toBeGreaterThan(-1);
-    const corpo = shell.slice(inicio, shell.indexOf('\n};', inicio));
-    expect(corpo, 'the guard is inside the Escape handler itself').toMatch(/isCapturing\s*\(\s*\)\s*\)\s*return/);
+  it('[Zero] 🔴 and the shell does NOT install its own document-level keydown listener', () => {
+    // 📏 Measured 2026-10-02: engine 11 routes capture AND Escape inside `createGame`. A `document.
+    //    addEventListener('keydown', …)` in this file would be double delivery — redundant, confusing to
+    //    read, and the exact dead code the plan rule says to remove.
+    expect(shell).not.toMatch(/document\.addEventListener\s*\(\s*['"]keydown['"]/);
+    expect(shell).not.toMatch(/\baoCapturar\b/);
+    expect(shell).not.toMatch(/\baoEscapar\b/);
   });
 });

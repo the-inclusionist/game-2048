@@ -105,16 +105,18 @@ const motor = createGame({
     //    voice offline. This game decided exactly that on 2026-09-06, for 27 MB against a school tablet's
     //    precache budget — see the note just below.
     //
-    //    ⚠️ AND MEASURED ON 2026-09-11, ON THIS BUILD: with the downloads on, booting the 2048 makes exactly
-    //    one external request — `https://webgazer.cs.brown.edu/webgazer.js`, 1.9 MB — which fails by CORS on
-    //    every load. That is a municipally-owned children's game reaching a third-party host it cannot even
-    //    use, for the 👀 icon the bar itself labels "em construção". The engine records the same thing from
-    //    the other side: ADR-0124 is the Dev choosing MediaPipe and writing «webgazer não», and ADR-0132 names
-    //    the leftover `<script src>` as a debt. Until that debt is paid, the request happens; this line is
-    //    what stops it happening HERE. 📏 H11 re-measures whether 11.0.0 closed it.
+    //    ✅ WEBGAZER LEFT IN 11.0.0 (ADR-0214), measured 2026-10-02: `node_modules/@the-inclusionist/engine/
+    //    dist-pkg` carries ONE mention of «webgazer» and it is a historical sentence inside a comment
+    //    (`platform/heavy-catalogue.js:14`). The engine no longer reaches `webgazer.cs.brown.edu` at all —
+    //    the vision runtime is MediaPipe (ADR-0124) and the 👀 icon's labelled «em construção» means
+    //    exactly that: unbuilt, not reaching anywhere. So the webgazer half of the reasoning this flag used
+    //    to carry is CLOSED by the engine itself, and the only reason left for `downloadHeavy: false` is
+    //    the ONE just above — 27 MB of ONNX runtime against a school tablet's precache budget.
     //
-    //    📌 Nothing this game uses depends on it: the voices are declined, the webcam icons are unbuilt, and
-    //    the TTS the child can actually switch on is the browser's.
+    //    📏 PART-TWO FINDING, PRESERVED AS HISTORY. Measured on 2026-09-11 against 9.0.0: with the
+    //    downloads on, booting the 2048 made exactly one external request — `https://webgazer.cs.brown.edu/
+    //    webgazer.js`, 1.9 MB — which failed by CORS on every load. ADR-0132 named the leftover `<script
+    //    src>` as a debt; ADR-0214 paid it.
     downloadHeavy: false,
     // ⚠️ NO `uses.neuralVoice`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port opt-in exists in
     //    11.0.0 (ADR-0255, note DW): `uses: { neuralVoice: true }` carries Kokoro via a lazy import at the
@@ -274,54 +276,23 @@ $('#open-ctrl')?.addEventListener('click', () => {
   motor.overlays.frontOverlay(ov);
   ov.querySelector<HTMLElement>('button:not([disabled])')?.focus();
 });
-// ⚠️ THE CAPTURED KEY HAS TO BE DELIVERED BY US, and finding out why is the second half of this work.
-//    `settings-controls` does not listen for the key itself: the engine's `input/keydown` router does, and
-//    calls `ctrlPanel.handleCaptureKeydown(e)` before anything else. 📏 Measured on 2026-09-11 —
-//    `createGame` never calls `initKeydown`, so for a consumer of the composition root that router does not
-//    exist. Without this listener the panel would enter "Pressione…" and stay there for ever, which is a
-//    worse control than none: it would take the child's next keystroke and give nothing back.
+// ⚠️ G2 AND G11 USED TO INSTALL TWO document-level listeners here — one for `ctrl.handleCaptureKeydown`,
+//    one for `overlays.escapeTarget()`. Both were measured against 9.0.0 and found necessary because
+//    `createGame` did not install a keydown router. H11 remeasured against 11.0.0 (2026-10-02) and both
+//    installations ARE NOW DONE BY THE ENGINE INSIDE `createGame`:
 //
-// 📌 ON THE DOCUMENT, IN THE CAPTURE PHASE, and deliberately not on `#game-region`: the overlay is
-//    OUTSIDE the region, so a key pressed with the panel open never reaches the game's own listener. It is
-//    also the one listener this file adds to a node it does not own — G5 of the cartridge plan has to
-//    release it, and it is written as a named function so that it can be.
-const aoCapturar = (e: KeyboardEvent) => {
-  if (!ctrl.isCapturing()) return;
-  if (ctrl.handleCaptureKeydown(e)) e.preventDefault();
-};
-document.addEventListener('keydown', aoCapturar, true);
-
+//    · Capture-key: `boot/create-game.js:3006` adds `win.addEventListener('keydown', …, true)` that
+//      checks `isCapturing()` and calls `handleCaptureKeydown`.
+//    · Escape chain: `ui/menu-nav.js:494` adds the full `menuNavKey` capture-phase handler, which walks
+//      `escapeTarget()`, calls `closeById()` and `restoreFocus()`.
+//
+//    Keeping our handlers alongside would be double delivery — redundant, not harmful (the engine's
+//    `stopPropagation` on `win` stops ours on `document` from firing), but dead code the plan rule says
+//    to remove. The forward gate below asserts the engine does the routing, so if a regression ever drops
+//    it, we notice before a child does.
 const fecharCtrl = () => { const ov = $<HTMLElement>('#ctrl'); if (ov) ov.hidden = true; };
 $('#ctrl-close')?.addEventListener('click', fecharCtrl);
 motor.overlays.register('ctrl', { close: fecharCtrl, inEscapeChain: true });
-
-// ⚠️ ESCAPE HAS TO BE ROUTED BY US TOO, and it is the SAME wall as the captured key above rather than a new
-//    one: `overlays.escapeTarget()` is walked by the engine's `input/keydown`, and `createGame` never installs
-//    that router for a consumer. 📏 Measured 2026-09-12, opening each panel in turn on the shipped build:
-//    Escape closed NONE of the three. So `inEscapeChain: true` — which every one of them passes to `register`
-//    — was a true declaration into a chain nobody walked, and this repository does not keep claims like that.
-//
-//    It was never a keyboard trap (WCAG 2.1.2): each card's «Fechar» is reachable by Tab, which is why the
-//    axe gate had nothing to say. It was the cost of leaving: a child who opens a panel by accident had to
-//    find a button instead of pressing the key every dialog on the web answers to.
-//
-// 📌 THE ORDER IS THE ENGINE'S AND NOT OURS. `escapeTarget()` walks the REGISTRATION order and returns the
-//    first dialog that is in the chain and actually visible — its own note says this is deliberately NOT
-//    "the top one". The shell routes the key and declines to decide which panel wins.
-const aoEscapar = (e: KeyboardEvent) => {
-  if (e.key !== 'Escape') return;
-  // A child mid-rebind is being asked «press a key»; Escape belongs to that flow, and `aoCapturar` has
-  // already seen it in the capture phase. Closing the panel underneath would answer the wrong question.
-  if (ctrl.isCapturing()) return;
-  const aberto = motor.overlays.escapeTarget();
-  if (!aberto) return;
-  motor.overlays.closeById(aberto);
-  // The documented pair of `frontOverlay`: the focus goes back to the button that opened the card, instead
-  // of to the top of the document. Without it, closing with the keyboard loses the child's place.
-  motor.overlays.restoreFocus(aberto);
-  e.preventDefault();
-};
-document.addEventListener('keydown', aoEscapar);
 
 // HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
 // `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels
