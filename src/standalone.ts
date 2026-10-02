@@ -17,7 +17,7 @@ import { createRng } from '@the-inclusionist/engine/core/rng.js';
 import { createStorage } from '@the-inclusionist/engine/platform/storage.js';
 import { CORRECTION_LABEL, buttonChoice, axisRows } from '@the-inclusionist/engine/ui/visual-axes-panel.js';
 import type { Correction } from '@the-inclusionist/engine/render/viz-axes.js';
-import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
+// `GameDeclaration` once imported here for the local placeholder; the cartridge owns the shape now (H9).
 import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
 import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
 // The module-level `kb`, `resetKB`, `setKB`, `initKB` are gone in engine 11.0.0 (note DA); they live on
@@ -25,7 +25,7 @@ import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-contr
 // root-provided `motor.keyboardConfig.save()` is the one we use, so this import carries no live symbol.
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
-import { cartridge, accommodations } from './index.ts';
+import { cartridge } from './index.ts';
 import { CORRECOES_OFERECIDAS, ehCorrecao, filtroCssDe } from '../app/js/visual.ts';
 import { acoesComRotulo } from '../app/js/actions.ts';
 import { semNulos } from '../app/js/keyboard-save.ts';
@@ -52,40 +52,18 @@ if (!regiao) throw new Error('#game-region is missing — the shell has nowhere 
 //    VALUE and checks it at boot — but the declaration belongs to an instance that does not exist until
 //    `create(ctx)` is called, and `create` needs the engine.
 //
-// 🔴 AND THE RECORD'S OWN ANSWER DOES NOT BOOT ON ENGINE 9.0.0. §5 prescribes "a declaration whose members
-//    forward to the mounted cartridge" — measured on 2026-09-11, that THROWS: with nothing mounted yet a
-//    delegate answers `undefined` for all ten fields, and 9.0.0 refuses a malformed declaration outright
-//    («LANÇA numa declaração malformada, e não a põe em `problems`») rather than reporting it. The interim was
-//    written against 8.x, where the check only filled `problems`.
+// 🔴 AND THE RECORD'S OWN ANSWER DOES NOT BOOT ON 11.0.0 either. §5 prescribes "a declaration whose members
+//    forward to the mounted cartridge" — measured on 2026-09-11 and still true on 2026-10-02: a delegate
+//    that answers `undefined` for all ten fields is refused outright, not reported into `problems`.
 //
-// 📌 SO THE SHELL BOOTS WITH A DECLARATION THAT IS HONEST RATHER THAN EMPTY: a well-formed one that says there
-//    is no game yet. `world: {kind:'none'}` is exactly right here and nowhere else — the contract warns that
-//    `none` must not be what happens when somebody FORGETS, and this is the one moment when "there is no space
-//    because there is no game" is the truth. `mount` replaces it the instant the cartridge exists.
-const semJogoAinda: GameDeclaration = {
-  topology: () => ({ kind: 'hotspots', order: ['vazio'] }),
-  world: () => ({ kind: 'none' }),
-  holdsAtOnce: () => 1,
-  holdsKeys: () => false,
-  tick: 'player',
-  roleAt: () => 'free',
-  nameAt: () => null,
-  focusOf: () => null,
-  objectiveOf: () => ({ have: 0, need: 1, name: { text: '', gender: 'n' as const, plural: false } }),
-  targetsOf: () => [],
-};
-
+// 📌 THE PLACEHOLDER LIVES ON THE CARTRIDGE SINCE H9 (ADR-0253 note DV): `cartridge.declaration` is the
+//    honest «there is no game yet» value, read at import time by `inclusionist-check-cartridge` and by this
+//    `createGame` call. `motor.mount(instance.declaration)` replaces it the instant the cartridge exists.
 const motor = createGame({
-  // The placeholder above. Replaced by `mount` as soon as the cartridge exists.
-  declaration: semJogoAinda,
-  // THE DICTIONARIES, THE ONE PLACE A GAME'S WORDS LIVE SINCE 11.0.0 (ADR-0232 D3, note DN). The three
-  // languages the cartridge exports — pt, en, es — reach the root's translator here, before any text. A
-  // declared key missing in every language becomes a line of `problems` and the field is left out.
-  dictionaries: cartridge.dictionaries,
-  // See the note on `accommodations` in `src/index.ts`: every GAME_KEYED entry is `false` because this
-  // game's vocabulary for them is empty. The GENERAL ones (typography, narration, highContrast, …) are
-  // CONTRACT_KEYED and the engine derives them from the declaration.
-  accommodations,
+  declaration: cartridge.declaration,
+  // The hooks are the game-owned half of CreateGameOptions minus `declaration`: `preset`, `accommodations`,
+  // `dictionaries`, `isNavigable`. Spreading keeps `createGame` honest about what the game is passing.
+  ...cartridge.hooks,
     host: {
       doc,
       win,

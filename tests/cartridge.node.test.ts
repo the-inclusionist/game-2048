@@ -178,6 +178,45 @@ describe('what the cartridge exports', () => {
   });
 });
 
+describe('H9 — the default export has what `inclusionist-check-cartridge` reads', () => {
+  // 🔴 ADR-0139 §2 plus ADR-0253 §DV: the checker imports the built entry, reads `{slug, declaration, hooks,
+  //    create}` off its DEFAULT export, and hands `declaration` and `hooks` to the engine's own
+  //    `cartridgeRefusals`. These assertions are the shape, not the semantics — the engine owns the latter.
+  it('[Zero] 🔴 `declaration` is a well-formed `GameDeclaration` placeholder — ten functions, no undefined', () => {
+    const d = cartridge.declaration as unknown as Record<string, unknown>;
+    for (const k of ['topology', 'world', 'holdsAtOnce', 'holdsKeys',
+      'roleAt', 'nameAt', 'focusOf', 'objectiveOf', 'targetsOf']) {
+      expect(typeof d[k], `declaration.${k} is a function`).toBe('function');
+    }
+    expect(cartridge.declaration.tick, 'tick is a literal, not a function').toBe('player');
+  });
+
+  it('[Zero] 🔴 `hooks.preset` names every position the game actually reads — with KEYS', () => {
+    // The engine's `cartridgeRefusals` does NOT look at preset entries; a null preset would pass it. This is
+    // the gate for H9's second mutation.
+    const preset = cartridge.hooks.preset ?? {};
+    expect(preset.up?.labelKey, 'up').toBe('act.up');
+    expect(preset.down?.labelKey, 'down').toBe('act.down');
+    expect(preset.left?.labelKey, 'left').toBe('act.left');
+    expect(preset.right?.labelKey, 'right').toBe('act.right');
+    expect(preset.action1?.labelKey, 'the sonar').toBe('act.sonar');
+    expect(preset.action1?.hintKey, 'and its hint').toBe('act.sonar.hint');
+  });
+
+  it('[Interface] `hooks` carries `accommodations` and `dictionaries` for the engine root to spread', () => {
+    expect(typeof cartridge.hooks.accommodations).toBe('object');
+    expect(cartridge.hooks.dictionaries).toBeDefined();
+    // And the top-level `dictionaries` is the SAME object — the alias is not a copy that drifts.
+    expect(cartridge.hooks.dictionaries).toBe(cartridge.dictionaries);
+  });
+
+  it('[Zero] ⚠️ `isNavigable` returns true — this game draws no menu of its own', () => {
+    // `memory/isnavigable-entrega-o-teclado.md`: `isNavigable: false` would make the engine stop routing the
+    // keyboard here. Measured against the specific defect that memory records.
+    expect(cartridge.hooks.isNavigable?.(0)).toBe(true);
+  });
+});
+
 describe('the package can actually be published — G10’s preconditions', () => {
   it('[Zero] 🔴 a SCOPED package says `access: public`, or npm publishes it to nobody', () => {
     // ⚠️ npm's default for a scoped name is `restricted`. On a free organisation `npm publish` then fails

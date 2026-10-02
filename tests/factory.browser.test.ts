@@ -16,39 +16,19 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createGame, type Engine } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
-import { cartridge, accommodations } from '../src/index.ts';
+import { cartridge } from '../src/index.ts';
 import type { GameInstance } from '../app/js/cartridge-types.ts';
 
-// 📏 THE DICTIONARIES RIDE INTO THE ENGINE through `CreateGameOptions.dictionaries` since 11.0.0 (ADR-0232
-// D3, note DN). The old module-level `registerDict` is gone, and so is the module-level `t`.
-
 /**
- * A SHELL, in eight lines — which is the claim ADR-0140 §2 makes ("the shell is roughly thirty lines") put
- * under a test. If booting this game outside its own `standalone.ts` needed more than a `ctx`, the split would
- * not have worked.
- *
- * ⚠️ The delegating declaration is ADR-0139 §5's interim, here for the same reason the shell has it:
- * `createGame` wants a declaration at boot and the real one belongs to an instance that cannot exist yet.
+ * A SHELL — H9 collapsed it to «declaration from the cartridge, hooks from the cartridge, host from the
+ * page». The placeholder declaration (ADR-0139 §5 would want it to delegate; H9 opted for the honest
+ * placeholder that boots on 11.0.0) lives on `cartridge.declaration`, and the game-half options live on
+ * `cartridge.hooks`. The test exercises the same chain as `src/standalone.ts`.
  */
 function montarShell(): GameInstance {
-  // 🔴 A DELEGATING declaration — ADR-0139 §5's interim — does NOT boot on engine 9.0.0: with nothing mounted
-  //    it answers `undefined` for all ten fields, and 9.0.0 THROWS on a malformed declaration instead of
-  //    reporting it. So the shell boots with a well-formed one that says there is no game yet, and `mount`
-  //    replaces it. `src/standalone.ts` carries the same shape and the same note.
-  const semJogoAinda = {
-    topology: () => ({ kind: 'hotspots' as const, order: ['vazio'] }),
-    world: () => ({ kind: 'none' as const }),
-    holdsAtOnce: () => 1,
-    holdsKeys: () => false,
-    tick: 'player' as const,
-    roleAt: () => 'free' as const,
-    nameAt: () => null,
-    focusOf: () => null,
-    objectiveOf: () => ({ have: 0, need: 1, name: { text: '', gender: 'n' as const, plural: false } }),
-    targetsOf: () => [],
-  };
   const motor = createGame({
-    declaration: semJogoAinda as never,
+    declaration: cartridge.declaration,
+    ...cartridge.hooks,
     // ⚠️ `a11yBarHost` IS NOT OPTIONAL FOR A FAITHFUL SHELL. Omitting it made gate 3 count zero icons —
     //    the engine fell back to looking for `#title-icons`, found nothing, and reported a problem instead
     //    of mounting. A harness that is not a shell proves nothing about shells.
@@ -61,8 +41,6 @@ function montarShell(): GameInstance {
     },
     declines: { noPauseActor: true, noNeuralVoice: true },
     downloadHeavy: false,
-    dictionaries: cartridge.dictionaries,
-    accommodations,
   });
   const jogo = cartridge.create({
     engine: motor,

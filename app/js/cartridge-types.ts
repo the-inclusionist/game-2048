@@ -75,22 +75,35 @@ export interface GameInstance {
 // 10.0.0 (English rename, note CN) — before that it was `GanchosDoCartucho` and this file aliased it to the
 // current English name; the engine took the name over, so the import at the top is the whole re-export.
 
-/** What the package exports. `create` is the only thing that runs. */
+/** What the package exports — ADR-0139 §2 and the `inclusionist-check-cartridge` reader. */
 export interface Cartridge {
   /** Matches the repository and the package name (ADR-0082 §1). */
   readonly slug: string;
   /**
-   * Handed to `createGame({ dictionaries })` by whichever shell loads this cartridge.
+   * THE PLACEHOLDER DECLARATION — a well-formed `GameDeclaration` that says «there is no game yet». Read at
+   * import time by `inclusionist-check-cartridge` (H9, note DV); replaced at run time by the live
+   * declaration that `create(ctx)` returns, through `motor.mount(instance.declaration)`.
    *
-   * ⚠️ RENAMED FROM `dicts` IN H2 to match engine 11.0.0's `CreateGameOptions.dictionaries` (note DN). The
-   * shape — language code → key → word — is exactly what the engine expects.
+   * 🔴 ⚠️ `declaration` MOVED TO THE DEFAULT EXPORT IN H9, which is a RETREAT from Part Two's `DERIVED
+   * HERE` note. ADR-0139 §5 wanted a delegating declaration here, forwarding to the mounted instance; that
+   * shape still throws on 11.0.0 (measured). The honest placeholder is the compromise: it is wrong about
+   * the game and the checker accepts it, which is what the checker was built to assert.
+   */
+  readonly declaration: GameDeclaration;
+  /**
+   * THE GAME-OWNED HALF OF `CreateGameOptions`, MINUS `declaration` — preset, accommodations, dictionaries,
+   * isNavigable and the rest of what `CartridgeHooks = Omit<GameHalf, 'declaration'>` names.
+   */
+  readonly hooks: CartridgeHooks;
+  /**
+   * Convenience alias into `hooks.dictionaries` — the SAME object, exposed at the top level so a consumer
+   * that only wants words does not need to reach through the hooks structure. The gate in
+   * `tests/cartridge.node.test.ts` reads it here.
    */
   readonly dictionaries: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /**
-   * Nothing runs until this is called. No side effects at module scope — spec D14.
-   *
-   * 📌 `declaration` AND `hooks` ARE NOT HERE, and the two notes on `GameInstance` say why: both need
-   * something that does not exist at import time — the instance's state, and the registered locale.
+   * Nothing runs until this is called. No side effects at module scope — spec D14. Returns a `GameInstance`
+   * carrying the LIVE declaration that observes per-instance state, which the shell mounts.
    */
   readonly create: (ctx: GameCtx) => GameInstance;
 }
