@@ -1,6 +1,6 @@
-# Plan — game-2048: engine 8 ✅ → engine 9 ✅ → the cartridge conversion ✅ → engine 11
+# Plan — game-2048: engine 8 ✅ → engine 9 ✅ → the cartridge conversion ✅ → engine 11 ✅ → Cloudflare delivery ⬜
 
-**Legend:** ✅ done · 🆕 newly possible (engine 9.0.0) · ⬜ not started · 🔴 defect
+**Legend:** ✅ done · 🆕 newly possible (engine 9.0.0) · ⬜ not started · 🔴 defect · ⏸ waiting on Dev · 🚫 n/a
 
 ---
 
@@ -131,7 +131,7 @@ Each step independently committable. Every new gate **born red with the mutation
 | **G7** | **Installable.** Peer + dev for engine and PixiJS (range vs exact pin), `exports`, `files` with the licence docs, `private` gone. `npm ci` + both builds verified; `npm pack` is 25 files / 125 kB. | ✅ `99dfd98` |
 | **G8** | **Two targets.** app 587 kB (engine bundled, PWA) vs lib **19 kB** (engine external, no SW). `scripts/build-lib.mjs` also emits types and rewrites the `.ts` specifiers TypeScript 5.9.3 leaves in `.d.ts` re-exports. | ✅ `99dfd98` |
 | **G9** | **CI builds BOTH** — ADR-0140 calls this *"not optional"*. Verified in the log for `99dfd98`, then gated: CI gives a game ONE build step whose inputs cannot be extended, so "both" is true only while `scripts.build` chains both — a simplification back to `vite build` would undo it and leave CI green. Four assertions, four mutations, four reds. | ✅ `10af2f7` |
-| **G10** | **Publish** — `npm publish` is spending and irreversible. **Prepared** (`ceb86b8`): `publishConfig.access: public` added, or a scoped package publishes to nobody; version off the `0.0.0` placeholder to `0.1.0`; `npm pack --dry-run` is 25 files / 46.4 kB. Gated by three assertions. ⏸ **The command itself is the Dev’s to run.** | ⏸ |
+| **G10** | 🔴 **Retired — WRONG DELIVERY ROUTE.** G10 was written as `npm publish` under the assumption the platform would npm-install the cartridge. The Dev's clarification 2026-10-02: the delivery is **Cloudflare Pages + R2 + a Router Worker** under `o-inclusionista.jrocha.dev.br/<slug>/*`, not npm. The G7 preparation (`publishConfig.access: public`, version off `0.0.0`, `inclusionist-check-cartridge` green) stays valuable — it keeps the cartridge library installable for a future platform that chooses npm, and it is what the engine's own checker reads — but **no `npm publish` is to be run** for this cartridge. See Part Four for the real delivery track. | ⏸ (retired) |
 | **G11** | 🔴 **The board did not fit on the screen.** Found by the Dev, 2026-09-12. `<main>` is a flex column with `overflow: hidden` and `#stage-wrap` is its only flexible item, so the always-open «Correção de cor» panel (311 px) squeezed the stage: 103 px of the board cut off on a 1280×800 laptop, 113 px at 800×600, 119 px at 1024×768, the wrapper collapsed to **zero** at 570×415 — and the page does not scroll, so none of it was reachable. The rows moved behind `🚥 Correção de cor`, the same overlay shape `⌨ Teclas` uses. Two more repaired on the way: **Escape closed none of the three panels** (the engine’s keydown router is never installed for a consumer, so every `inEscapeChain: true` declared into a chain nobody walked), and the **44 px touch floor** was missing from two panels (`var(--tap)` is out of scope outside `#game-region`). New gate `scripts/layout-check.mjs` on four real screens, chained into `test:a11y`; four source assertions, four mutations. 🔴 Two gates were WRONG when first written and the mutations caught it — one matched its own explanatory comment, the other a different call site. 📏 Known boundary written into the gate: below ~500 px viewport height the stage is still clipped, because `ui/layout` holds k=2 instead of stepping to k=1 — not this game’s. | ✅ `ef48a40` |
 
 ---
@@ -379,3 +379,104 @@ AXE_URL=http://localhost:8197/ npm run test:a11y
 - From **H9** onward, `inclusionist-check-cartridge` runs in CI after every build (the shared workflow).
 - All H-tier gates born red with their mutations before green counts.
 - Nothing is pushed by me; every push is the Dev's.
+
+---
+
+## Part four — Cloudflare Pages delivery (replaces G10)
+
+### Context
+
+The user corrected the plan 2026-10-02: `npm publish` was the wrong deliverable. Every game ships through
+**Cloudflare Pages + R2 + a Router Worker** under one origin — `o-inclusionista.jrocha.dev.br/<slug>/*` —
+so the 1.2 GiB of heavy artefacts (voice, vision, recognition, reading) downloads **once per child**, not
+per game (ADR-0117 + the `incl-pesados-v2` cache). 2048's share of that heavy is zero (it declines neural
+voice, does not opt into reading), but the delivery shape has to match the catalogue's so this game installs
+beside the others on the same origin.
+
+**Measured against the catalogue's reference implementation (`game-platformer`, 2026-10-02) and against this
+repository today:**
+
+| Checklist item | 2048 state | What D-step does |
+|---|---|---|
+| `fetch()` / `Texture.from()` with relative paths | ✅ zero occurrences — the board is procedural | nothing (the 🔴 BASE_URL rule is a no-op here) |
+| `<base href="/" />` in `app/index.html` | ⬜ absent | **D3** adds it |
+| `vite.config.ts` with a configurable `base` | ⬜ absent | **D2** |
+| `<link rel="stylesheet" href="/vendor/fonts.css">` is absolute-rooted | ⚠️ breaks under `/game-2048/` without `<base>` | fixed BY **D3** (the `<base>` lands it under the game subpath) |
+| Preset keys (`act.up`, `.down`, `.left`, `.right`, `.sonar`, `.sonar.hint`) in pt/en/es | ✅ already present in `app/js/i18n/*.ts` | nothing — the pattern is satisfied by the H2 move into `CreateGameOptions.dictionaries` |
+| `uses: { neuralVoice, reading }` | ✅ absent on purpose — 2048 declines neural voice (H3) and does not use reading | **D5** writes the choice down so a later reader finds the decision rather than the absence |
+| `wrangler.toml` + `functions/heavy/[[path]].ts` + `scripts/post-build-cloudflare.mjs` + deploy workflow | ⬜ absent | **D1 / D7 / D8 / D9** |
+| Platform-side: `game-2048` row in the Router Worker's `GAMES` table | ⬜ not yet added | **D10** — platform work, not this repo's commit |
+
+### What this game does NOT need, by measurement
+
+- **No `/heavy/*` proxy traffic.** 2048 declines neural voice, does not opt into reading, and uses only the
+  engine's 19 free fonts (none of which touch `heavy/`). `functions/heavy/[[path]].ts` lands anyway for
+  parity with the catalogue's shape — the function is cheap and a game that opts in later needs no
+  structural change.
+- **Nothing from the engine's «Pedido (C)».** The six engine-side asks the Dev raised 2026-10-02 (per-seat
+  pause/HUD/settings-store, «sair» per seat, gamepad on title, `inclusionist-heavy --base` layout) all
+  concern platform- and multi-seat behaviour. 2048 is single-player and declines the pause actor, so none
+  of the six bear on this cartridge's delivery.
+
+### Standing rules (unchanged)
+
+- **Nothing in `the-inclusionist-engine` without the Dev's authorisation.**
+- **Commits are mine, pushes are the Dev's.**
+- **Each gate born red with the mutation confirmed before green counts** — same discipline as H-tier.
+
+### The order
+
+Each D is independently committable except where noted. **No deploy fires until the Dev decides.**
+
+| | Step | Status |
+|---|---|---|
+| **D1** | **`wrangler.toml` at the repo root.** `name = "game-2048"`, `compatibility_date` current, `pages_build_output_dir = "dist"`, `[vars] INCL_BASE = "/game-2048/"`, `[[r2_buckets]] binding = "LFS"` + `bucket_name = "the-inclusionist-lfs"` + `jurisdiction = "eu"`. 📌 With `wrangler.toml` present, the CF Pages dashboard goes read-only for bindings — the file IS the truth. The jurisdiction key is the «R2 bucket not found» pitfall the Dev named by its name. | ⬜ |
+| **D2** | **`vite.config.ts` honours `INCL_BASE`.** Inside the `config` block of `defineGameBuild`: `base: process.env.INCL_BASE ?? '/'` and `build.outDir` reflects the base path. The engine's wrapper passes the config through — the `base` reaches app and cartridge builds alike. Local `vite dev` still runs at `/`; CF Pages builds inject `INCL_BASE=/game-2048/` through `[vars]`. | ⬜ |
+| **D3** | **`<base href="/" />` in `app/index.html`.** One line in the `<head>`. Resolves two concerns at once: (a) `/vendor/fonts.css` lands at the domain root (not under the subpath) so the shared `incl-pesados-v2` cache can be reached, and (b) any future relative URL falls back to the origin's root. Gate: a source-reading test that refuses `<link rel="stylesheet" href="./` for `vendor/*` under D3's rule, and asserts the `<base>` is present. | ⬜ |
+| **D4** | **(Already satisfied — no-op by measurement.)** A sweep for `fetch(` and `Texture.from(` with relative paths. Zero occurrences — 2048 draws procedurally from `render/*.ts`. A forward gate reads the source and refuses a reintroduction, written in the same shape as `tests/english-rename.node.test.ts`. Lands with D3 or separately. | ⬜ |
+| **D5** | **`uses` DECISION recorded on the cartridge.** 2048 declines neural voice (H3) and does not opt into reading; `uses` therefore stays absent. The 10 lines in `src/standalone.ts` already say so — this step adds a line to `src/index.ts` that attaches `uses = undefined` explicitly beside `accommodations`, so the choice is visible on the cartridge default export and a later reader finds the decision rather than the absence. Gate: a cartridge-source assertion that `uses` is absent AND the decline is paired. | ⬜ |
+| **D6** | **Preset keys verified in `game-keys.ts` form.** 📌 The pasted guide names `app/js/i18n/game-keys.ts` specifically; our pattern lives in the same shape but with the three per-language files (`pt.ts`/`en.ts`/`es.ts`), which the H2 move into `CreateGameOptions.dictionaries` makes the equivalent surface. A forward gate asserts every preset key the cartridge declares (`act.up`, `.down`, `.left`, `.right`, `.sonar`, `.sonar.hint`) is in all three languages — same measurement that `tests/actions.node.test.ts` already runs for `pt`; widened to en and es. | ⬜ |
+| **D7** | **`functions/heavy/[[path]].ts` for parity.** The Router Worker routes `/heavy/*` to one game's origin; serving nothing from here is fine, but the function is present so adding `uses` later needs no new file. Inlines the engine's `MIRROR_FOLDERS` table (esbuild under CF Pages does not resolve the import stably — the pasted guide names this by its own symptom). | ⬜ |
+| **D8** | **`scripts/post-build-cloudflare.mjs` writes `dist/_headers`.** Paths prefixed by `INCL_BASE`. Chained after the app build: `build` → the post-build hook. The hook belongs to this game's own build, not the engine's wrapper. | ⬜ |
+| **D9** | **`.github/workflows/deploy-router-worker.yml`** — OPTIONAL per the pasted guide; only in repos that also move the Router Worker. 2048 does not; skip, note in the plan. | 🚫 n/a |
+| **D10** | 📌 **PLATFORM WORK — not this repo's commit.** `game-2048` gets a line in the Router Worker's `GAMES` table (`'game-2048': 'game-2048.pages.dev'`). Belongs to whichever repo owns the Router Worker. This row is the only platform-side change 2048 needs. | ⬜ |
+| **D11** | **First `git push` → CF Pages auto-creates the project**, per the GitHub-integration behaviour the pasted guide describes. ⚠️ Pushing is the Dev's — this step is a note, not a command. Pitfall surfaced in the guide: if the dashboard builds the wrong SHA («Retry deployment» → same SHA), an empty commit OR a manual «Create deployment» unblocks it. | ⏸ (Dev) |
+
+### Verification — D-tier
+
+```bash
+npm run build
+```
+
+```bash
+INCL_BASE=/game-2048/ npm run build
+```
+
+(the second runs with the production base — asserts the config respects the env var; `dist/` lands with every
+absolute reference under `/game-2048/`.)
+
+- From **D1** onward, `wrangler.toml` is the single source of truth for CF Pages bindings; the dashboard is
+  read-only for those fields.
+- From **D3** onward, `/vendor/fonts.css` resolves to the domain root even under the subpath (the `<base href="/" />` is what does it).
+- From **D5** onward, the «no neural voice, no reading» decision has a written place.
+- From **D10** onward, the Router Worker routes `o-inclusionista.jrocha.dev.br/game-2048/*` to this
+  project's Pages origin.
+- Nothing is deployed by me; every push is the Dev's.
+
+### Open design calls to surface before touching code
+
+- **D1 secrets.** The pasted guide names `CLOUDFLARE_API_TOKEN` as an ORG secret with «public repos»
+  visibility — a GitHub Actions secret, not something checked into this repo. No decision for 2048 here;
+  recorded for future readers.
+- **D7's inlined `MIRROR_FOLDERS` table drift.** The pasted guide calls out that esbuild under CF Pages
+  does not resolve the engine's import stably, so the table is COPIED into `functions/heavy/[[path]].ts`.
+  Copying a table that lives elsewhere is a drift risk the ADR README calls by its name — a forward gate
+  on this cartridge asserting the copy matches the engine's current `platform/heavy-catalogue.MIRROR_FOLDERS`
+  would catch a drift. Belongs with D7.
+
+### Not ours, deliberately not touched here
+
+- The Router Worker, the R2 bucket, and the shared platform origin (all platform work).
+- The engine's six «Pedido (C)» asks — multi-seat / per-seat / gamepad-title / `inclusionist-heavy --base`
+  layout. 2048 is single-player and declines the pause actor, so none of the six affect this cartridge.
+- Nothing is written to `the-inclusionist-engine`.
