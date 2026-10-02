@@ -49,13 +49,13 @@ function seatSemNulos(e: Esquema): Esquema {
  */
 export function semNulos<T extends EsquemaGuardado>(kb: T): T {
   const saida: Record<string, unknown> = {};
-  for (const [grupo, valor] of Object.entries(kb)) {
-    if (Array.isArray(valor)) {
-      saida[grupo] = valor.map((e) => (e ? seatSemNulos(e as Esquema) : e));
-    } else if (valor && typeof valor === 'object') {
-      saida[grupo] = seatSemNulos(valor as Esquema);
+  for (const [grupo, value] of Object.entries(kb)) {
+    if (Array.isArray(value)) {
+      saida[grupo] = value.map((e) => (e ? seatSemNulos(e as Esquema) : e));
+    } else if (value && typeof value === 'object') {
+      saida[grupo] = seatSemNulos(value as Esquema);
     } else {
-      saida[grupo] = valor;
+      saida[grupo] = value;
     }
   }
   return saida as T;
@@ -63,8 +63,8 @@ export function semNulos<T extends EsquemaGuardado>(kb: T): T {
 
 /** Would this scheme survive `migrarEsquema`? Used by the gate, and by nobody else. */
 export function temNulo(kb: EsquemaGuardado): boolean {
-  for (const valor of Object.values(kb)) {
-    const seats = Array.isArray(valor) ? valor : [valor];
+  for (const value of Object.values(kb)) {
+    const seats = Array.isArray(value) ? value : [value];
     for (const e of seats) {
       if (!e || typeof e !== 'object') continue;
       for (const teclas of Object.values(e as Esquema)) if (!Array.isArray(teclas)) return true;

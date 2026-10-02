@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // THE BOARD AS DRAWN, TESTED WITHOUT A BROWSER — and it is ADR-0035's port that makes that possible.
 //
-// `pintarTabuleiro` receives a `Desenho` (the engine's renderer port) instead of importing PixiJS. What goes
+// `pintarTabuleiro` receives a `Drawing` (the engine's renderer port) instead of importing PixiJS. What goes
 // in here is a FAKE drawing that merely notes what was asked of it, and the assertions become assertions
 // about the ORDER and the GEOMETRY of the painting — which is everything one can claim without looking at
 // real pixels.
@@ -18,7 +18,7 @@
 // What this file does NOT prove, said so nobody trusts it too far: that the thing looks good on screen. That
 // is the browser test and the screenshot. What it proves is that the drawing happens inside the grid, that
 // high contrast swaps the colour by ROLE and not by value, and that no number is painted.
-import type { Desenho } from '@the-inclusionist/engine/render/port.js';
+import type { Drawing } from '@the-inclusionist/engine/render/port.js';
 import { describe, expect, it } from 'vitest';
 import { SIZE, slide, type Board } from '../app/js/board.ts';
 import { pecasNoInstante, pecasParadas } from '../app/js/animation.ts';
@@ -28,12 +28,12 @@ import { FUNDO_DA_TELA, HC_POR_PAPEL, MOLDURA, fundoDe } from '../app/js/render/
 
 interface Retangulo { cor: number; x: number; y: number; w: number; h: number }
 
-/** A `Desenho` that does not draw: it takes notes. The port's minimum, and not one method more. */
+/** A `Drawing` that does not draw: it takes notes. The port's minimum, and not one method more. */
 function desenhoDeMentira() {
   const rects: Retangulo[] = [];
   let limpezas = 0;
   let cor = 0;
-  const g: Desenho = {
+  const g: Drawing = {
     clear() { limpezas++; rects.length = 0; return this; },
     beginFill(c: number) { cor = c; return this; },
     drawRect(x: number, y: number, w: number, h: number) { rects.push({ cor, x, y, w, h }); return this; },

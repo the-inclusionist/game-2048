@@ -149,9 +149,9 @@ export function slide(board: Board, dir: Direction): Move {
     }
 
     caminho.forEach((destino, k) => {
-      const valor = resultado[k] ?? 0;
-      if (saida[destino] !== valor) moved = true;
-      saida[destino] = valor;
+      const value = resultado[k] ?? 0;
+      if (saida[destino] !== value) moved = true;
+      saida[destino] = value;
     });
   }
 

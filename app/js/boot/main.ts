@@ -13,7 +13,7 @@
 import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
 import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
 import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
-import { lerCenaGuardada } from '@the-inclusionist/engine/ui/motion-scene.js';
+import { readStoredScene } from '@the-inclusionist/engine/ui/motion-scene.js';
 import * as PIXI from 'pixi.js';
 
 import {
@@ -55,7 +55,7 @@ import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
 const movimentoReduzido = (win: Window): boolean =>
   querMenosMovimento(
     win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
-    lerCenaGuardada(),
+    readStoredScene(),
   );
 
 /* ===================== THE ROUND'S STATE =====================
@@ -299,8 +299,8 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     //    is taking the tool the child uses to reach the game. Shift is the exception, and it is a verb here.
     if (ehAtalhoDoSistema(e)) return;
 
-    const acao = motor.keyboard.actionOf(e.code, 0);
-    const dir = direcaoDe(acao);
+    const action = motor.keyboard.actionOf(e.code, 0);
+    const dir = direcaoDe(action);
 
     // THE SONAR — "where is a merge available?", asked as an ACTION and no longer as a chord.
     //
@@ -320,7 +320,7 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     //    `audio`, `motora`, `tipo`, `visual`, `anim` — none of them is the remap panel — and NOTHING in the
     //    engine opens `ui/settings-controls`, exactly as nothing opens `ui/settings-typo`, which this game
     //    has mounted itself since the beginning. It was mountable on engine 8; nobody had mounted it.
-    if (ehSonar(acao)) {
+    if (ehSonar(action)) {
       const f = declaration.focusOf(0);
       // ⚠️ NO `viz` SINCE ENGINE 8.0.0, and the field did not move — it was DELETED. `platform/audio-sonar`
       //    used to read `ctx.VIZ_BY_KEY[pl.viz]`, a table of RENDER modes consulted from inside `platform/`;
@@ -369,9 +369,9 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   });
 
   // 8. THE SCENE STACK. One scene, and it is not invented for the test: `desenhar` was already the `draw`.
-  motor.cenas.push({ nome: 'tabuleiro', draw: () => desenhar(), input: () => false });
+  motor.scenes.push({ name: 'tabuleiro', draw: () => desenhar(), input: () => false });
   motor.nav.attach();
-  motor.cenas.draw();
+  motor.scenes.draw();
   grade.focar();
   srSay(t('a11y.instructions'));
 

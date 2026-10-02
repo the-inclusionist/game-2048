@@ -5,7 +5,7 @@
 // It was `<select id="viz">`, and the engine's own `ui/visual-axes-panel` records why that is the wrong
 // shape, in the Dev's words: inside a closed box, a control whose reason to exist is to be FOUND by someone
 // who sees poorly is "almost the same as not having moved it". The rows are visible rows now, and the markup
-// that draws them is the engine's `linhasDoEixo` — so this game does not invent a second look for a control
+// that draws them is the engine's `axisRows` — so this game does not invent a second look for a control
 // the rest of the catalogue already has.
 //
 // ⚠️ AND ON 2026-09-12 THEY MOVED AGAIN, FROM THE PAGE INTO A PANEL. The sentence above is about the SHAPE of
@@ -52,16 +52,16 @@
 // comment describes as «esquema de teclas e nada mais». The read-back that would recover it from storage,
 // `lerVisualGuardado`, lives in `render/viz-setters` — the PixiJS-shaped module `createGame` never mounts.
 //
-// So a mounted 🚥 would read `PADRAO` on every click and cycle from the first value for ever: it would
+// So a mounted 🚥 would read `DEFAULT_VISUAL` on every click and cycle from the first value for ever: it would
 // LOOK like it worked once and then stick. 9.0.0 opened the write door and not the read door, which is why
 // the four visible rows below remain this game's own control.
 import {
-  CORRECOES, PADRAO, SIMULACOES, aplicacao, type Correcao, type VisualState,
+  CORRECTIONS, DEFAULT_VISUAL, SIMULATIONS, howItApplies, type Correction, type VisualState,
 } from '@the-inclusionist/engine/render/viz-axes.js';
 import { VIZ_FILTER } from '@the-inclusionist/engine/render/viz-modes.js';
 
 /** The four values of the correction axis, in the engine's order. `tricro` first, and it is a NAME. */
-export const CORRECOES_OFERECIDAS: readonly Correcao[] = CORRECOES;
+export const CORRECOES_OFERECIDAS: readonly Correction[] = CORRECTIONS;
 
 /**
  * The full visual state for a chosen correction.
@@ -72,18 +72,18 @@ export const CORRECOES_OFERECIDAS: readonly Correcao[] = CORRECOES;
  * old `<select>` had to filter them out by hand with `simulatesDisability`; on this axis they cannot appear,
  * because they are a different field.
  */
-export function estadoDa(correcao: Correcao): VisualState {
-  return { ...PADRAO, correcao };
+export function estadoDa(correcao: Correction): VisualState {
+  return { ...DEFAULT_VISUAL, correcao };
 }
 
 /**
  * The CSS `filter` this correction needs — `''` for none.
  *
- * The key comes from the engine (`aplicacao().filtro`) and the declaration of what that key MEANS comes from
+ * The key comes from the engine (`howItApplies().filter`) and the declaration of what that key MEANS comes from
  * the engine too (`VIZ_FILTER`). This game supplies neither; it only puts the result on the element it owns.
  */
-export function filtroCssDe(correcao: Correcao): string {
-  const chave = aplicacao(estadoDa(correcao)).filtro;
+export function filtroCssDe(correcao: Correction): string {
+  const chave = howItApplies(estadoDa(correcao)).filter;
   return chave ? (VIZ_FILTER[chave] ?? '') : '';
 }
 
@@ -91,9 +91,9 @@ export function filtroCssDe(correcao: Correcao): string {
  * Is this a correction this game offers? A boundary guard, for the same reason `actions.ts` has one: the
  * value arrives from a `data-valor` attribute in the DOM, which is a string like any other.
  */
-export function ehCorrecao(x: unknown): x is Correcao {
-  return typeof x === 'string' && (CORRECOES as readonly string[]).includes(x);
+export function ehCorrecao(x: unknown): x is Correction {
+  return typeof x === 'string' && (CORRECTIONS as readonly string[]).includes(x);
 }
 
 /** Every simulation key, so a test can assert that none of them can reach the child through this control. */
-export const SIMULACOES_CONHECIDAS: readonly (string | null)[] = SIMULACOES;
+export const SIMULACOES_CONHECIDAS: readonly (string | null)[] = SIMULATIONS;

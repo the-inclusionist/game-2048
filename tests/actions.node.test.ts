@@ -117,8 +117,8 @@ describe('the keystrokes that are NOT the game’s', () => {
 describe('the rows the remapping panel shows', () => {
   it('[Many] one row per position this game reads, each with a word', () => {
     const linhas = acoesComRotulo(t);
-    expect(linhas.map((l) => l.acao).sort()).toEqual(ACOES_USADAS.slice().sort());
-    for (const l of linhas) expect(l.rotulo, l.acao).toBeTruthy();
+    expect(linhas.map((l) => l.action).sort()).toEqual(ACOES_USADAS.slice().sort());
+    for (const l of linhas) expect(l.label, l.action).toBeTruthy();
   });
 
   it('[Cross-check] ⚠️ the rows are the PRESET read back, not a second list', () => {
@@ -127,7 +127,7 @@ describe('the rows the remapping panel shows', () => {
     // so the pairing cannot come apart without this assertion noticing.
     const preset = criarPreset(t);
     for (const l of acoesComRotulo(t)) {
-      expect(l.rotulo, l.acao).toBe(preset[l.acao]?.label);
+      expect(l.label, l.action).toBe(preset[l.action]?.label);
     }
   });
 
@@ -135,12 +135,12 @@ describe('the rows the remapping panel shows', () => {
     // ADR-0074: `labellerFrom` returns null rather than `action1` so an abstract name cannot reach a person.
     // A row carrying the key instead would be exactly that, in the one screen built to be read aloud.
     const linhas = acoesComRotulo(t);
-    for (const l of linhas) expect(l.rotulo).not.toMatch(/^action\d$/);
-    expect(linhas.some((l) => l.acao === 'action2'), 'a position this game does not use').toBe(false);
+    for (const l of linhas) expect(l.label).not.toMatch(/^action\d$/);
+    expect(linhas.some((l) => l.action === 'action2'), 'a position this game does not use').toBe(false);
   });
 
   it('[Interface] every word still comes from the dictionary', () => {
-    for (const l of acoesComRotulo(t)) expect(l.rotulo).toMatch(/^t:act\./);
+    for (const l of acoesComRotulo(t)) expect(l.label).toMatch(/^t:act\./);
   });
 });
 

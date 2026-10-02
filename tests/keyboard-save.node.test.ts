@@ -33,8 +33,8 @@ describe('what we write instead', () => {
     // crash that made the game unopenable.
     const limpo = semNulos(KB_DEFAULTS);
     expect(temNulo(limpo)).toBe(false);
-    for (const [grupo, valor] of Object.entries(limpo)) {
-      const seats = Array.isArray(valor) ? valor : [valor];
+    for (const [grupo, value] of Object.entries(limpo)) {
+      const seats = Array.isArray(value) ? value : [value];
       for (const e of seats) {
         // ⚠️ THE CAST IS THE EVIDENCE, not a workaround. `migrarEsquema`'s parameter type says every key
         //    list is `readonly string[]`, while `KB_DEFAULTS` ships 42 that are `null` — the type and the
@@ -61,8 +61,8 @@ describe('what we write instead', () => {
   it('[Right] every real binding survives — the fix must not eat a key the child chose', () => {
     const solo = (KB_DEFAULTS as unknown as Record<string, Record<string, unknown>>).solo;
     const limpo = (semNulos(KB_DEFAULTS) as unknown as Record<string, Record<string, unknown>>).solo;
-    for (const [acao, teclas] of Object.entries(solo)) {
-      if (Array.isArray(teclas)) expect(limpo[acao], acao).toEqual(teclas);
+    for (const [action, teclas] of Object.entries(solo)) {
+      if (Array.isArray(teclas)) expect(limpo[action], action).toEqual(teclas);
     }
   });
 

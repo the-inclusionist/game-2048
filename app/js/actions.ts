@@ -60,13 +60,13 @@ export const ACOES_USADAS: readonly Action[] = ['up', 'down', 'left', 'right', A
  * remapping"), so a key bound to something this game does not read falls out here instead of indexing a table
  * with a string nobody checked.
  */
-export function direcaoDe(acao: string | null | undefined): Direction | undefined {
-  return acao && isAction(acao) ? ACAO_PARA_DIRECAO[acao] : undefined;
+export function direcaoDe(action: string | null | undefined): Direction | undefined {
+  return action && isAction(action) ? ACAO_PARA_DIRECAO[action] : undefined;
 }
 
 /** Is this the sonar's position? Same boundary, same reason — one place that knows the answer. */
-export function ehSonar(acao: string | null | undefined): boolean {
-  return acao === ACAO_DO_SONAR;
+export function ehSonar(action: string | null | undefined): boolean {
+  return action === ACAO_DO_SONAR;
 }
 
 /** The modifier flags of a `KeyboardEvent`, and nothing else — so this stays testable without a keyboard. */
@@ -120,7 +120,7 @@ export function criarPreset(t: (chave: string) => string): ActionPreset {
 /**
  * The rows the engine's keyboard-remap panel shows: one per position this game reads, with its word.
  *
- * ⚠️ IT IS THE PRESET, READ BACK — not a second list. `ui/settings-controls` asks for `{acao, rotulo}` and
+ * ⚠️ IT IS THE PRESET, READ BACK — not a second list. `ui/settings-controls` asks for `{action, label}` and
  * `createGame` asks for an `ActionPreset`; building the two independently would be the duplicated fact that
  * drifts, and the drift would show as a remapping screen naming an action the game does not read, or reading
  * one it does not name. `labellerFrom` is the engine's own reader, so the pairing cannot come apart.
@@ -129,10 +129,10 @@ export function criarPreset(t: (chave: string) => string): ActionPreset {
  * `action1` in front of a child. Those are dropped rather than filled in with the key: a row with no name is
  * a button a screen reader reads as nothing, and this list exists precisely to be read aloud.
  */
-export function acoesComRotulo(t: (chave: string) => string): readonly { acao: Action; rotulo: string }[] {
+export function acoesComRotulo(t: (chave: string) => string): readonly { action: Action; label: string }[] {
   const preset = criarPreset(t);
-  const rotulo = labellerFrom(preset);
+  const label = labellerFrom(preset);
   return presetActions(preset)
-    .map((acao) => ({ acao, rotulo: rotulo(acao) }))
-    .filter((r): r is { acao: Action; rotulo: string } => typeof r.rotulo === 'string' && r.rotulo.length > 0);
+    .map((action) => ({ action, label: label(action) }))
+    .filter((r): r is { action: Action; label: string } => typeof r.label === 'string' && r.label.length > 0);
 }

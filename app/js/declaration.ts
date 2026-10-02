@@ -114,7 +114,7 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
     //      the accessibility bar entirely, instead of offering her a switch that does nothing. That dead
     //      button is what ADR-0106 §5 forbids, and it is worse than a missing one: she turns on the very
     //      adjustment she depends on and learns that it is broken.
-    seguraTeclas(): boolean {
+    holdsKeys(): boolean {
       return false;
     },
 

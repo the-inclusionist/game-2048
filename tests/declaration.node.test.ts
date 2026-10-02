@@ -89,7 +89,7 @@ describe('the declaration is well formed in the engine’s own eyes', () => {
     // there is nothing to latch, so the engine leaves the icon out of the accessibility bar entirely instead
     // of offering her a switch that does nothing — the dead button ADR-0106 §5 forbids, and the worse of the
     // two failures: she turns on the adjustment she depends on and learns it is broken.
-    expect(observar(VAZIO).seguraTeclas()).toBe(false);
+    expect(observar(VAZIO).holdsKeys()).toBe(false);
   });
 
   it('[Interface] both new answers are FUNCTIONS, not values, because a value goes stale in silence', () => {
@@ -97,7 +97,7 @@ describe('the declaration is well formed in the engine’s own eyes', () => {
     // change, which is exactly when the shape looks like ceremony and is not — the type is the contract's.
     const d = observar(VAZIO);
     expect(typeof d.holdsAtOnce).toBe('function');
-    expect(typeof d.seguraTeclas).toBe('function');
+    expect(typeof d.holdsKeys).toBe('function');
   });
 });
 

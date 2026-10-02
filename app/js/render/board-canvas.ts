@@ -2,7 +2,7 @@
 // THE PICTURE OF THE BOARD — what sits UNDER the numbers, and what carries `aria-hidden`.
 //
 // ========================= IT DOES NOT IMPORT PIXI, AND THAT IS ADR-0035 IN USE =========================
-// It receives a `Desenho` — the renderer port the engine already defines in `render/port` — instead of
+// It receives a `Drawing` — the renderer port the engine already defines in `render/port` — instead of
 // importing PixiJS. It is the same bet ADR-0035 made for the engine: the renderer is replaceable because no
 // module names it. The immediate gain is another one and it is bigger: with the port, this function runs in
 // the `node` project against a fake drawing, and THE BOARD CAN BE TESTED WITHOUT A BROWSER.
@@ -11,7 +11,7 @@
 // No PNG. Every tile is a rectangle in a computed palette — the project's "procedural art" rule, which here
 // also settles the licence question by erasing it: there is no third-party asset to license, and no artist's
 // rights under Lei nº 9.610/1998 to respect, because there is no drawing.
-import type { Desenho } from '@the-inclusionist/engine/render/port.js';
+import type { Drawing } from '@the-inclusionist/engine/render/port.js';
 import type { Role } from '@the-inclusionist/engine/core/contract.js';
 
 import type { Peca } from '../animation.ts';
@@ -46,7 +46,7 @@ export interface PinturaOpts {
  * The two layers move together by CONSTRUCTION, not by discipline: they receive the same coordinates, from the
  * same call to `pecasNoInstante(t)`, inside the same frame.
  */
-export function pintarTabuleiro(g: Desenho, o: PinturaOpts): void {
+export function pintarTabuleiro(g: Drawing, o: PinturaOpts): void {
   g.clear();
 
   g.beginFill(FUNDO_DA_TELA).drawRect(0, 0, LOGICAL_W, LOGICAL_H).endFill();

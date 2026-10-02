@@ -101,7 +101,7 @@ describe('the filter each choice applies', () => {
   });
 
   it('[Cross-check] the filter is the ENGINE’s declaration, not a string this game invented', () => {
-    // The key comes from `aplicacao().filtro` and its meaning from `VIZ_FILTER`. If this game wrote its own
+    // The key comes from `howItApplies().filter` and its meaning from `VIZ_FILTER`. If this game wrote its own
     // matrix, it would drift from the six SVG filters `createGame` installs into `#cvd`.
     expect(filtroCssDe('protan')).toContain('url(');
   });
@@ -113,7 +113,7 @@ describe('the value arriving from the DOM is data, not a promise', () => {
   });
 
   it('[Exception] ⚠️ a SIMULATION key is refused, even though it is a real engine value', () => {
-    // This is the one that matters: `data-valor` is an attribute, and an attribute is a string anybody can
+    // This is the one that matters: `data-value` is an attribute, and an attribute is a string anybody can
     // write. The guard is what stops "blind" reaching `estadoDa` and blanking the screen of the child who
     // came here to see it better.
     expect(ehCorrecao('sim-protan')).toBe(false);
@@ -158,7 +158,7 @@ describe('the colour-correction panel opens, rather than occupying the page', ()
     //    same as not having moved it". That was written about a `<select>`. What keeps it answered here is
     //    that the opener is a button with WORDS in the same row as «Alto contraste» — so this asserts the
     //    label, not merely the button.
-    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="eixo\.correcao\.titulo"/);
+    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="axis\.correcao\.titulo"/);
     const tools = html.slice(html.indexOf('class="p2-tools"'), html.indexOf('</div>', html.indexOf('class="p2-tools"')));
     expect(tools, 'beside the other three, not off on its own').toContain('id="open-viz"');
   });

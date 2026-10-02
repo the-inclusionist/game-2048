@@ -39,7 +39,7 @@ function montarShell(): GameInstance {
     topology: () => ({ kind: 'hotspots' as const, order: ['vazio'] }),
     world: () => ({ kind: 'none' as const }),
     holdsAtOnce: () => 1,
-    seguraTeclas: () => false,
+    holdsKeys: () => false,
     tick: 'player' as const,
     roleAt: () => 'free' as const,
     nameAt: () => null,

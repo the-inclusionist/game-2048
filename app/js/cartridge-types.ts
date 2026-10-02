@@ -2,7 +2,7 @@
 // THE CARTRIDGE CONTRACT, as this repository implements it — ADR-0139, with the holes it leaves marked.
 //
 // ========================= THESE ARE NOT THE ENGINE'S TYPES, AND THAT IS THE POINT =========================
-// The engine publishes `CreateGameOptions` and, since 9.0.0, `GanchosDoCartucho` — the game-owned half as a
+// The engine publishes `CreateGameOptions` and, since 9.0.0, `CartridgeHooks` — the game-owned half as a
 // `Pick<>` of its own options. What it does not publish is `GameCtx`, `GameInstance` or `Cartridge`: those
 // live in `the-inclusionist-site/docs/cartridge-contract.md` as a derivation, and in ADR-0139 §2 as a sketch.
 // So they are written here, deliberately narrow, and every departure from the record is marked.
@@ -14,7 +14,7 @@
 import type { Engine } from '@the-inclusionist/engine';
 import type { Rng } from '@the-inclusionist/engine/core/rng.js';
 import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
-import type { GanchosDoCartucho } from '@the-inclusionist/engine';
+import type { CartridgeHooks } from '@the-inclusionist/engine';
 
 /** What a shell hands a cartridge. Five members, read off `cartridge-contract.md`. */
 export interface GameCtx {
@@ -71,8 +71,9 @@ export interface GameInstance {
   readonly hooks: CartridgeHooks;
 }
 
-/** The game-owned half of `CreateGameOptions`. The engine names this type as of 9.0.0, so it is not redefined. */
-export type CartridgeHooks = GanchosDoCartucho;
+// The game-owned half of `CreateGameOptions`. The engine names this type `CartridgeHooks` directly as of
+// 10.0.0 (English rename, note CN) — before that it was `GanchosDoCartucho` and this file aliased it to the
+// current English name; the engine took the name over, so the import at the top is the whole re-export.
 
 /** What the package exports. `create` is the only thing that runs. */
 export interface Cartridge {
