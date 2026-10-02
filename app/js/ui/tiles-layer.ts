@@ -16,8 +16,9 @@
 // number now. What changed is only WHO draws the glyph.
 //
 // ⚠️ AND THE NUMBER IS STILL REAL TEXT IN THE DOM, which is what pillar 2 requires. It is selectable, it grows
-// with the engine's typography panel, and it is the same data VLibras would translate. Painting it on the
-// canvas so it could be animated would have been the easy way out and the wrong one.
+// with the engine's typography panel, and it is the same data the engine's Libras avatar player signs
+// (`ui/libras-avatar-player` since 11.0.0, note DO). Painting it on the canvas so it could be animated would
+// have been the easy way out and the wrong one.
 import { SIZE } from '../board.ts';
 import type { Peca } from '../animation.ts';
 import { BOARD, BOARD_X, BOARD_Y, TILE, fontFor } from '../geometry.ts';

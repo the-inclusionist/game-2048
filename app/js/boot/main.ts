@@ -12,7 +12,9 @@
 // The round's state, the PixiJS surface, the DOM grid over it, and the mapping from key to move. That is all.
 // Announcements go through `motor.say`/`motor.alert` since engine 11.0.0 (note CY). `core/a11y-sr`'s
 // module-level `srSay`/`srAlert` are gone: the root owns the one announcer, every engine module receives
-// it, and a second one would write to the same regions and carry none of this root's Libras mirror.
+// it, and a second one would write to the same regions as the root's. 📌 Note DG retired the «Libras
+// mirror» the previous versions carried: the deaf-mode interpreter signs what the sonar finds, not an
+// announcement queue, so the mirror-to-signing hop this comment used to describe no longer exists.
 import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
 import { createLayout } from '@the-inclusionist/engine/ui/layout.js';
 import { readStoredScene } from '@the-inclusionist/engine/ui/motion-scene.js';

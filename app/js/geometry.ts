@@ -8,8 +8,9 @@
 //   · the DOM draws the NUMBERS, and it is the one carrying `role="grid"`, focus and `aria-label`.
 //
 // Pillar 2 of ADR-0010 says "text always in the DOM". A digit painted on the canvas disappears for the screen
-// reader and for VLibras, which translates TEXT — so the accessible layer is not a caption of the drawing:
-// it IS the board, and the canvas is its illustration. `aria-hidden` on the canvas says so to the machine.
+// reader and for the Libras avatar player (`ui/libras-avatar-player` since engine 11.0.0, note DO), which
+// signs TEXT — so the accessible layer is not a caption of the drawing: it IS the board, and the canvas is
+// its illustration. `aria-hidden` on the canvas says so to the machine.
 //
 // ========================= WHAT KEEPS THE TWO ALIGNED =========================
 // This file. Both read from here, in LOGICAL PIXELS of the 320×180 grid, and CSS converts one logical pixel

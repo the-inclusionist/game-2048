@@ -213,7 +213,7 @@ describe('H9 — the default export has what `inclusionist-check-cartridge` read
   it('[Zero] ⚠️ `isNavigable` returns true — this game draws no menu of its own', () => {
     // `memory/isnavigable-entrega-o-teclado.md`: `isNavigable: false` would make the engine stop routing the
     // keyboard here. Measured against the specific defect that memory records.
-    expect(cartridge.hooks.isNavigable?.(0)).toBe(true);
+    expect(cartridge.hooks.isNavigable?.()).toBe(true);
   });
 });
 

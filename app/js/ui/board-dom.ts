@@ -2,8 +2,9 @@
 // THE ACCESSIBLE GRID — and it is not a caption of the drawing: it IS the board.
 //
 // ========================= PILLAR 2 DECIDES THE ARCHITECTURE, NOT JUST THE FINISH =========================
-// "Text always in the DOM". A digit painted on the canvas disappears for the screen reader and for VLibras,
-// which translates TEXT. So there are THREE layers, each with an owner, and the division matters:
+// "Text always in the DOM". A digit painted on the canvas disappears for the screen reader and for the
+// Libras avatar player (`ui/libras-avatar-player`, since engine 11.0.0 note DO), which signs TEXT. So there
+// are THREE layers, each with an owner, and the division matters:
 //
 //   · this module — the 16 SQUARES: `role="grid"`, focus, `aria-label`. Fixed position, and this is the board
 //     for whoever uses a screen reader;

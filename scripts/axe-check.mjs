@@ -14,9 +14,11 @@
 // where the board does not exist yet and return a green that looked at nothing.
 //
 // ========================= WHAT IS NOT EXCLUDED, AND IT IS WORTH SAYING =========================
-// Nothing. The engine excludes the VLibras widget because it does not control a third party's markup; this
-// game does not load the widget, so there is not one exclusion here — and a gate with no exceptions is the
-// only one that does not have to be read suspiciously.
+// Nothing — and that stays true in 11.0.0 for a different reason. Until 10.x the engine excluded the
+// third-party VLibras widget because it did not control that markup; in 11.0.0 (ADR-0234, note DO) that
+// widget left the engine entirely and the free `ui/libras-avatar-player` took its place. Either way this
+// game loads no third-party widget, so there is not one exclusion here — and a gate with no exceptions is
+// the only one that does not have to be read suspiciously.
 import { chromium } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 
