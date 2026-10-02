@@ -10,7 +10,9 @@
 //
 // ========================= WHAT THIS FILE DOES THAT IS THIS GAME'S =========================
 // The round's state, the PixiJS surface, the DOM grid over it, and the mapping from key to move. That is all.
-import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
+// Announcements go through `motor.say`/`motor.alert` since engine 11.0.0 (note CY). `core/a11y-sr`'s
+// module-level `srSay`/`srAlert` are gone: the root owns the one announcer, every engine module receives
+// it, and a second one would write to the same regions and carry none of this root's Libras mirror.
 import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
 import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
 import { readStoredScene } from '@the-inclusionist/engine/ui/motion-scene.js';
@@ -25,7 +27,7 @@ import {
 } from '../animation.ts';
 import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
 import type { GameCtx, GameInstance } from '../cartridge-types.ts';
-import { criarDeclaracao } from '../declaration.ts';
+import { criarDeclaracao, RESPOSTAS_DAS_ACOMODACOES } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
 import { LOGICAL_H, LOGICAL_W } from '../geometry.ts';
 import { pintarTabuleiro } from '../render/board-canvas.ts';
@@ -84,10 +86,15 @@ const RUMO: Record<Direction, 'n' | 'e' | 's' | 'w'> = { left: 'w', right: 'e', 
  * picks one. Either way nothing calls `reseed` again — see `novaRodada`.
  */
 export function criarJogo(ctx: GameCtx): GameInstance {
+  const motor = ctx.engine;
   const região = ctx.region;
   const doc = região.ownerDocument;
   const win = doc.defaultView ?? window;
-  const t = ctx.t;
+  // The announcers and the translator come off the engine since 11.0.0 — `core/a11y-sr` and `core/i18n` no
+  // longer carry module-level state. The two short names are kept for readability where this file calls them.
+  const t = motor.t;
+  const srSay = (text: string) => motor.say(text);
+  const srAlert = (text: string) => motor.alert(text);
 
   /* ===================== THE ROUND'S STATE, OWNED BY THIS INSTANCE =====================
    *
@@ -151,7 +158,6 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   //    `src/index.ts`. The half that describes the PAGE — `host`, `declines`, `baixarPesados` — moved to the
   //    shell, `src/standalone.ts`, with its reasoning intact. The split is read off `CreateGameOptions` by
   //    asking whether a page could answer the field without knowing which game is running.
-  const motor = ctx.engine;
   if (motor.problems.length) console.warn('[2048] host gaps:', motor.problems);
 
   // 4. THE CANVAS, under the numbers and HIDDEN FROM THE ACCESSIBILITY TREE. It is the illustration; the real
@@ -393,11 +399,12 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     //    pointer — the very thing spec D14 forbids. The shell mounts it with `engine.mount` (ADR-0142).
     declaration,
 
-    // 📌 AND THE HOOKS TRAVEL WITH IT, for a second reason: `preset` carries the WORDS a child reads on the
-    //    remapping screen, and `criarPreset` resolves them through `t` — which only answers once the shell has
-    //    registered the dictionaries. Built at module scope it would resolve to raw keys, and `act.sonar` in
-    //    front of a child is what ADR-0074 calls a defect in as many words.
-    hooks: { preset: criarPreset(t), isNavigable: () => true },
+    // 📌 AND THE HOOKS TRAVEL WITH IT, for a second reason worth saying out loud since 11.0.0 (ADR-0232 D3):
+    //    `preset` carries the KEYS of this game's words. The engine's root resolves them against its own
+    //    `dictionaries` at every drawing, so a `setLocale` changes every row at once and the preset itself
+    //    is immutable. Measured on 10.x: a preset built with a resolved `t` at boot stayed in the boot
+    //    language forever — «Acima» after `setLocale('en')`. H2 moved us to keys.
+    hooks: { preset: criarPreset(), isNavigable: () => true, accommodations: RESPOSTAS_DAS_ACOMODACOES },
 
     /**
      * ONE TICK OF THE HOST'S LOOP.

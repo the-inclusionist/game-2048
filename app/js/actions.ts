@@ -16,7 +16,7 @@
 // nobody can accidentally show it. A position we read but do not name would appear in the remapping screen as
 // a blank line — which, to a child using a screen reader, is a button that exists and has no name.
 import {
-  isAction, labellerFrom, presetActions, type Action, type ActionPreset,
+  isAction, labellerFrom, presetActions, wordsOf, type Action, type ActionPreset,
 } from '@the-inclusionist/engine/core/actions.js';
 import type { Direction } from './board.ts';
 
@@ -98,22 +98,25 @@ export function ehAtalhoDoSistema(e: Modificadores): boolean {
 }
 
 /**
- * This game's vocabulary, for the engine to SHOW when it has to name a key.
+ * This game's vocabulary, as KEYS of its own dictionaries.
  *
  * PARTIAL on purpose, and the contract says why: requiring all fourteen positions would force a quiz to
  * invent a name for a trigger it does not have, "and an invented name ends up on a remapping screen in front
  * of a child".
  *
- * `t` is INJECTED rather than imported, for the same reason it is injected into `declaration.ts`: a test can
- * pass a `t` that echoes the key and measure WHICH key was asked for, without asserting on a translation.
+ * ⚠️ KEYS AND NOT WORDS, SINCE ENGINE 11.0.0 (ADR-0232 D3, erratum of 2026-09-25). This used to take `t` and
+ * return resolved words — the engine `wordsOf`ed the preset itself and the labels became literals in the
+ * boot language. Measured by the engine: a preset built with `t` in Portuguese still read «Acima» after
+ * `setLocale('en')`. A key is resolved by the root's translator each time the engine draws or speaks it, so
+ * one `setLocale` changes every word at once (ADR-0225), and the game never needs to know how (ADR-0216).
  */
-export function criarPreset(t: (chave: string) => string): ActionPreset {
+export function criarPreset(): ActionPreset {
   return {
-    up: { label: t('act.up') },
-    down: { label: t('act.down') },
-    left: { label: t('act.left') },
-    right: { label: t('act.right') },
-    [ACAO_DO_SONAR]: { label: t('act.sonar'), hint: t('act.sonar.hint') },
+    up: { labelKey: 'act.up' },
+    down: { labelKey: 'act.down' },
+    left: { labelKey: 'act.left' },
+    right: { labelKey: 'act.right' },
+    [ACAO_DO_SONAR]: { labelKey: 'act.sonar', hintKey: 'act.sonar.hint' },
   };
 }
 
@@ -123,15 +126,19 @@ export function criarPreset(t: (chave: string) => string): ActionPreset {
  * ⚠️ IT IS THE PRESET, READ BACK — not a second list. `ui/settings-controls` asks for `{action, label}` and
  * `createGame` asks for an `ActionPreset`; building the two independently would be the duplicated fact that
  * drifts, and the drift would show as a remapping screen naming an action the game does not read, or reading
- * one it does not name. `labellerFrom` is the engine's own reader, so the pairing cannot come apart.
+ * one it does not name. `wordsOf` + `labellerFrom` are the engine's own readers, so the pairing cannot come
+ * apart — the first resolves the preset's keys through the live translator, the second turns the result into
+ * a per-action label function.
  *
- * 📌 `labellerFrom` returns `null` for a position the preset does not name, which is ADR-0074 refusing to put
- * `action1` in front of a child. Those are dropped rather than filled in with the key: a row with no name is
- * a button a screen reader reads as nothing, and this list exists precisely to be read aloud.
+ * 📌 `labellerFrom` returns `null` for a position whose word the translator could not resolve, which is
+ * ADR-0074 refusing to put `action1` in front of a child. Those are dropped rather than filled in with the
+ * key: a row with no name is a button a screen reader reads as nothing, and this list exists precisely to be
+ * read aloud. The caller passes `engine.word` — `string | null`, exactly what `wordsOf` asks for.
  */
-export function acoesComRotulo(t: (chave: string) => string): readonly { action: Action; label: string }[] {
-  const preset = criarPreset(t);
-  const label = labellerFrom(preset);
+export function acoesComRotulo(word: (chave: string) => string | null): readonly { action: Action; label: string }[] {
+  const preset = criarPreset();
+  const words = wordsOf(preset, word);
+  const label = labellerFrom(words);
   return presetActions(preset)
     .map((action) => ({ action, label: label(action) }))
     .filter((r): r is { action: Action; label: string } => typeof r.label === 'string' && r.label.length > 0);

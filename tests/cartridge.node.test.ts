@@ -152,16 +152,19 @@ describe('CI builds BOTH targets — ADR-0140 calls this gate "not optional"', (
 });
 
 describe('what the cartridge exports', () => {
-  it('[Interface] the three languages, ready for a shell to register', () => {
-    expect(Object.keys(cartridge.dicts).sort()).toEqual(['en', 'es', 'pt']);
-    for (const [codigo, dict] of Object.entries(cartridge.dicts)) {
+  it('[Interface] the three languages, named for `CreateGameOptions.dictionaries`', () => {
+    // Renamed from `dicts` to `dictionaries` in H2 (engine 11.0.0, note DN): the shell hands this straight to
+    // `createGame({ dictionaries })` and the root's translator registers them before any text.
+    expect(Object.keys(cartridge.dictionaries).sort()).toEqual(['en', 'es', 'pt']);
+    for (const [codigo, dict] of Object.entries(cartridge.dictionaries)) {
       expect(Object.keys(dict).length, codigo).toBeGreaterThan(20);
     }
   });
 
-  it('[Zero] ⚠️ and it does NOT register them — a cartridge never writes to the shared table', () => {
-    // Two cartridges each registering would be two writes to one table in an order nobody controls, and the
-    // loser's strings would simply be missing with nothing said.
+  it('[Zero] ⚠️ and it does NOT call registerDict — the module-level door is gone in 11.0.0', () => {
+    // `core/i18n.registerDict` was removed in 11.0.0 (note DN); a cartridge reaching for it would import
+    // nothing. The dictionaries ride through the engine options instead, and `src/index.ts` must not reach
+    // for the removed symbol.
     const entrada = arquivos.find((a) => a.nome === 'src/index.ts')!.texto;
     expect(entrada).not.toMatch(/registerDict\s*\(/);
   });

@@ -79,8 +79,13 @@ export interface GameInstance {
 export interface Cartridge {
   /** Matches the repository and the package name (ADR-0082 §1). */
   readonly slug: string;
-  /** Registered by whichever shell loads this cartridge; a cartridge never registers its own. */
-  readonly dicts: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /**
+   * Handed to `createGame({ dictionaries })` by whichever shell loads this cartridge.
+   *
+   * ⚠️ RENAMED FROM `dicts` IN H2 to match engine 11.0.0's `CreateGameOptions.dictionaries` (note DN). The
+   * shape — language code → key → word — is exactly what the engine expects.
+   */
+  readonly dictionaries: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /**
    * Nothing runs until this is called. No side effects at module scope — spec D14.
    *

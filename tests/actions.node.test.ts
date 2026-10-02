@@ -26,8 +26,14 @@ import {
 } from '../app/js/actions.ts';
 import pt from '../app/js/i18n/pt.ts';
 
-/** A `t` that echoes the key, so the test measures WHICH key was asked for and never a translation. */
-const t = (k: string) => `t:${k}`;
+/**
+ * A `word` that echoes the key, so the test measures WHICH key the engine's `wordsOf` asked for — never a
+ * translation. Returns `string | null`, which is the shape `wordsOf` wants (null is «unknown», dropped).
+ *
+ * ⚠️ RETURNS A STRING FOR EVERY KEY, including unknown ones. The preset we build only names positions this
+ * game uses, so no «unknown» ever appears here — the null branch is proven by the dedicated test below.
+ */
+const word = (k: string): string | null => `word:${k}`;
 
 describe('the positions this game reads', () => {
   it('[Interface] every one of them is an action the ENGINE knows', () => {
@@ -116,66 +122,75 @@ describe('the keystrokes that are NOT the game’s', () => {
 
 describe('the rows the remapping panel shows', () => {
   it('[Many] one row per position this game reads, each with a word', () => {
-    const linhas = acoesComRotulo(t);
+    const linhas = acoesComRotulo(word);
     expect(linhas.map((l) => l.action).sort()).toEqual(ACOES_USADAS.slice().sort());
     for (const l of linhas) expect(l.label, l.action).toBeTruthy();
   });
 
   it('[Cross-check] ⚠️ the rows are the PRESET read back, not a second list', () => {
     // Two independently-built lists would drift, and the drift shows as a remapping screen naming an action
-    // the game does not read — or reading one it does not name. `labellerFrom` is the engine's own reader,
-    // so the pairing cannot come apart without this assertion noticing.
-    const preset = criarPreset(t);
-    for (const l of acoesComRotulo(t)) {
-      expect(l.label, l.action).toBe(preset[l.action]?.label);
+    // the game does not read — or reading one it does not name. `wordsOf` + `labellerFrom` are the engine's
+    // own readers, so the pairing cannot come apart without this assertion noticing. The rows carry the
+    // RESOLVED word; the preset carries the KEY — hence the double echo in the comparison.
+    const preset = criarPreset();
+    for (const l of acoesComRotulo(word)) {
+      const chaveDoRotulo = preset[l.action]?.labelKey;
+      expect(chaveDoRotulo).toBeTruthy();
+      expect(l.label, l.action).toBe(`word:${chaveDoRotulo}`);
     }
   });
 
-  it('[Zero] a position with no word is DROPPED, never filled in with its key', () => {
+  it('[Zero] a position whose word is unknown is DROPPED, never filled in with its key', () => {
     // ADR-0074: `labellerFrom` returns null rather than `action1` so an abstract name cannot reach a person.
-    // A row carrying the key instead would be exactly that, in the one screen built to be read aloud.
-    const linhas = acoesComRotulo(t);
-    for (const l of linhas) expect(l.label).not.toMatch(/^action\d$/);
-    expect(linhas.some((l) => l.action === 'action2'), 'a position this game does not use').toBe(false);
+    // Here the word function says null for every key — simulating a dictionary that holds none of them —
+    // and the result must be EMPTY, not a list of raw keys.
+    const semPalavras = acoesComRotulo((_k) => null);
+    expect(semPalavras).toEqual([]);
+    // And the one row the preset does NOT declare must not appear even when every known key resolves.
+    expect(acoesComRotulo(word).some((l) => l.action === 'action2'),
+      'a position this game does not use').toBe(false);
   });
 
   it('[Interface] every word still comes from the dictionary', () => {
-    for (const l of acoesComRotulo(t)) expect(l.label).toMatch(/^t:act\./);
+    for (const l of acoesComRotulo(word)) expect(l.label).toMatch(/^word:act\./);
   });
 });
 
 describe('the vocabulary shown to a child', () => {
   it('[Cross-check] the preset is well formed by the ENGINE’s own validator', () => {
-    // `presetProblems` catches the silent one: an EMPTY label breaks nothing, warns nobody, and leaves the
+    // `presetProblems` catches the silent one: an EMPTY key breaks nothing, warns nobody, and leaves the
     // remapping screen with a mute line.
-    expect(presetProblems(criarPreset(t))).toEqual([]);
+    expect(presetProblems(criarPreset())).toEqual([]);
   });
 
   it('[Right] it names EXACTLY the positions the game reads — no more, no fewer', () => {
     // Fewer is a nameless button in front of a child (ADR-0074). More is a name invented for a control this
     // game does not have, which the contract says "ends up on a remapping screen in front of a child".
-    expect(presetActions(criarPreset(t)).slice().sort()).toEqual(ACOES_USADAS.slice().sort());
+    expect(presetActions(criarPreset()).slice().sort()).toEqual(ACOES_USADAS.slice().sort());
   });
 
-  it('[Interface] every word comes from the DICTIONARY, so it is not Portuguese for everybody', () => {
-    const p = criarPreset(t);
-    expect(p.up?.label).toBe('t:act.up');
-    expect(p[ACAO_DO_SONAR]?.label).toBe('t:act.sonar');
+  it('[Interface] every entry is a KEY, since 11.0.0', () => {
+    // The preset carries `labelKey`/`hintKey` — not the resolved word. The engine's root translates them at
+    // every drawing, so a `setLocale` changes every surface at once.
+    const p = criarPreset();
+    expect(p.up?.labelKey).toBe('act.up');
+    expect(p[ACAO_DO_SONAR]?.labelKey).toBe('act.sonar');
   });
 
   it('[Cross-check] and every key it asks for exists in the dictionary', () => {
-    // The pairing that no type checks: `criarPreset` asks `t()` for a string, and `t()` answers the key back
-    // when the key is missing. Without this, a renamed key would ship as raw `act.sonar` on screen.
-    const pedidas = [
-      ...Object.values(criarPreset((k) => k)).map((w) => w?.label),
-      ...Object.values(criarPreset((k) => k)).map((w) => w?.hint),
+    // The pairing that no type checks: `criarPreset` asks for keys, and those keys must be in the game's
+    // dictionaries, or the engine will leave the position unnamed and `problems` will say so.
+    const p = criarPreset();
+    const chaves = [
+      ...Object.values(p).map((e) => e?.labelKey),
+      ...Object.values(p).map((e) => e?.hintKey),
     ].filter((s): s is string => typeof s === 'string');
-    for (const k of pedidas) expect(Object.keys(pt), k).toContain(k);
+    for (const k of chaves) expect(Object.keys(pt), k).toContain(k);
   });
 
-  it('[One] the sonar carries a HINT, because it is the one position nobody can guess', () => {
+  it('[One] the sonar carries a HINT key, because it is the one position nobody can guess', () => {
     // A push is self-evident from the arrow; "where is a merge" is not. The hint is the sentence the
     // remapping screen shows when the child asks what the button does.
-    expect(criarPreset(t)[ACAO_DO_SONAR]?.hint).toBe('t:act.sonar.hint');
+    expect(criarPreset()[ACAO_DO_SONAR]?.hintKey).toBe('act.sonar.hint');
   });
 });

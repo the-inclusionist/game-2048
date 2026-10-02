@@ -14,13 +14,13 @@
 //     outside it is a defect with an address" — and three things escaped it here: a `resize` listener on the
 //     WINDOW, a `visibilitychange` listener on the DOCUMENT, and a `__incl2048` global.
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createGame } from '@the-inclusionist/engine';
+import { createGame, type Engine } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
-import { registerDict, t } from '@the-inclusionist/engine/core/i18n.js';
-import { cartridge } from '../src/index.ts';
+import { cartridge, accommodations } from '../src/index.ts';
 import type { GameInstance } from '../app/js/cartridge-types.ts';
 
-for (const [codigo, dict] of Object.entries(cartridge.dicts)) registerDict(codigo, dict);
+// 📏 THE DICTIONARIES RIDE INTO THE ENGINE through `CreateGameOptions.dictionaries` since 11.0.0 (ADR-0232
+// D3, note DN). The old module-level `registerDict` is gone, and so is the module-level `t`.
 
 /**
  * A SHELL, in eight lines — which is the claim ADR-0140 §2 makes ("the shell is roughly thirty lines") put
@@ -59,19 +59,25 @@ function montarShell(): GameInstance {
       a11yBarHost: document.querySelector('#p2-a11y'),
       pauseHost: document.querySelector('#game-region'),
     },
-    declines: { semAssistenteDePad: true, semAtorDePausa: true, semVozNeural: true },
-    baixarPesados: false,
+    declines: { noPauseActor: true, noNeuralVoice: true },
+    downloadHeavy: false,
+    dictionaries: cartridge.dictionaries,
+    accommodations,
   });
   const jogo = cartridge.create({
     engine: motor,
     region: document.querySelector<HTMLElement>('#game-region')!,
     rng: createRng(20260911),
-    t,
+    t: motor.t,
     params: new URLSearchParams(),
   });
   motor.mount(jogo.declaration, jogo.hooks);
+  motorAtivo = motor;
   return jogo;
 }
+
+/** Kept around for the gate: a single root per test, exposed so an assertion can call `motor.setLocale`. */
+let motorAtivo: Engine | null = null;
 
 /** The markup the engine and this game require. Built fresh per test, as a shell would build it. */
 function montarCasca(): void {
@@ -201,5 +207,37 @@ describe('teardown leaves nothing', () => {
     const jogo = montarShell();
     jogo.teardown();
     expect(() => jogo.teardown()).not.toThrow();
+  });
+});
+
+describe('H2 — a `setLocale` reaches every drawn label at once', () => {
+  // 🔴 THE WHOLE REASON KEYS REPLACED WORDS in 11.0.0 (ADR-0232 D3, erratum of 2026-09-25). Against 10.x,
+  //    a preset built with `t` in Portuguese stayed in Portuguese forever: `setLocale('en')` loaded the new
+  //    dictionary, and nothing read it. The engine's own measurement showed «Acima» after an English switch.
+  //    Keys are resolved by the root's translator at every drawing, so one switch moves every surface at
+  //    once. This gate reads one of ours — the accessible-grid cells — through the switch.
+  //
+  // ⚠️ IT DOES NOT ASSERT ON A SPECIFIC WORD per language, because our dictionaries are what the gate reads
+  //    FROM. The property it holds is INEQUALITY: the Portuguese sentence and the English sentence for the
+  //    same cell MUST differ, or the preset's resolution did not re-run after the switch. The two sentences
+  //    being specific strings is a dictionary question, not a translation-plumbing one.
+  it('[Right] 🔴 a cell\'s accessible label changes language with `motor.setLocale`', async () => {
+    const jogo = montarShell();
+    try {
+      const umaCelula = () => regiao().querySelector('[role="gridcell"][aria-label]')?.getAttribute('aria-label') ?? '';
+      await motorAtivo!.setLocale('pt');
+      const emPt = umaCelula();
+      expect(emPt.length, 'the grid has at least one labelled cell').toBeGreaterThan(0);
+
+      await motorAtivo!.setLocale('en');
+      const emEn = umaCelula();
+      expect(emEn, 'the label moved languages — the key resolved against the new dictionary')
+        .not.toEqual(emPt);
+
+      await motorAtivo!.setLocale('pt');
+      expect(umaCelula(), 'and switching back returns the Portuguese sentence').toEqual(emPt);
+    } finally {
+      jogo.teardown();
+    }
   });
 });

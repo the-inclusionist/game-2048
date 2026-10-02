@@ -20,6 +20,7 @@
 // This module keeps neither board nor cursor: it OBSERVES. The fields are functions because the answer changes
 // with every move, and the owner of the state is whoever plays. Keeping a copy here would create the second
 // version of the truth that drifts on the first `undo`.
+import type { AccommodationAnswers } from '@the-inclusionist/engine/core/accommodations.js';
 import type {
   Focus, GameDeclaration, Heading, Objective, Role, Speakable, Spot, Topology, WorldScope,
 } from '@the-inclusionist/engine/core/contract.js';
@@ -179,3 +180,38 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
     },
   };
 }
+
+/**
+ * THIS GAME'S ANSWERS FOR THE EIGHTEEN GAME_KEYED ACCOMMODATIONS (ADR-0153 erratum, note CN).
+ *
+ * ⚠️ EVERY ONE IS `false` ON PURPOSE. The GAME_KEYED list — camera sway, easy mode, wheelchair mode,
+ * detection leniency, intensity, hints, reduced character motion, cane spacing, text pace, lexical
+ * difficulty, word highlight, piece sets, distinguishable suits, timing window, aim assist, repeated input,
+ * owner colors, contrast outlines — is platform/quiz vocabulary. 2048 has no camera, no character to animate,
+ * no text on the board, no cards, no timing, no aim. The engine's own rule says a GAME_KEYED entry not
+ * declared is not mounted; `false` is the explicit answer that nothing is skipped by omission.
+ *
+ * 📌 NO GENERAL/CONTRACT_KEYED ENTRIES HERE. `typography`, `narration`, `highContrast` and the other twelve
+ * the game mounts are derived from the contract (`core/accommodations.CONTRACT_KEYED`). The game answers
+ * only the ones it OWNS the vocabulary for, and the vocabulary 2048 owns is empty.
+ */
+export const RESPOSTAS_DAS_ACOMODACOES: AccommodationAnswers = Object.freeze({
+  cameraSway: false,
+  easyMode: false,
+  wheelchairMode: false,
+  detectionLeniency: false,
+  intensity: false,
+  hints: false,
+  reducedCharacterMotion: false,
+  caneSpacing: false,
+  textPace: false,
+  lexicalDifficulty: false,
+  wordHighlight: false,
+  pieceSets: false,
+  distinguishableSuits: false,
+  timingWindow: false,
+  aimAssist: false,
+  repeatedInput: false,
+  ownerColors: false,
+  contrastOutlines: false,
+});

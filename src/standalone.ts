@@ -13,8 +13,6 @@
 import '@the-inclusionist/engine/style.css';
 
 import { createGame } from '@the-inclusionist/engine';
-import { srAlert, srSay } from '@the-inclusionist/engine/core/a11y-sr.js';
-import { registerDict, t } from '@the-inclusionist/engine/core/i18n.js';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
 import * as store from '@the-inclusionist/engine/platform/storage.js';
 import { CORRECTION_LABEL, buttonChoice, axisRows } from '@the-inclusionist/engine/ui/visual-axes-panel.js';
@@ -25,7 +23,7 @@ import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-contr
 import { factoryWithGame, kb, resetKB, saveKB, setKB } from '@the-inclusionist/engine/input/keyboard.js';
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
-import { cartridge } from './index.ts';
+import { cartridge, accommodations } from './index.ts';
 import { CORRECOES_OFERECIDAS, ehCorrecao, filtroCssDe } from '../app/js/visual.ts';
 import { acoesComRotulo } from '../app/js/actions.ts';
 import { semNulos } from '../app/js/keyboard-save.ts';
@@ -33,9 +31,11 @@ import { MS_POR_QUADRO } from '../app/js/animation.ts';
 
 const $ = <T extends Element = Element>(sel: string): T | null => document.querySelector<T>(sel);
 
-// 1 · THE DICTIONARIES, BEFORE ANY TEXT. The cartridge exports them and the shell registers them — which is
-//     also why the preset's words resolve: `create(ctx)` builds it with a `t` that now has a table to read.
-for (const [codigo, dict] of Object.entries(cartridge.dicts)) registerDict(codigo, dict);
+// 1 · THE DICTIONARIES RIDE INTO `createGame`. H2 of Part Three: engine 11 removed the module-level
+//     `registerDict` and reads the game's words through `CreateGameOptions.dictionaries` instead (ADR-0232 D3,
+//     note DN). Two cartridges each registering on the same root used to be two writes to one table in an
+//     order nobody controlled; the engine's own rule now ADDS a cartridge's words to the root's at `mount`
+//     time, and keys unknown to every language go into `problems` named.
 
 // The two the lifted `host` block refers to. They were `bootar`'s parameters; in a shell they are the page.
 const doc = document;
@@ -76,6 +76,14 @@ const semJogoAinda: GameDeclaration = {
 const motor = createGame({
   // The placeholder above. Replaced by `mount` as soon as the cartridge exists.
   declaration: semJogoAinda,
+  // THE DICTIONARIES, THE ONE PLACE A GAME'S WORDS LIVE SINCE 11.0.0 (ADR-0232 D3, note DN). The three
+  // languages the cartridge exports — pt, en, es — reach the root's translator here, before any text. A
+  // declared key missing in every language becomes a line of `problems` and the field is left out.
+  dictionaries: cartridge.dictionaries,
+  // See the note on `accommodations` in `src/index.ts`: every GAME_KEYED entry is `false` because this
+  // game's vocabulary for them is empty. The GENERAL ones (typography, narration, highContrast, …) are
+  // CONTRACT_KEYED and the engine derives them from the declaration.
+  accommodations,
     host: {
       doc,
       win,
@@ -145,11 +153,22 @@ const jogo = cartridge.create({
   //    `rnd`, `randInt`, `shuffle` or `reseed` — a source gate holds that, because a standalone build has one
   //    stream and would pass either way.
   rng: createRng(Date.now() & 0x7fffffff),
-  t,
+  // The engine's own `t` reaches the cartridge through `engine.t`; the ctx member mirrors it for games that
+  // prefer the short name, and the `GameCtx` type says so.
+  t: motor.t,
   // This game reads nothing from the address; the door exists so nobody reaches past it to `location.search`.
   params: new URLSearchParams(),
 });
 motor.mount(jogo.declaration, jogo.hooks);
+
+// A `(key) → string | null` reader, the shape `wordsOf` and the engine's own `labellerFrom` ask for. The
+// Engine exposes `t` (which returns the key when missing) and not `word` directly, so we read fallback-to-key
+// as «unknown», which is what the labeller then drops. Our dictionaries declare every key the preset reads,
+// so this helper only exists for safety's sake — a mismatch would surface as a mute row in the remap panel.
+const word = (chave: string): string | null => {
+  const palavra = motor.t(chave);
+  return palavra === chave ? null : palavra;
+};
 
 
 // ============================ THE SHELL RUNS THE LOOP ============================
@@ -177,7 +196,7 @@ const tick = (agora: number) => {
     jogo.update(dt);
   } catch (e) {
     vivo = false;
-    srAlert(t('a11y.instructions'));
+    motor.alert(motor.t('a11y.instructions'));
     console.error('[2048] the game stopped itself:', e);
     return;
   }
@@ -187,7 +206,7 @@ requestAnimationFrame(tick);
 // TYPOGRAPHY — borrowed whole. The quiz measured that this panel serves outside its genre without a line of
 // change, and it is the strongest evidence that the menu stack belongs to the engine rather than to the
 // platformer.
-const typo = initSettingsTypo({ $, srSay, store, root: document.documentElement });
+const typo = initSettingsTypo({ $, srSay: motor.say, store, root: document.documentElement, t: motor.t });
 $('#open-typo')?.addEventListener('click', () => {
   const ov = $<HTMLElement>('#typo');
   if (!ov) return;
@@ -212,8 +231,9 @@ motor.overlays.register('typo', { close: fechar, inEscapeChain: true });
 // `ui/settings-typo`. It was mountable on engine 8 and simply had not been mounted.
 const ctrl = initSettingsControls({
   $,
-  srSay,
-  srAlert,
+  t: motor.t,
+  srSay: motor.say,
+  srAlert: motor.alert,
   // ⚠️ NOT the whole `platform/storage` module: `ControlsStore` is exactly `{ saveKB, resetKB }`, and both
   //    live in `input/keyboard` beside the `kb` they persist. Passing the broad module compiled against
   //    nothing — the narrow type is what says which two functions this panel may reach.
@@ -228,7 +248,7 @@ const ctrl = initSettingsControls({
   store: { saveKB: (esquema) => saveKB(semNulos(esquema)), resetKB },
   // The rows are this game's preset read back through the engine's own labeller, so the screen cannot name
   // an action the game does not read. See `acoesComRotulo`.
-  gameActions: () => acoesComRotulo(t),
+  gameActions: () => acoesComRotulo(word),
   kb,
   setKB,
   kbFor: (i) => motor.keyboard.kbFor(i),
@@ -306,7 +326,7 @@ hc?.addEventListener('click', () => {
   document.documentElement.dataset.hc = ligado ? '0' : '1';
   hc.setAttribute('aria-pressed', String(!ligado));
   motor.scenes.draw();
-  srSay(hc.textContent ?? '');
+  motor.say(hc.textContent ?? '');
 });
 
 // COLOUR VISION. The six SVG filters were already installed into `#cvd` by `createGame`; what lives here is
@@ -331,7 +351,7 @@ if (caixaViz && alvo && motor.cvdFilters > 0) {
     // only i18n values and the axis' own literals. The old `<select>` was built with `new Option` to close
     // the injection class pre-emptively; here the equivalent guarantee is that nothing outside the engine's
     // dictionary reaches the template, and `ehCorrecao` guards the way back in.
-    caixaViz.innerHTML = axisRows('correcao', CORRECOES_OFERECIDAS, CORRECTION_LABEL, atual, t);
+    caixaViz.innerHTML = axisRows('correcao', CORRECOES_OFERECIDAS, CORRECTION_LABEL, atual, motor.t);
   };
 
   pintar();
@@ -350,7 +370,7 @@ if (caixaViz && alvo && motor.cvdFilters > 0) {
     pintar();
     // The label, not the state word: "Escolhido" alone would tell a screen reader that something was
     // chosen without saying what. `aria-checked` already carries the state; the announcement carries the name.
-    srSay(t(CORRECTION_LABEL[atual]));
+    motor.say(motor.t(CORRECTION_LABEL[atual]));
   });
 
   // THE DOOR. Same three lines as `#open-typo` and `#open-ctrl`, and the sameness is the point: three panels

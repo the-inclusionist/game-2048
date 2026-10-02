@@ -158,7 +158,7 @@ describe('the colour-correction panel opens, rather than occupying the page', ()
     //    same as not having moved it". That was written about a `<select>`. What keeps it answered here is
     //    that the opener is a button with WORDS in the same row as «Alto contraste» — so this asserts the
     //    label, not merely the button.
-    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="axis\.correcao\.titulo"/);
+    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="eixo\.correcao\.titulo"/);
     const tools = html.slice(html.indexOf('class="p2-tools"'), html.indexOf('</div>', html.indexOf('class="p2-tools"')));
     expect(tools, 'beside the other three, not off on its own').toContain('id="open-viz"');
   });
