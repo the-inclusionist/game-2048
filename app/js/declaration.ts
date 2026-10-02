@@ -152,7 +152,12 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
 
     // 4 · FOCUS. No body and no physics: what holds the focus is the keyboard cursor, and "where it points" is
     //     the last direction pushed — which is what the cane and the scanning need to know.
-    focusOf(): Focus | null {
+    //
+    //     ⚠️ `playerIndex` IS INJECTED SINCE 11.0.0 (contract CI) but ignored here. 2048 is single-player
+    //     (the shell declares `createRng(seed)` once and the engine passes seat 0 to every call); for a
+    //     seat the game does not have, the honest answer is still p0's focus. A multi-seat game would
+    //     switch on this argument.
+    focusOf(_playerIndex: number): Focus | null {
       return { id: 'p0', at: o.cursor(), heading: o.heading() };
     },
 
@@ -163,7 +168,7 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
     //      IS — eleven doublings. The counter starts stating the subject instead of marking points, and it
     //      cost neither a new field in the engine nor a line of conditional: it is the same `have`/`need` that
     //      used to count coins.
-    objectiveOf(): Objective {
+    objectiveOf(_playerIndex: number): Objective {
       return {
         name: { text: o.t('hud.nome.dobras'), gender: 'f', plural: true },
         have: maxTile(o.board()),
@@ -175,7 +180,7 @@ export function criarDeclaracao(o: Observado): GameDeclaration {
     //
     //      Empty when no merge is available, and empty is an ANSWER: it means "there is nowhere to point",
     //      which at the end of a round is the most honest information there is.
-    targetsOf(): readonly Spot[] {
+    targetsOf(_playerIndex: number): readonly Spot[] {
       return mergeSpots(o.board()).map(casa);
     },
   };
