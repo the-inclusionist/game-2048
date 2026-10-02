@@ -25,8 +25,8 @@
 //
 // THE HALF THAT EXPIRED: against 8.0.0 the writers lived only in `render/viz-setters`, whose context asks
 // for ~34 fields of a PixiJS platformer render graph this game does not have, and `createGame` offered no
-// way to supply them. ✅ 9.0.0 added `setTemaDoJogador` and `setCorrecaoDoJogador` to the game's half. The
-// door is open.
+// way to supply them. ✅ 9.0.0 added them to the game's half — renamed in 10.0.0 to the current
+// `setPlayerTheme` and `setPlayerCorrection` (note CN). The door is open.
 //
 // THE HALF THAT DID NOT, and it stopped being a matter of effort: `tema` offers `hc3`, `hc45` and `hc7` —
 // three levels named after the contrast RATIO they guarantee — and this game answers with ROLE colours, of
@@ -46,10 +46,11 @@
 // three levels have no honest answer at any effort.
 //
 // ========================= AND THE COLOUR-VISION ICON HAS THE OPPOSITE PROBLEM =========================
-// ⚠️ MEASURED AGAINST ENGINE 9.0.0: the 🚥 icon could now be WRITTEN to — `setCorrecaoDoJogador` exists —
-// but it cannot be READ. `ui/pause-icons` takes the current value from `(P()[i] || {}).visual`, and the only
-// door a `createGame` consumer has for players is typed `Pick<ControlledPlayer,'ctrl'>`, which its own
-// comment describes as «esquema de teclas e nada mais». The read-back that would recover it from storage,
+// ⚠️ MEASURED AGAINST ENGINE 9.0.0, RE-MEASURED ON 11.0.0 (H11, 2026-10-02): the 🚥 icon can be WRITTEN to —
+// `setPlayerCorrection` exists (renamed from `setCorrecaoDoJogador` in 10.0.0, note CN) — but it still
+// cannot be READ. `ui/pause-icons` takes the current value from `(P()[i] || {}).visual`, and the only door
+// a `createGame` consumer has for players is typed `Pick<ControlledPlayer,'ctrl'>`, which its own comment
+// describes as «esquema de teclas e nada mais». The read-back that would recover it from storage,
 // `lerVisualGuardado`, lives in `render/viz-setters` — the PixiJS-shaped module `createGame` never mounts.
 //
 // So a mounted 🚥 would read `DEFAULT_VISUAL` on every click and cycle from the first value for ever: it would

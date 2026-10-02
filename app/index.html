@@ -84,9 +84,10 @@
 
          ⚠️ THESE FOUR STAY OURS — FOR NOW, AND THE REASON CHANGED UNDER THEM. The engine's bar has a 🌗
          and a 🚥 too, but `iconesQueAccionam` only mounts an icon that has somebody to action it: the
-         contrast icon needs `setTemaDoJogador` and the colour-vision icon needs `setCorrecaoDoJogador`.
-         Against engine 8.0.0 `createGame` passed neither AND OFFERED NO WAY to supply them, so keeping our
-         own was the only honest option.
+         contrast icon needs `setPlayerTheme` and the colour-vision icon needs `setPlayerCorrection`
+         (renamed from `setTemaDoJogador` / `setCorrecaoDoJogador` in engine 10.0.0, note CN). Against engine
+         8.0.0 `createGame` passed neither AND OFFERED NO WAY to supply them, so keeping our own was the
+         only honest option.
 
          ✅ ENGINE 9.0.0 ADDED BOTH FIELDS, so the doors exist — and measuring them found a different wall
          behind each. 🌗 CONTRAST: the axis offers `hc3`/`hc45`/`hc7`, three levels named after a RATIO, and
@@ -94,7 +95,8 @@
          the scale stops at 21. 🚥 COLOUR VISION: the write door opened, the READ door did not — the icon
          takes its current value from `players`, typed «esquema de teclas e nada mais», so it would read the
          default on every click and stick after one. Both are gated in `tests/visual.node.test.ts` and
-         explained in `app/js/visual.ts`.
+         explained in `app/js/visual.ts`. 📏 Remeasured on 11.0.0 (H11, 2026-10-02): the 🚥 read gap is
+         still open on the engine side — reported, not patched.
 
          The high contrast here is also not the engine's: it repaints by the contract's ROLE (field 2), which
          is the quiz's finding 8 — the engine's `hcnew` modes repaint the platformer's tile textures, and this

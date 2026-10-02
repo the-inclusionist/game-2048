@@ -7,10 +7,12 @@
 // live in `the-inclusionist-site/docs/cartridge-contract.md` as a derivation, and in ADR-0139 §2 as a sketch.
 // So they are written here, deliberately narrow, and every departure from the record is marked.
 //
-// ⚠️ AND THE RECORDS SAY TO EXPECT CORRECTIONS. ADR-0068 §6 puts `game-whackwhack` through this first; the Dev
-// decided on 2026-09-11 that this repository goes now. Going first means deriving what the records leave open
-// — and one derivation has already been overruled within a day (`declines`, settled as game-owned by engine
-// 9.0.0's `MetadeDoJogo`). Each `DERIVED HERE` below is a place to expect the same.
+// ⚠️ AND THE RECORDS SAY TO EXPECT CORRECTIONS. ADR-0068 §6 puts `game-whackwhack` through this first; the
+// Dev decided on 2026-09-11 that this repository goes now. Going first meant deriving what the records left
+// open — and two derivations were overruled within weeks: `declines` as game-owned (engine 9.0.0's
+// `MetadeDoJogo`), and the `DERIVED HERE` placement of `declaration` + `hooks` on the GameInstance alone,
+// which H9 moved to live on BOTH the Cartridge (placeholder for the checker) and the instance (live). Each
+// `DERIVED HERE` below is a place to expect the same correction.
 import type { Engine } from '@the-inclusionist/engine';
 import type { Rng } from '@the-inclusionist/engine/core/rng.js';
 import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
@@ -39,16 +41,16 @@ export interface GameCtx {
 /**
  * What a cartridge hands back.
  *
- * ⚠️ `declaration` IS AN ADDITION — `DERIVED HERE`. ADR-0139 §2 puts `declaration` on the CARTRIDGE, beside
- * `create`, as a module-level value. That cannot work for a game whose declaration OBSERVES per-instance state:
- * ours reads the board, the cursor and the heading, so a module-level declaration would need a module-level
- * "current instance" pointer — which is exactly the state spec D14 forbids a cartridge to hold, and the reason
- * two games on one page collide.
+ * ⚠️ `declaration` AND `hooks` RIDE ON THE INSTANCE AS WELL AS ON THE CARTRIDGE SINCE H9. ADR-0139 §2 puts
+ * `declaration` on the CARTRIDGE for the checker to read at import time; the cartridge exposes a placeholder
+ * that satisfies the checker but says «there is no game yet». The LIVE declaration — the one that observes
+ * the board, the cursor and the heading — can only be built inside `create(ctx)`, so it travels with the
+ * instance here and the shell swaps it in through `motor.mount(instance.declaration, instance.hooks)`.
  *
- * ⚠️ ADR-0142 is what makes the alternative honest rather than a workaround: engine 9.0.0 gained
- * `mount(declaration, ganchos)`, so the declaration can arrive WITH the instance and be mounted per swap. The
- * shell calls `engine.mount` — the cartridge never does, because `mount` reaches the one engine everybody
- * shares.
+ * ⚠️ ADR-0142 is what makes this split honest rather than a workaround: engine 9.0.0 gained
+ * `mount(declaration, hooks)` (still present in 11.0.0), so the live declaration can arrive WITH the
+ * instance and be mounted per swap. The shell calls `motor.mount` — the cartridge never does, because
+ * `mount` reaches the one engine everybody shares.
  */
 export interface GameInstance {
   /** One tick of the host's loop. `dt` in FRAMES, never seconds. */
