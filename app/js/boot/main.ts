@@ -14,8 +14,9 @@
 // module-level `srSay`/`srAlert` are gone: the root owns the one announcer, every engine module receives
 // it, and a second one would write to the same regions and carry none of this root's Libras mirror.
 import { createRng, type Rng } from '@the-inclusionist/engine/core/rng.js';
-import { initLayout, layout } from '@the-inclusionist/engine/ui/layout.js';
+import { createLayout } from '@the-inclusionist/engine/ui/layout.js';
 import { readStoredScene } from '@the-inclusionist/engine/ui/motion-scene.js';
+import { createStorage } from '@the-inclusionist/engine/platform/storage.js';
 import * as PIXI from 'pixi.js';
 
 import {
@@ -54,11 +55,13 @@ import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
  * reference and that holding a copy makes the switch stop working in silence. Reading per move is the other
  * side of that warning — the child flips the icon mid-game and the next move already obeys.
  */
-const movimentoReduzido = (win: Window): boolean =>
-  querMenosMovimento(
-    win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
-    readStoredScene(),
-  );
+// `readStoredScene(store, reducedByDefault)` since engine 11.0.0 (notes CS, CT, D4): the module no longer
+// reads a module-level store, and `platform/storage` is a factory now. Our Store is built once from the
+// window's localStorage — the same backend the engine's root uses, so the two agree on the stored flags.
+const movimentoReduzido = (win: Window, store: ReturnType<typeof createStorage>): boolean => {
+  const sistema = win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  return querMenosMovimento(sistema, readStoredScene(store, sistema));
+};
 
 /* ===================== THE ROUND'S STATE =====================
  *
@@ -95,6 +98,14 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   const t = motor.t;
   const srSay = (text: string) => motor.say(text);
   const srAlert = (text: string) => motor.alert(text);
+  // The persistence port, since engine 11.0.0 (note CT): `platform/storage` is a factory now, and the Store
+  // owns `get`/`set`/`getJSON`/… instead of exporting them. Read against the window's `localStorage` — the
+  // same backend the engine's root is reading from, so stored motion-scene flags are the same object either
+  // way, and the TypoStore the shell builds on this is just a `{get, set}` view of it.
+  const store = createStorage(win.localStorage);
+  // Tracks whether this instance was torn down — read by `desenhar()` (and the locale-change hook that calls
+  // it) because `motor.onLocaleChange` returns no release, so the handler has to answer for itself.
+  let desmontado = false;
 
   /* ===================== THE ROUND'S STATE, OWNED BY THIS INSTANCE =====================
    *
@@ -186,9 +197,12 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   // 5. SCALE. The engine's `ui/layout` locks `#game-region` to an INTEGER multiple of 320×180 in real pixels
   //    (ADR-0001) and publishes `--ui-fs = 8·k`. The stylesheet derives `--px` from it, and that is what keeps
   //    the DOM number exactly on top of the painted square at any device pixel ratio.
-  initLayout({ numJogadores: () => 1 });
-  layout();
-  const aoRedimensionar = () => layout();
+  // `createLayout` since engine 11.0.0 (note DD): the previous module-level `initLayout` / `layout` are gone;
+  // the new factory takes `doc`/`win`/`numPlayers` through its ctx and returns a `{layout(): void}` scaler.
+  // `afterScale` re-anchors the engine root's CRT scanlines to the real-pixel scale (REQUIRED).
+  const stage = createLayout({ doc, win, numPlayers: () => 1, afterScale: () => motor.crt.scanVars() });
+  stage.layout();
+  const aoRedimensionar = () => stage.layout();
   win.addEventListener('resize', aoRedimensionar);
 
   // ⚠️ BECOMING VISIBLE AGAIN RECONCILES THE SCREEN WITH THE MODEL. While the document is hidden nothing is
@@ -217,6 +231,7 @@ export function criarJogo(ctx: GameCtx): GameInstance {
 
   /** The board AT REST: what is seen between moves, and the final frame of every animation. */
   function desenhar(): void {
+    if (desmontado) return;
     quadro(pecasParadas(board));
     grade.atualizar(declaration, t);
     const o = declaration.objectiveOf(0);
@@ -225,6 +240,14 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     const placar = doc.querySelector<HTMLElement>('#p2-score');
     if (placar) placar.textContent = String(pontos);
   }
+
+  // 🔴 LABELS DO NOT RETRANSLATE ON THEIR OWN. The grid cells, the mission line, the score — every surface
+  //    this file writes carries RESOLVED words set at build time (`aria-label="Linha 1, coluna 1: vazio"`),
+  //    not `data-i18n` keys the engine would re-walk on language change. The H2 gate in
+  //    `tests/factory.browser.test.ts` caught this: `motor.setLocale('en')` loaded the new dictionary and
+  //    the labels stayed Portuguese. The engine's `onLocaleChange` hook is the hand-off we need; `desenhar()`
+  //    re-reads `t` and rebuilds every label. The guard above makes it safe to arrive after teardown.
+  motor.onLocaleChange(() => desenhar());
 
   /**
    * THE LOOP, assembled — and it no longer lives here.
@@ -246,7 +269,7 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   const relogio = criarRelogioDeQuadros();
   const animador = criarAnimador(relogio.relogio, quadro);
   const animar = (movimentos: readonly Movimento[]): Promise<void> =>
-    animador.correr(movimentos, duracaoDaJogada(movimentoReduzido(win)), doc.visibilityState !== 'hidden');
+    animador.correr(movimentos, duracaoDaJogada(movimentoReduzido(win, store)), doc.visibilityState !== 'hidden');
 
   /** A whole move: push, count, draw a tile, announce, redraw. */
   function jogar(dir: Direction): void {
@@ -384,7 +407,6 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   // The project's verification hook: checking the boot means checking this exists, and reading from it.
   // ⚠️ IT IS A GLOBAL, so `teardown` deletes it. A verification hook that outlived the instance would answer
   //    questions about a game that is no longer on the page — which is worse than not being there.
-  let desmontado = false;
   const janela = win as Window & { __incl2048?: unknown };
   janela.__incl2048 = {
     get board() { return board; },

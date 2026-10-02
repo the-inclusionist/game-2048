@@ -41,7 +41,16 @@ beforeEach(async () => {
   alerta.setAttribute('role', 'alert');
   alerta.setAttribute('aria-live', 'assertive');
   document.body.append(status, alerta);
-  translator = createTranslator();
+  // ⚠️ A LocalePort IS REQUIRED FOR `setLocale`, since engine 11.0.0 (ADR-0178): the composition root
+  //    normally builds the translator with the stored settings, and a rootless `setLocale` call throws.
+  //    The port here is a MEMORY one: no persistence, just enough to satisfy the shape and let the Spanish
+  //    assertion exercise the switch.
+  const localeMem = new Map<string, string>();
+  translator = createTranslator({
+    get: (k, fallback) => localeMem.get(k) ?? fallback,
+    set: (k, v) => { localeMem.set(k, v); },
+    KEYS: { lang: 'incl_lang' },
+  });
   translator.registerDict('pt', pt);
   translator.registerDict('en', en);
   translator.registerDict('es', es);

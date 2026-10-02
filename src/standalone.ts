@@ -14,13 +14,15 @@ import '@the-inclusionist/engine/style.css';
 
 import { createGame } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
-import * as store from '@the-inclusionist/engine/platform/storage.js';
+import { createStorage } from '@the-inclusionist/engine/platform/storage.js';
 import { CORRECTION_LABEL, buttonChoice, axisRows } from '@the-inclusionist/engine/ui/visual-axes-panel.js';
 import type { Correction } from '@the-inclusionist/engine/render/viz-axes.js';
 import type { GameDeclaration } from '@the-inclusionist/engine/core/contract.js';
 import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
 import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
-import { factoryWithGame, kb, resetKB, saveKB, setKB } from '@the-inclusionist/engine/input/keyboard.js';
+// The module-level `kb`, `resetKB`, `setKB`, `initKB` are gone in engine 11.0.0 (note DA); they live on
+// `motor.keyboardConfig` now. `saveKB` stays exported, but with a `(store, kb)` signature; the engine's
+// root-provided `motor.keyboardConfig.save()` is the one we use, so this import carries no live symbol.
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { cartridge, accommodations } from './index.ts';
@@ -179,6 +181,12 @@ const word = (chave: string): string | null => {
   return palavra === chave ? null : palavra;
 };
 
+// ⚠️ ONE STORE PER ROOT (ADR-0232 D4, note CT). `platform/storage` is a factory now — the page-wide `get`/
+// `set` / `getJSON` members are gone, and the engine's root builds one from `host.storage` (the window's
+// `localStorage` by default). The shell builds its own on top of the same backend, so stored motion flags
+// and font choices are the same object either way. `TypoStore` is a narrow `{get, set}` view of this.
+const store = createStorage(window.localStorage);
+
 
 // ============================ THE SHELL RUNS THE LOOP ============================
 // ⚠️ ONE LOOP, AND IT IS THIS FILE'S. ADR-0139 §3 puts it here rather than in the game: "six cartridges
@@ -254,17 +262,28 @@ const ctrl = initSettingsControls({
   //    `semNulos` writes only the positions that name a key; the merge on load leaves the factory's value
   //    for the rest, so nothing is lost. The whole chain is in `app/js/keyboard-save.ts`, and it is an
   //    ENGINE defect reported as one, not a disagreement.
-  store: { saveKB: (esquema) => saveKB(semNulos(esquema)), resetKB },
+  // 🔴 `saveKB` IS STILL WRAPPED. The engine's `p3`/`p4` factory schemes carry `null` for positions a seat
+  //    cannot reach; saving them unwrapped used to lock the child out on the next boot (`migrarEsquema`
+  //    threw on `[...null]`). H11 is where we check whether 11.0.0 fixed that; until then, the wrap stays.
+  //    The method we wrap is `motor.keyboardConfig.save` instead of the free `saveKB` — the module function
+  //    now takes a store first, which this panel does not have, and `.save()` is the engine's own door.
+  store: {
+    saveKB: (esquema) => motor.keyboardConfig.save(semNulos(esquema)),
+    resetKB: () => motor.keyboardConfig.reset(),
+  },
   // The rows are this game's preset read back through the engine's own labeller, so the screen cannot name
   // an action the game does not read. See `acoesComRotulo`.
   gameActions: () => acoesComRotulo(word),
-  kb,
-  setKB,
+  // The live keyboard config — the engine's own since 11.0.0 (note DA). Mutated in place by successful
+  // remaps; `set` replaces it wholesale, which is what Reset needs.
+  kb: motor.keyboardConfig.kb(),
+  setKB: motor.keyboardConfig.set,
   kbFor: (i) => motor.keyboard.kbFor(i),
-  // ⚠️ DERIVED, because the runtime exposes no `defaultSchemeFor`. `factoryWithGame()` is the engine's factory
-  //    WITH this game's `mapeamentoDoTeclado` already folded in — which is the right "default" to offer a
-  //    child pressing Reset: the factory as this game configured it, not the engine's bare table.
-  defaultSchemeFor: (_i) => factoryWithGame().solo,
+  // ⚠️ `factoryWithGame()` without args returns the engine's factory WITH this game's `keyboardMapping`
+  //    already folded in. The 10.0.0 rename (note DA) moved it to a method on `Engine.keyboardConfig`; the
+  //    module-level function is still exported with a required `mapping` arg, but the panel's "right
+  //    default" is the GAME's factory, which only the engine knows.
+  defaultSchemeFor: (_i) => motor.keyboardConfig.factoryWithGame().solo,
   getNumPlayers: () => 1,
   applyControls: () => { motor.keyboard.refreshControls(); },
   assignControls: () => { motor.keyboard.assignControls(); },
