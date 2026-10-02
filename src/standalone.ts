@@ -102,20 +102,28 @@ const motor = createGame({
       pauseHost: doc.querySelector('#game-region'),
     },
     declines: {
-      semAssistenteDePad: true,
-      semAtorDePausa: true,
-      // ⚠️ THE NEURAL VOICE IS DECLINED, and until engine 8.0.0 that refusal was invisible to the engine.
-      //    The reasoning is fifteen lines below and unchanged — 27 MB of ONNX runtime against a school
-      //    tablet's precache budget. What changed is that `Declinios` now has somewhere to say it, so a
-      //    decision stops looking like an oversight. The engine's own note still lists this game among the
-      //    three that DO declare `carregarVozNeural`; the warning it printed at us says otherwise.
-      semVozNeural: true,
+      // ⚠️ `semAssistenteDePad` RETIRED IN 11.0.0 (ADR-0231, note CQ). The field had no reader on the engine
+      //    side for several releases; the decline is gone from the type entirely, so this game simply says
+      //    nothing about it. The absence of a pad assistant comes from `GamepadCtx` not being hand-built
+      //    (we go through `createGame`), which is the whole mechanism.
+      //
+      // ⚠️ `noPauseActor` — RENAMED FROM `semAtorDePausa` IN 10.0.0 (note CN). The reason is unchanged: a
+      //    cartridge installed in the platform shares one pause card with every other, so the actor must
+      //    come from the platform rather than from any single game. The standalone has no actor to name.
+      noPauseActor: true,
+      // ⚠️ `noNeuralVoice` — RENAMED FROM `semVozNeural` IN 10.0.0 (note CN). The decision below (27 MB of
+      //    ONNX runtime against a school tablet's precache budget) is unchanged. 📌 The matching decision
+      //    on the other side — not opt in to the `uses.neuralVoice` port — stays implicit: `uses` is absent
+      //    entirely here, so the engine does not load the Kokoro runtime. A test holds the pair together, so
+      //    enabling one half later cannot leave the other half declaring the opposite.
+      noNeuralVoice: true,
     },
 
-    // ⚠️ NO HEAVY DOWNLOADS AT BOOT, and this is the SAME decision as `semVozNeural` rather than a new one.
-    //    The engine's own doc says `false` is "for whoever has a reason", and that a production game turning
-    //    it off decides its child goes without the neural voice offline. This game decided exactly that on
-    //    2026-09-06, for 27 MB against a school tablet's precache budget — see the note just below.
+    // ⚠️ NO HEAVY DOWNLOADS AT BOOT — RENAMED FROM `baixarPesados` IN 10.0.0 (note CN). This is the SAME
+    //    decision as `noNeuralVoice` rather than a new one. The engine's own doc says `false` is "for whoever
+    //    has a reason", and that a production game turning it off decides its child goes without the neural
+    //    voice offline. This game decided exactly that on 2026-09-06, for 27 MB against a school tablet's
+    //    precache budget — see the note just below.
     //
     //    ⚠️ AND MEASURED ON 2026-09-11, ON THIS BUILD: with the downloads on, booting the 2048 makes exactly
     //    one external request — `https://webgazer.cs.brown.edu/webgazer.js`, 1.9 MB — which fails by CORS on
@@ -123,14 +131,15 @@ const motor = createGame({
     //    use, for the 👀 icon the bar itself labels "em construção". The engine records the same thing from
     //    the other side: ADR-0124 is the Dev choosing MediaPipe and writing «webgazer não», and ADR-0132 names
     //    the leftover `<script src>` as a debt. Until that debt is paid, the request happens; this line is
-    //    what stops it happening HERE.
+    //    what stops it happening HERE. 📏 H11 re-measures whether 11.0.0 closed it.
     //
     //    📌 Nothing this game uses depends on it: the voices are declined, the webcam icons are unbuilt, and
     //    the TTS the child can actually switch on is the browser's.
-    baixarPesados: false,
-    // ⚠️ NO `carregarVozNeural`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port exists (ADR-0094) and
-    //    switching it on is one line: `carregarVozNeural: () => import('@mintplex-labs/piper-tts-web')`. The
-    //    narration falls back to the BROWSER's voice, which speaks the right language.
+    downloadHeavy: false,
+    // ⚠️ NO `uses.neuralVoice`, AND THAT IS A CHOICE RATHER THAN AN OVERSIGHT. The port opt-in exists in
+    //    11.0.0 (ADR-0255, note DW): `uses: { neuralVoice: true }` carries Kokoro via a lazy import at the
+    //    first neural utterance. Omitting it (as this file does) means the engine does not load the 371 MB
+    //    runtime. The narration falls back to the BROWSER's voice, which speaks the right language.
     //
     //    What it would cost, measured in this repository on 2026-09-06 while upgrading the engine from 6.36.1
     //    to 7.0.1: `dist/` went from **28.9 MB to 1.6 MB**. The 27 MB was the ONNX runtime riding along — and
