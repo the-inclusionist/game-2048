@@ -282,11 +282,14 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     if (desmontado) return;
     quadro(pecasParadas(board));
     grade.atualizar(declaration, t);
-    const o = declaration.objectiveOf(0);
-    const hud = doc.querySelector<HTMLElement>('#p2-doubles');
-    if (hud) hud.textContent = t('move.doubles', { have: o.have, need: o.need });
-    const placar = doc.querySelector<HTMLElement>('#p2-score');
-    if (placar) placar.textContent = String(pontos);
+    // 🔴 THE SCORE AND THE DOUBLES ARE NOT WRITTEN HERE ANY MORE. They were two `querySelector`s into this
+    //    game's own `#p2-score` and `#p2-doubles`, rewritten on every draw. The engine mounts them from the
+    //    `hud` declaration below (ADR-0168/0175) and refreshes them on its own frame — 📏 and its note is
+    //    about exactly this game: «six sibling games, six HUDs of their own, none in the bands».
+    //
+    //    📌 WHAT THE BANDS ADD, beyond one fewer place to keep in step: the score becomes five digits with an
+    //    `aria-label` that says «12 pontos» instead of a listener hearing «zero zero zero um dois» (ADR-0238),
+    //    and both are sized by the engine — which is what takes the HUD's text off the floor of ADR-0163.
   }
 
   // 🔴 LABELS DO NOT RETRANSLATE ON THEIR OWN. The grid cells, the mission line, the score — every surface
@@ -496,6 +499,25 @@ export function criarJogo(ctx: GameCtx): GameInstance {
       //    📌 `howToPlay` REPEATED FROM `src/index.ts`'s frozen array for the same reason as `declines`:
       //    `mount` replaces the game half, and the slides would vanish the moment this cartridge mounted.
       howToPlay: SLIDES,
+      //    📌 `hud` GOES ON THE INSTANCE AND NOT ON THE CARTRIDGE, unlike `howToPlay` and `onScreenPad`: its
+      //    `value`s read THIS round's score and board, so they cannot be module-level data. Measured that it
+      //    works: `mountHud()` runs inside `mount` too (`create-game.js:3455`), re-reading `cartridge.hud`.
+      hud: [
+        // The score, as the engine's identity band: five digits, and a name a listener hears as «12 pontos».
+        { band: 'identity' as const, nameKey: 'hud.score', value: () => pontos },
+        // The doubles, as a counter — `{have, need}` is the shape `hud.contador` draws as «1 de 11 dobras».
+        // ⚠️ THE NUMBERS ARE EXPONENTS, not tile values, and `declaration.ts` carries the reason at length:
+        //    with values it would read «16 de 2048», which is true and teaches nothing; with exponents it
+        //    reads «4 de 11 dobras», and 11 is exactly what 2048 IS.
+        {
+          band: 'mission' as const,
+          nameKey: 'hud.nome.dobras',
+          value: () => {
+            const o = declaration.objectiveOf(0);
+            return { have: o.have, need: o.need };
+          },
+        },
+      ],
     },
 
     /**

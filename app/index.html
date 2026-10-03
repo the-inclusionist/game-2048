@@ -46,8 +46,12 @@
           <div id="p2-hud" class="p2-hud">
             <h1 class="p2-hud__title" data-i18n="game.title">2048 · Potência de 2</h1>
             <p class="p2-hud__line"><span data-i18n="hud.objective">Chegue à peça 2048</span></p>
-            <p class="p2-hud__line"><span data-i18n="hud.score">Pontos</span>: <b id="p2-score">0</b></p>
-            <p class="p2-hud__line" id="p2-doubles">0 de 11 dobras.</p>
+            <!-- 🔴 THE SCORE AND THE DOUBLES LEFT ON 2026-10-03 — the engine's HUD bands have them now
+                 (ADR-0168/0175, declared in `app/js/boot/main.ts`). They were `<b id="p2-score">` and
+                 `<p id="p2-doubles">`, rewritten by this game on every draw. 📏 The engine's own note names
+                 this exact situation: «six sibling games, six HUDs of their own, none in the bands».
+                 The score is five digits with an `aria-label` saying «12 pontos» now, instead of a listener
+                 hearing «zero zero zero um dois» (ADR-0238). -->
             <button id="p2-again" class="p2-btn" type="button" data-i18n="end.again">Jogar outra vez</button>
           </div>
 

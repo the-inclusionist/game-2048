@@ -146,7 +146,17 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
   left: calc(8 * var(--px));
   top: calc(max(var(--barra-a11y-h, 0px), 40 * var(--px)) + 2 * var(--px));
   width: calc(158 * var(--px));
-  font-size: calc(7 * var(--px));
+  /* 🔴 8 LOGICAL PIXELS AND NOT 7, which is ADR-0163's floor and not a preference. `ui/layout` publishes
+   * `--ui-fs` as `8·k`, so one logical pixel is `k` CSS pixels and 8 of them are exactly the 16 px the floor
+   * demands at k=2, growing with the scale. 📏 At 7 it measured 14 CSS px, and the engine named it in
+   * `motor.problems` at every boot: «the cartridge draws text under 16 px … a child with low vision or
+   * unsteady hands cannot read or hit them».
+   *
+   * ⚠️ IT COULD ONLY BE RAISED ONCE THE COLUMN HAD ROOM. Two of its three lines — the score and the doubles
+   * — went to the engine's HUD bands on 2026-10-03, and the third fits at the floor in the width `HUD_W`
+   * gained when the board narrowed. Raising it while all three were here would have pushed the column into
+   * the touch pad, which is the budget E6 is about. */
+  font-size: calc(8 * var(--px));
 }
 .p2-hud__title { font-size: calc(11 * var(--px)); margin: 0 0 calc(6 * var(--px)); line-height: 1.1; }
 .p2-hud__line { margin: 0 0 calc(4 * var(--px)); }
@@ -230,7 +240,10 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
  * ours. It is sized in logical pixels like the rest of the HUD, not in the 44 px of the old outside row. */
 .p2-btn {
   min-height: var(--alvo-min, 44px); padding: 0 calc(4 * var(--px));
-  font: inherit; font-size: calc(7 * var(--px));
+  /* 8 logical pixels: ADR-0163's floor, the same one `.p2-hud__line` is held to. 📏 At 7 the engine named
+   * this button by id in `motor.problems` — `button#p2-again.p2-btn` — the moment the two HUD lines above it
+   * stopped being the nearer offence. One floor, stated in both places that have text. */
+  font: inherit; font-size: calc(8 * var(--px));
   background: #24528f; color: #f6f8ff;
   border: calc(1 * var(--px)) solid #58a0e8; border-radius: calc(2 * var(--px)); cursor: pointer;
 }
