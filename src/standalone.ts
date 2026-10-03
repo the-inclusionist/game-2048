@@ -19,6 +19,7 @@ import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { cartridge } from './index.ts';
 import { MS_POR_QUADRO } from '../app/js/animation.ts';
+import { montarRecolhimentoDaBarra } from '../app/js/ui/a11y-bar-retract.ts';
 
 const $ = <T extends Element = Element>(sel: string): T | null => document.querySelector<T>(sel);
 
@@ -216,6 +217,22 @@ hc?.addEventListener('click', () => {
   motor.say(hc.textContent ?? '');
 });
 
+
+// THE BAR FOLDS AWAY AFTER FIVE SECONDS WITH NOBODY REACHING FOR IT (the Dev, 2026-10-03), and comes back
+// when a pointer heads for the top band, when a finger lands there, or when focus enters it. Never while one
+// of the engine's menus is open.
+//
+// ⚠️ THE SHELL WIRES IT AND THE CARTRIDGE DOES NOT, and the reason is the bar's owner: `createGame` mounts it
+//    before `cartridge.create` is called and `jogo.teardown()` must leave it standing — a cartridge taking it
+//    over would be a cartridge reaching past its own `region` for something it did not build (ADR-0139 §4).
+//
+// 📌 AND THIS IS THE ENGINE'S JOB, written down in `app/js/ui/a11y-bar-retract.ts` rather than acted on: every
+//    game in the catalogue has the same twelve icons over the same top band, so one copy in the engine serves
+//    all of them and twelve copies in twelve games is the `initPauseIcons` mistake ADR-0148 exists to end.
+//    Writing to `the-inclusionist-engine` needs the Dev's authorisation; this change does not have it. The
+//    module reaches into nothing — it takes its nodes and its clock — so moving it there is a copy of one file.
+const barraA11y = $<HTMLElement>('#title-icons');
+if (barraA11y) montarRecolhimentoDaBarra({ barra: barraA11y, regiao, doc, win });
 
 // TOUCH: the PURE half of `input/touch`. `padPxPerMm` anchors the real millimetre to the device (WCAG 2.5.5),
 // and the four buttons get 11 mm MEASURED instead of a guess in pixels. The whole `initTouch` is deliberately

@@ -33,6 +33,7 @@ import { createRng } from '@the-inclusionist/engine/core/rng.js';
 import paginaHtml from '../app/index.html?raw';
 import { cartridge } from '../src/index.ts';
 import { HUD_W, HUD_X, LOGICAL_H, LOGICAL_W, TOP_BAND } from '../app/js/geometry.ts';
+import { ATRIBUTO, montarRecolhimentoDaBarra } from '../app/js/ui/a11y-bar-retract.ts';
 import type { GameInstance } from '../app/js/cartridge-types.ts';
 
 /**
@@ -219,5 +220,124 @@ describe('E4 (c) — the room the engine reserves, and what the game does with i
     for (const [face, b] of vistas) {
       expect(b, `${face} asks for ${b} logical px`).toBeLessThanOrEqual(TOP_BAND);
     }
+  });
+});
+
+// ========================= E5 — THE BAR FOLDS AWAY, AND COMES BACK =========================
+// The Dev, 2026-10-03: «O painel de acessibilidade rápida deve desaparecer se recolhendo pra cima após 5
+// segundos de inatividade, exceto se o jogo estiver pausado. Ele deve aparecer novamente quando o mouse se
+// dirige em sua direção ou se há um toque na tela no lugar onde ele deveria estar.»
+//
+// 🔴 THE CLOCK IS INJECTED AND THE GATE NEVER WAITS FIVE SECONDS. A test that slept would be five seconds
+// slower per assertion and would still be measuring a timer rather than the behaviour; `msParado` is a
+// parameter precisely so the rule can be exercised at a few milliseconds. What is asserted is WHICH EVENTS
+// fold it and unfold it, which is the part a child meets.
+describe('E5 — the bar folds away after five seconds with nobody reaching for it', () => {
+  const montar = (extra: Record<string, unknown> = {}) => montarRecolhimentoDaBarra({
+    barra: barra(), regiao: regiao(), doc: document, win: window, msParado: 30, ...extra,
+  });
+  const zonaY = () => regiao().getBoundingClientRect().top + 4;
+  const foraDaZona = () => regiao().getBoundingClientRect().bottom - 4;
+  const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it('[Right] 🔴 it starts visible and folds on its own', async () => {
+    // The child arrives and the bar is there; it leaves after she has had time to see it. Starting folded
+    // would hide from her that the row exists at all, which costs more than the top band it buys back.
+    const r = montar();
+    try {
+      expect(r.recolhida(), 'the bar is out when the page opens').toBe(false);
+      await esperar(90);
+      expect(r.recolhida(), 'and it folds with nobody reaching for it').toBe(true);
+      expect(barra().getAttribute(ATRIBUTO), 'the stylesheet reads this attribute').toBe('1');
+    } finally { r.teardown(); }
+  });
+
+  it('[Right] 🔴 a pointer heading for the top band brings it back', async () => {
+    const r = montar();
+    try {
+      await esperar(90);
+      expect(r.recolhida()).toBe(true);
+      regiao().dispatchEvent(new PointerEvent('pointermove', { clientY: zonaY(), bubbles: true }));
+      expect(r.recolhida(), 'the mouse went where the bar should be and nothing happened').toBe(false);
+    } finally { r.teardown(); }
+  });
+
+  it('[Right] 🔴 and so does a touch in the place where it should be', async () => {
+    const r = montar();
+    try {
+      await esperar(90);
+      regiao().dispatchEvent(new PointerEvent('pointerdown', { clientY: zonaY(), bubbles: true }));
+      expect(r.recolhida()).toBe(false);
+    } finally { r.teardown(); }
+  });
+
+  it('[Zero] ⚠️ a pointer anywhere ELSE does NOT hold it out', async () => {
+    // 📌 THE ASSERTION THAT KEEPS THE FEATURE FROM DOING NOTHING. «Inactivity» here is inactivity WITH THE
+    //    BAR: a mouse resting on the board must not hold the row over the top band for a whole match. An
+    //    earlier draft of the handler restarted the clock on any move inside the region, which reads
+    //    reasonable and quietly undoes the whole thing.
+    const r = montar({ msParado: 40 });
+    try {
+      await esperar(110);
+      expect(r.recolhida()).toBe(true);
+      regiao().dispatchEvent(new PointerEvent('pointermove', { clientY: foraDaZona(), bubbles: true }));
+      expect(r.recolhida(), 'a move over the board is not a move towards the bar').toBe(true);
+    } finally { r.teardown(); }
+  });
+
+  it('[Exception] 🔴 focus reveals it — a folded bar must never hold an invisible focus ring', async () => {
+    // WCAG 2.4.11. The icons stay in the tab order while folded, because removing them would take the bar
+    // away from the child who reaches it by keyboard — so the reveal on `focusin` is what makes that safe.
+    const r = montar();
+    try {
+      await esperar(90);
+      expect(r.recolhida()).toBe(true);
+      icones()[0].dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      expect(r.recolhida(), 'Tab moved focus to something nobody can see').toBe(false);
+    } finally { r.teardown(); }
+  });
+
+  it('[Exception] 🔴 it does NOT fold while one of the engine’s menus is open', async () => {
+    // The Dev's «exceto se o jogo estiver pausado», read wider on purpose: the engine has no «am I paused?»
+    // door — `isNavigable` is the game's answer TO it and `engine.pause` is write-only — so what is observed
+    // is a menu being on screen. Folding the bar while the panel one of its own icons just opened is still
+    // up would be absurd independently of the pause.
+    const r = montar({ menuAberto: () => true });
+    try {
+      await esperar(110);
+      expect(r.recolhida(), 'the child is in a menu and the bar walked off the screen').toBe(false);
+    } finally { r.teardown(); }
+  });
+
+  it('[Interface] the fold keeps the engine’s centring, and is motion the stylesheet can switch off', () => {
+    // ⚠️ `transform` IS ONE PROPERTY. Writing only the upward translate would drop the engine's
+    //    `translateX(-50%)` and the bar would fold away towards the left edge — visible only while it moves,
+    //    which is where a screenshot does not look.
+    const r = montar();
+    const b = barra();
+    try {
+      // 🔴 THE TRANSITION HAS TO BE TAKEN OFF BEFORE THE MATRIX IS READ, and the first draft of this
+      //    assertion did not: `getComputedStyle` a tick after the attribute lands returns the transform at
+      //    t=0 OF THE ANIMATION — `translateY(0)` — so it read a vertical travel of zero and failed. What is
+      //    being asserted here is the fold's DESTINATION, which is the thing the stylesheet declares; the
+      //    travel to it is asserted separately, from `transitionProperty`, read first and un-overridden.
+      expect(getComputedStyle(b).transitionProperty, 'the fold is animated, so it reads as folding rather '
+        + 'than vanishing').toContain('transform');
+      b.style.transition = 'none';
+      r.recolher();
+      const m = new DOMMatrixReadOnly(getComputedStyle(b).transform);
+      expect(m.m41, 'the engine’s horizontal centring survived the fold').toBeLessThan(0);
+      expect(m.m42, 'and it travels upward').toBeLessThan(0);
+      expect(Math.abs(m.m42), 'a whole bar-height of travel, not a nudge')
+        .toBeGreaterThanOrEqual(b.getBoundingClientRect().height - 0.5);
+    } finally { b.style.transition = ''; r.teardown(); }
+  });
+
+  it('[Zero] teardown leaves the bar out and listening to nothing', async () => {
+    const r = montar();
+    r.teardown();
+    await esperar(90);
+    expect(r.recolhida(), 'a timer outliving its mounting would fold a bar nobody is managing').toBe(false);
+    expect(barra().hasAttribute(ATRIBUTO)).toBe(false);
   });
 });

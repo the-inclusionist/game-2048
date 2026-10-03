@@ -204,8 +204,35 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
  *
  * 📌 THE SIZE COMES FROM THE REGION TOO. `.pi-btn` reads `--alvo-min` (22·k px), and `ui/layout` writes that
  * variable on `#game-region`. The bar used to live under `<main>`, out of scope, so every icon took the
- * literal 44 px fallback and stopped growing with the scale. Anything this file added here would be a third
- * ruler beside those two. */
+ * literal 44 px fallback and stopped growing with the scale. Any LAYOUT this file added here would be a
+ * third ruler beside those two.
+ *
+ * ============================ THE BAR FOLDS AWAY — AND THAT IS NOT LAYOUT ============================
+ * The Dev, 2026-10-03: «deve desaparecer se recolhendo pra cima após 5 segundos de inatividade». The two
+ * rules below declare a STATE and how it is reached; neither says where the bar is, how wide it is, whether
+ * its row wraps or where its caption hangs. Those four are the engine's, and they are what the paragraph
+ * above refuses to restate.
+ *
+ * ⚠️ THE `translateX(-50%)` IS REPEATED ON PURPOSE. `transform` is one property: writing only the translate
+ * upward would drop the engine's centring and the bar would fold away from the left edge instead of
+ * straight up — visible only while it moves, which is exactly the kind of defect a screenshot misses.
+ *
+ * 📌 `opacity` AS WELL AS THE TRANSLATE, because `#game-region` clips with `overflow: hidden` and a game
+ * whose host ever stopped clipping would have the bar fold up over whatever is above the region instead of
+ * disappearing. Two reasons to vanish, so losing one is not losing the behaviour.
+ *
+ * 🔴 IT STAYS IN THE TAB ORDER WHILE FOLDED, which is why there is no `display:none` and no `visibility`
+ * here. A child who plays by keyboard reaches the bar by tabbing, and `ui/a11y-bar-retract` brings it back
+ * on `focusin` — the way a skip link behaves. Hiding it from the tab order would take the bar away from
+ * exactly the child it exists for. */
+#title-icons { transition: transform .28s ease, opacity .28s ease; }
+#title-icons[data-recolhida='1'] { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+
+/* WCAG 2.3.3: the fold is motion, and a child with vestibular sensitivity should not have to find a menu to
+   stop it. The STATE survives — the bar still gets out of the game's way — and only the travel goes. */
+@media (prefers-reduced-motion: reduce) {
+  #title-icons { transition: none; }
+}
 
 .p2-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
 .p2-tools__label { font-size: 16px; }
