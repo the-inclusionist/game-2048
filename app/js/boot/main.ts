@@ -29,6 +29,7 @@ import {
   criarAnimador, criarRelogioDeQuadros, duracaoDaJogada, pecasParadas, querMenosMovimento, type Peca,
 } from '../animation.ts';
 import { criarPreset, direcaoDe, ehLer, ehSonar } from '../actions.ts';
+import { SLIDES } from '../how-to-play.ts';
 import type { GameCtx, GameInstance } from '../cartridge-types.ts';
 import { criarDeclaracao, RESPOSTAS_DAS_ACOMODACOES } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
@@ -492,6 +493,9 @@ export function criarJogo(ctx: GameCtx): GameInstance {
       //    other game, so the actor comes from the platform and a cartridge that declared it would be
       //    answering for a card it does not own.
       declines: { noNeuralVoice: true },
+      //    📌 `howToPlay` REPEATED FROM `src/index.ts`'s frozen array for the same reason as `declines`:
+      //    `mount` replaces the game half, and the slides would vanish the moment this cartridge mounted.
+      howToPlay: SLIDES,
     },
 
     /**

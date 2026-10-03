@@ -24,6 +24,7 @@
 // `motor.mount(instance.declaration, instance.hooks)`.
 import { criarJogo } from '../app/js/boot/main.ts';
 import { criarPreset } from '../app/js/actions.ts';
+import { SLIDES } from '../app/js/how-to-play.ts';
 import { RESPOSTAS_DAS_ACOMODACOES } from '../app/js/declaration.ts';
 import pt from '../app/js/i18n/pt.ts';
 import en from '../app/js/i18n/en.ts';
@@ -87,6 +88,19 @@ const hooks: CartridgeHooks = Object.freeze({
    * `hidden`, and no touch brought it back. Nothing reports that: `padGapProblems` asks whether the pad's
    * map has gaps, not whether anybody can see it.
    */
+  /**
+   * HOW TO PLAY, which the engine's own record says belongs here (ADR-0195, quoting the Dev: «O "Como jogar"
+   * é justamente algo a ser feito pelo cartucho»).
+   *
+   * 📏 Measured on the built page before this line existed: pausing and opening «Ajuda — Como jogar» showed
+   * «AJUDA VOLTAR ◀ W EMPURRAR PARA CIMA ▶» — the button list and nothing else. A child who paused BECAUSE
+   * she did not know how to play found the keys she could press and no sentence telling her what the game is.
+   *
+   * ⚠️ DECLARED IN BOTH HALVES, like `onScreenPad`, and for the measured reason: `mount` replaces the whole
+   * game half, so a `howToPlay` given only here would survive until the cartridge mounts and then vanish.
+   * `app/js/boot/main.ts` repeats it from the same frozen array — one source, two declarations.
+   */
+  howToPlay: SLIDES,
   onScreenPad: true,
   /**
    * 🔴 THE 🌗 ICON EXISTS ONLY FOR A GAME THAT HANDS IN THIS WRITER. `iconsThatAct` asks

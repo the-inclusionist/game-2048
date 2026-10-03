@@ -75,6 +75,9 @@ export const pt = {
   'act.sonar.hint': 'Diz onde há uma fusão possível, para que lado e a que distância.',
   'act.ler': 'Ler o tabuleiro',
   'act.ler.hint': 'Troca o que as setas fazem: empurrar as peças ou passear pelas casas para ouvir cada uma.',
+  'help.push': 'Empurre o tabuleiro para um lado. Todas as peças andam de uma vez — as setas movem o tabuleiro, não um cursor.',
+  'help.merge': 'Duas peças com o mesmo número que se encontram viram uma só, com o dobro: 2 e 2 fazem 4.',
+  'help.goal': 'A cada jogada nasce uma peça nova. Vá dobrando até chegar à peça 2048.',
   'a11y.reading.on': 'Leitura ligada: as setas passeiam pelas casas.',
   'a11y.reading.off': 'Leitura desligada: as setas voltam a empurrar as peças.',
 

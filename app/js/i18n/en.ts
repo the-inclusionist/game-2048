@@ -41,6 +41,9 @@ export const en: Dicionario = {
   'act.sonar.hint': 'Says where a merge is available, which way, and how far.',
   'act.ler': 'Read the board',
   'act.ler.hint': 'Switches what the arrows do: push the tiles, or walk the squares to hear each one.',
+  'help.push': 'Push the board to one side. Every tile moves at once — the arrows move the board, not a cursor.',
+  'help.merge': 'Two tiles with the same number that meet become one, worth double: 2 and 2 make 4.',
+  'help.goal': 'A new tile appears after every move. Keep doubling until you reach the 2048 tile.',
   'a11y.reading.on': 'Reading on: the arrows walk the squares.',
   'a11y.reading.off': 'Reading off: the arrows push the tiles again.',
 
