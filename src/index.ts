@@ -97,3 +97,26 @@ export default cartridge;
 
 /** The accommodations answer, for consumers that want it beside `cartridge.hooks.accommodations`. */
 export const accommodations = RESPOSTAS_DAS_ACOMODACOES;
+
+/**
+ * `uses` — THE OPT-IN PORT (ADR-0255, note DW). This game declares NONE of the three ports:
+ *
+ *   · `neuralVoice: true`   — opts into Kokoro (371 MB lazy-loaded). 2048 declines through
+ *                             `declines.noNeuralVoice: true` (H3). Browser voice is enough for the
+ *                             sentences this game speaks; the budget decision is in `src/standalone.ts`.
+ *   · `reading: true`       — opts into the ~850 MB of reading models. 2048 has NO reading flow — the
+ *                             board carries no text to read aloud, only digits spoken through TTS.
+ *   · `fonts: [...]`        — library font families. 2048 uses only «Atkinson Hyperlegible», one of the
+ *                             engine's 19 free faces (H7 copy pipeline), so no library family is declared.
+ *
+ * EXPORTED EXPLICITLY AS `undefined` SO THE DECISION HAS A WRITTEN PLACE (D5 of Part Four). A reader
+ * inspecting the cartridge's exports finds the absence as a decision rather than as an oversight; a shell
+ * that imports it alongside `accommodations` sees the pair. The `tests/neural-voice-decision.node.test.ts`
+ * forward gate asserts the shell's `createGame({...})` call does NOT contain a `uses:` key for any of the
+ * three ports.
+ *
+ * ⚠️ `as undefined` is deliberate — a bare `undefined` value is still typed, and the declaration carries
+ * what the game chose. A future opt-in replaces the value AND the typed shape at once; a lazy omission here
+ * would silently gain a port without the gate noticing.
+ */
+export const uses: undefined = undefined;

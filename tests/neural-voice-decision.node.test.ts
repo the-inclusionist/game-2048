@@ -72,3 +72,35 @@ describe('H3 — the «no neural voice» decision is said once, with no drift', 
     expect(CODIGO).not.toContain('baixarPesados:');
   });
 });
+
+describe('D5 — the three `uses` ports stay closed, and the cartridge says so', () => {
+  // 📌 D5 of Part Four: the `uses` opt-in (ADR-0255, note DW) has three ports — `neuralVoice`, `reading`,
+  //    `fonts`. 2048 declares none of them. The neural one is already paired with its decline above; this
+  //    block covers the other two AND asserts the cartridge records the whole decision in prose.
+
+  const INDEX = readFileSync(join(import.meta.dirname, '..', 'src', 'index.ts'), 'utf8');
+
+  it('[Zero] 🔴 the shell does not opt into `uses.reading` either', () => {
+    // Opting in loads ~850 MiB of reading models for the active locale and every available locale
+    // (`create-game.js:3419` per the pasted guide). 2048 has no reading flow — the board carries digits,
+    // not text to read aloud — so this port stays closed. Noise `uses:` keys for other options are
+    // irrelevant: this gate only forbids a `reading` key under `uses`.
+    expect(CODIGO).not.toMatch(/uses\s*:[\s\S]{0,200}reading/);
+  });
+
+  it('[Zero] ⚠️ and does not declare `uses.fonts` — only engine-free faces are in play', () => {
+    // Library fonts are declared via `uses: { fonts: ['Press Start 2P', ...] }` and delivered by
+    // `inclusionist-heavy dist --fonts "..."` (note DW). 2048 uses only «Atkinson Hyperlegible», one of
+    // the engine's 19 free faces (confirmed by H7's copy pipeline), so no library family is declared.
+    expect(CODIGO).not.toMatch(/uses\s*:[\s\S]{0,200}fonts/);
+  });
+
+  it('[Interface] and `src/index.ts` records the decision as a typed export, not as absence', () => {
+    // The pasted guide's own pattern: a cartridge DECLARES `uses` even when it opts into nothing, so a
+    // reader finds the decision rather than an oversight. The declaration below carries the typed
+    // nothing, with the three-way breakdown in prose beside it.
+    expect(INDEX).toMatch(/export\s+const\s+uses\s*:\s*undefined\s*=\s*undefined/);
+    // And the explanation names the three ports so a future opt-in finds the record it is replacing.
+    expect(INDEX, 'the port names are catalogued').toMatch(/neuralVoice[\s\S]{0,500}reading[\s\S]{0,500}fonts/);
+  });
+});
