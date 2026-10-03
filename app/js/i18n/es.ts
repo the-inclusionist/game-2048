@@ -42,6 +42,10 @@ export const es: Dicionario = {
   'act.right': 'Empujar hacia la derecha',
   'act.sonar': 'Dónde hay una unión',
   'act.sonar.hint': 'Dice dónde hay una unión posible, hacia qué lado y a qué distancia.',
+  'act.ler': 'Leer el tablero',
+  'act.ler.hint': 'Cambia lo que hacen las flechas: empujar las fichas o recorrer las casillas para oír cada una.',
+  'a11y.reading.on': 'Lectura activada: las flechas recorren las casillas.',
+  'a11y.reading.off': 'Lectura desactivada: las flechas vuelven a empujar las fichas.',
 
   'tools.typography': 'Tipografía',
   'tools.contrast': 'Alto contraste',

@@ -73,6 +73,10 @@ export const pt = {
   'act.right': 'Empurrar para a direita',
   'act.sonar': 'Onde há fusão',
   'act.sonar.hint': 'Diz onde há uma fusão possível, para que lado e a que distância.',
+  'act.ler': 'Ler o tabuleiro',
+  'act.ler.hint': 'Troca o que as setas fazem: empurrar as peças ou passear pelas casas para ouvir cada uma.',
+  'a11y.reading.on': 'Leitura ligada: as setas passeiam pelas casas.',
+  'a11y.reading.off': 'Leitura desligada: as setas voltam a empurrar as peças.',
 
   /* ---- this game's own toolbar, outside the 320×180 world ---- */
   // ⚠️ THEY WERE HARDCODED PORTUGUESE until 2026-09-11 — three buttons a child reading English or Spanish

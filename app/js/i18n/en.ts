@@ -39,6 +39,10 @@ export const en: Dicionario = {
   'act.right': 'Push right',
   'act.sonar': 'Where a merge is',
   'act.sonar.hint': 'Says where a merge is available, which way, and how far.',
+  'act.ler': 'Read the board',
+  'act.ler.hint': 'Switches what the arrows do: push the tiles, or walk the squares to hear each one.',
+  'a11y.reading.on': 'Reading on: the arrows walk the squares.',
+  'a11y.reading.off': 'Reading off: the arrows push the tiles again.',
 
   'tools.typography': 'Typeface',
   'tools.contrast': 'High contrast',

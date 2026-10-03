@@ -61,6 +61,13 @@ const arquivos = fontesParaMedir().map((caminho) => ({
 function semComentarios(fonte: string): string {
   return fonte
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    // 🔴 CRLF FIRST, AND IT IS NOT TIDINESS. Measured on 2026-10-03: in a file with CRLF line endings,
+    // every assertion below went inert without a word. JavaScript's `.` does NOT match a carriage return — it
+    // is a line terminator — so `(^|[^:])//.*$` finds no match on such a line, and NOTHING is stripped. The
+    // gate then reads the comments as if they were code. It surfaced as a false positive (a comment naming the
+    // forbidden token reddened the gate), which is the lucky direction; a checkout with `core.autocrlf=true`
+    // would leave every «this source does not contain X» gate in this repository measuring prose.
+    .replace(/\r\n?/g, '\n')
     .split('\n')
     .map((linha) => linha.replace(/(^|[^:])\/\/.*$/, '$1'))
     .join('\n');

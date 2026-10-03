@@ -38,18 +38,35 @@ import type { Direction } from './board.ts';
 export const ACAO_DO_SONAR: Action = 'action1';
 
 /**
- * The four directions, which in this game PUSH THE BOARD rather than move a cursor.
+ * THE POSITION THAT SWITCHES BETWEEN PUSHING AND READING.
  *
- * The reading cursor is Shift + the same arrows — the APG deviation declared in the header of
- * `ui/board-dom.ts`, and the reason is there: in 2048 pushing IS the verb, so arrows that only navigated
- * would leave a keyboard-only child unable to play.
+ * 🔴 IT REPLACED `Shift` + arrow ON 2026-10-03, and the reason is the same one that retired `Alt+S` above,
+ * one level up. A modifier chord is not a position: it exists only where there is a KEYBOARD. The engine
+ * carries every transport to the game as a `VirtualCommand` — `{ action, pressed, source, player }` — and a
+ * command has no `shiftKey`, because the eyes, the face, the hands, the voice, the gamepad and the on-screen
+ * pad have no Shift to hold. So `Shift` + arrow was a reading mode for keyboard children and for nobody
+ * else, while the four pushes worked for everyone.
+ *
+ * As a position it is remappable, it is checked against every other binding, it is named on the remap screen,
+ * the scan can land on it, and a child playing with her face reaches it exactly as she reaches `left`.
+ *
+ * 📌 A MODE AND NOT FOUR MORE POSITIONS. Giving the cursor its own up/down/left/right would double this
+ * game's vocabulary and put eight near-identical rows on the remap screen; what a child learns here is «the
+ * arrows do the other thing now», which is one thing to learn instead of four.
+ */
+export const ACAO_DE_LER: Action = 'action2';
+
+/**
+ * The four directions, which in this game PUSH THE BOARD rather than move a cursor — unless the reading mode
+ * is on, when the same four move the reading cursor (`ACAO_DE_LER`). In 2048 pushing IS the verb, so arrows
+ * that only navigated would leave a child who plays by positions unable to play at all.
  */
 export const ACAO_PARA_DIRECAO: Readonly<Partial<Record<Action, Direction>>> = {
   left: 'left', right: 'right', up: 'up', down: 'down',
 };
 
 /** Every engine position this game actually reads. The preset must name all of them, and nothing else. */
-export const ACOES_USADAS: readonly Action[] = ['up', 'down', 'left', 'right', ACAO_DO_SONAR];
+export const ACOES_USADAS: readonly Action[] = ['up', 'down', 'left', 'right', ACAO_DO_SONAR, ACAO_DE_LER];
 
 /**
  * The push this key means, or `undefined` — and the guard is the point.
@@ -69,33 +86,30 @@ export function ehSonar(action: string | null | undefined): boolean {
   return action === ACAO_DO_SONAR;
 }
 
-/** The modifier flags of a `KeyboardEvent`, and nothing else — so this stays testable without a keyboard. */
-export interface Modificadores {
-  readonly ctrlKey: boolean;
-  readonly altKey: boolean;
-  readonly metaKey: boolean;
+/** Is this the position that switches between pushing and reading? */
+export function ehLer(action: string | null | undefined): boolean {
+  return action === ACAO_DE_LER;
 }
 
-/**
- * Does this keystroke belong to the SYSTEM rather than to the game?
- *
- * ⚠️ MEASURED ON 2026-09-11, IN THE BROWSER: `Ctrl+S` played a move AND was swallowed, so the browser's Save
- * never opened. `KeyS` is `down` in the engine's solo scheme, and the handler read the action without ever
- * asking whether a modifier was held — so every `Ctrl`/`Alt`/`Cmd` chord built on `W`, `A`, `S`, `D`, `U` or
- * an arrow was quietly taken from whoever pressed it.
- *
- * 🔴 AND THE PERSON IT COSTS MOST IS THE ONE THIS GAME IS FOR. Screen readers and magnifiers live on modifier
- * chords — NVDA on `Insert`/`CapsLock` combinations, VoiceOver on `Ctrl+Option`, Windows Magnifier on
- * `Win` + keys. A game that calls `preventDefault()` on those does not merely ignore them: it takes them away
- * from the assistive technology the child is using to reach the game in the first place.
- *
- * ⚠️ SHIFT IS DELIBERATELY NOT HERE. It is the one modifier this game claims, and it claims it as a VERB:
- * `Shift` + arrow moves the reading cursor instead of pushing the board (the APG deviation in the header of
- * `ui/board-dom.ts`). Adding it would delete that reading mode.
- */
-export function ehAtalhoDoSistema(e: Modificadores): boolean {
-  return e.ctrlKey || e.altKey || e.metaKey;
-}
+// ========================= `ehAtalhoDoSistema` LEFT ON 2026-10-03, AND SO DID ITS SUBJECT =========================
+// It answered «does this keystroke belong to the SYSTEM rather than to the game?» — `e.ctrlKey || e.altKey ||
+// e.metaKey` — and it existed because this game listened to `keydown` itself. 📏 Measured on 2026-09-11 in the
+// browser: `Ctrl+S` played a move AND was swallowed, so the browser's Save never opened, because `KeyS` is
+// `down` in the engine's solo scheme and the handler read the action without asking whether a modifier was
+// held. The person it cost most was the one this game is for: screen readers and magnifiers live on modifier
+// chords — NVDA on `Insert`/`CapsLock`, VoiceOver on `Ctrl+Option`, the Windows Magnifier on `Win` + keys —
+// and a game that calls `preventDefault()` on those takes away the assistive technology the child is using to
+// reach the game in the first place.
+//
+// 🔴 THE GUARD IS NOT GONE; THE DUPLICATE IS. This game no longer has a `keydown` listener at all: the engine
+// mounts the keyboard, presses `engine.controller`, and the controller carries a `VirtualCommand` to
+// `onCommand`. The engine's own `input/key-default` is what decides that a press «belongs to something else» —
+// a field being typed into, the engine's own control, a chord — and `press()` answers `toPlay: false` for it,
+// so it reaches nobody. One answer to one question, which is ADR-0223's whole point.
+//
+// 📌 WHAT TO DO IF THE DEFECT COMES BACK: it is the engine's now. Measure it against `input/key-default`
+// rather than re-adding a guard here, because a second guard is a second answer, and two answers to one
+// question is how the two doors came to disagree in the first place.
 
 /**
  * This game's vocabulary, as KEYS of its own dictionaries.
@@ -117,6 +131,7 @@ export function criarPreset(): ActionPreset {
     left: { labelKey: 'act.left' },
     right: { labelKey: 'act.right' },
     [ACAO_DO_SONAR]: { labelKey: 'act.sonar', hintKey: 'act.sonar.hint' },
+    [ACAO_DE_LER]: { labelKey: 'act.ler', hintKey: 'act.ler.hint' },
   };
 }
 

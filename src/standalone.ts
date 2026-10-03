@@ -15,7 +15,6 @@ import '@the-inclusionist/engine/style.css';
 import { createGame } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
 // `GameDeclaration` once imported here for the local placeholder; the cartridge owns the shape now (H9).
-import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { cartridge } from './index.ts';
 import { MS_POR_QUADRO } from '../app/js/animation.ts';
@@ -234,8 +233,17 @@ hc?.addEventListener('click', () => {
 const barraA11y = $<HTMLElement>('#title-icons');
 if (barraA11y) montarRecolhimentoDaBarra({ barra: barraA11y, regiao, doc, win });
 
-// TOUCH: the PURE half of `input/touch`. `padPxPerMm` anchors the real millimetre to the device (WCAG 2.5.5),
-// and the four buttons get 11 mm MEASURED instead of a guess in pixels. The whole `initTouch` is deliberately
-// left out: its pad is a platformer d-pad with twelve fixed ids this game does not want.
-const pxmm = padPxPerMm(matchMedia('(pointer: coarse)').matches, window.innerWidth, window.innerHeight);
-document.documentElement.style.setProperty('--alvo-toque', (11 * pxmm).toFixed(1) + 'px');
+// 🔴 THE SHELL NO LONGER TOUCHES INPUT AT ALL, and the three lines that stood here are why this note exists.
+//    They called `padPxPerMm` and wrote `--alvo-toque` onto `:root` so that four hand-built `[data-dir]`
+//    buttons could be 11 mm across. The comment that justified them said «the whole `initTouch` is
+//    deliberately left out: its pad is a platformer d-pad with twelve fixed ids this game does not want».
+//
+//    📏 THAT PREMISE WAS NOT RE-MEASURED EITHER. `initTouch` builds its pad from the cartridge's OWN
+//    `preset` — this game names five positions and gets five — and `onScreenPad` (ADR-0166) is the switch
+//    that asks for it. The twelve fixed ids were the platformer's preset, not the engine's.
+//
+//    What the hand-built pad could not do is the part that mattered: it called `jogar()` directly, so it
+//    never pressed `engine.controller`, never carried a `source` (ADR-0109), was never offered to the
+//    one-button scan (ADR-0218 §4) and never asked `press()` whether a menu had taken the press (ADR-0223).
+//    The cartridge asks for the engine's pad in `boot/main.ts`'s hooks now, and this file has nothing to say
+//    about control.

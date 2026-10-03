@@ -28,7 +28,7 @@ import {
 import {
   criarAnimador, criarRelogioDeQuadros, duracaoDaJogada, pecasParadas, querMenosMovimento, type Peca,
 } from '../animation.ts';
-import { criarPreset, direcaoDe, ehAtalhoDoSistema, ehSonar } from '../actions.ts';
+import { criarPreset, direcaoDe, ehLer, ehSonar } from '../actions.ts';
 import type { GameCtx, GameInstance } from '../cartridge-types.ts';
 import { criarDeclaracao, RESPOSTAS_DAS_ACOMODACOES } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
@@ -123,6 +123,18 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   let pontos = 0;
   let heading: 'n' | 'e' | 's' | 'w' | 'none' = 'none';
   let acabou = false;
+  /**
+   * Are the four directions moving the READING CURSOR instead of pushing the board?
+   *
+   * 📌 PER INSTANCE, like everything else in this block, and for the reason spec D14 names: a module-level
+   * `let` here would mean the second game on a page inherited the first child's reading mode.
+   *
+   * ⚠️ It is a MODE and not a modifier since 2026-10-03. `Shift` + arrow could only ever be held by a child
+   * with a keyboard; the position (`ACAO_DE_LER`) is reachable from the gamepad, the eyes, the face, the
+   * hands, the voice, the on-screen pad and the one-button scan, because all of them press the same
+   * controller.
+   */
+  let lendo = false;
 
   let rng: Rng = createRng(Date.now() & 0x7fffffff);
 
@@ -319,54 +331,59 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     motor.tts.narrate(dito);
   }
 
-  // 6. KEYBOARD, THROUGH THE ENGINE'S REMAPPABLE LAYER. No raw `e.code === 'ArrowLeft'`: `actionOf` translates
-  //    a key into INTENT, respects ABNT/QWERTY/alternative layouts and whatever remapping the child has made.
+  // ============================ 6. EVERY TRANSPORT, THROUGH ONE DOOR ============================
   //
-  //    ⚠️ SHIFT CHANGES THE VERB, and this is where the APG deviation declared in `ui/board-dom` happens: an
-  //    arrow on its own PLAYS, an arrow with Shift moves the READING cursor and announces where it stopped.
-  região.addEventListener('keydown', (e: KeyboardEvent) => {
-    // ⚠️ A CHORD IS NOT OURS. See `ehAtalhoDoSistema`: until this line, `Ctrl+S` played a move and was
-    //    swallowed, because `KeyS` is `down`. Assistive technology lives on modifier chords, so taking them
-    //    is taking the tool the child uses to reach the game. Shift is the exception, and it is a verb here.
-    if (ehAtalhoDoSistema(e)) return;
+  // 🔴 THREE LISTENERS STOOD HERE UNTIL 2026-10-03 and all three were this game understanding control by
+  //    itself: a `keydown` on the region, a `touchstart`/`touchend` pair doing swipe arithmetic, and a
+  //    `click` on four `[data-dir]` buttons. Each ended in `jogar(dir)` — the game delivering to itself.
+  //    The Dev, finding it: «Não é para usar meios próprios de entender controle, use o virtualController».
+  //
+  // 📏 WHAT IT COST, MEASURED. The engine mounts the keyboard, the gamepad (ADR-0224), touch, the eyes, the
+  //    face, the hands, the voice and the one-button scan, and every one of them presses `engine.controller`,
+  //    which carries a `VirtualCommand` here. With no `onCommand` the commands went nowhere: the 📷 and 👄
+  //    icons sit in the bar this game just put back at the top, a child presses them, and the board does not
+  //    move. The keyboard appeared to work only because of the duplicate listener.
+  //
+  // ⚠️ AND THE DUPLICATE WAS THE MIGRATION'S TRAP. Measured with a probe before any of this was written: the
+  //    engine's keyboard ALREADY delivers `left` here, with `source: undefined` — a real key carries no stamp
+  //    (ADR-0109). Wiring `onCommand` without deleting the listener makes every arrow play TWICE, which is
+  //    invisible in a screenshot, exactly like the double boot of 05/09.
+  //
+  // 📌 `onCommand` MUST TRAVEL ON THE HOOKS THIS FUNCTION RETURNS, not on the shell's `createGame` call. The
+  //    same probe: passed to `createGame` alone it received 0 commands, because `motor.mount(declaration,
+  //    hooks)` replaces the whole game half (`GameHalf`) and `onCommand` is in it. Passed through `mount` it
+  //    received all of them. There is no error for the first case — it is simply silent.
+  const aoComando = (c: { readonly action: string; readonly pressed: boolean }): void => {
+    // A release is not a move. This game acts on the EDGE, as a board game does: holding `left` pushes once.
+    if (!c.pressed) return;
 
-    const action = motor.keyboard.actionOf(e.code, 0);
-    const dir = direcaoDe(action);
-
-    // THE SONAR — "where is a merge available?", asked as an ACTION and no longer as a chord.
+    // THE SONAR — "where is a merge available?", asked as a position. It was `e.code === 'KeyS' && e.altKey`
+    // until engine 8.0.0: invisible to the engine, unremappable, unchecked against other bindings, and moved
+    // in silence by any layout that puts `S` elsewhere.
     //
-    // ⚠️ IT WAS `e.code === 'KeyS' && e.altKey` UNTIL ENGINE 8.0.0, and three things were wrong with that.
-    //    The engine did not know the binding existed, so it could not be remapped and was not checked against
-    //    any other binding; a layout that puts `S` elsewhere moved it silently; and the README promised "in
-    //    one keystroke" while asking for two. Read through `actionOf`, it is the same path every other key in
-    //    this game already took.
-    //
-    // ✅ AND THE CHILD CAN REACH THE SCREEN THAT WRITES ONE, since 2026-09-11: `⌨ Teclas` opens the
-    //    engine's `ui/settings-controls`, mounted in `boot/boot.ts`. Measured end to end — rebinding the
-    //    sonar to another key makes the old key dead and the new one fire it, and the choice persists.
-    //
-    // ⚠️ THIS NOTE USED TO BLAME THE WRONG THING, and the correction is worth more than the panel. It
-    //    said the screen was unreachable because `CreateGameOptions` had no `getPauseActs`. 📏 Measured:
-    //    remapping was never behind `getPauseActs`. The pause card's options list is `caa`, `empatia`,
-    //    `audio`, `motora`, `tipo`, `visual`, `anim` — none of them is the remap panel — and NOTHING in the
-    //    engine opens `ui/settings-controls`, exactly as nothing opens `ui/settings-typo`, which this game
-    //    has mounted itself since the beginning. It was mountable on engine 8; nobody had mounted it.
-    if (ehSonar(action)) {
+    // ⚠️ NO `viz` SINCE ENGINE 8.0.0 — the field was DELETED, not moved. Checked in 8.0.0-rc.1 before the
+    //    argument went: `sonar()` does not gate on vision at all (the gate is on the continuous GUIDE), so
+    //    this sounds and speaks exactly as it did. Passing `viz: 'cego'` was forcing a flag with no reader.
+    if (ehSonar(c.action)) {
       const f = declaration.focusOf(0);
-      // ⚠️ NO `viz` SINCE ENGINE 8.0.0, and the field did not move — it was DELETED. `platform/audio-sonar`
-      //    used to read `ctx.VIZ_BY_KEY[pl.viz]`, a table of RENDER modes consulted from inside `platform/`;
-      //    issue #104 made it take the injected boolean instead, and the module got smaller rather than
-      //    migrated. Checked in the published 8.0.0-rc.1 before deleting the argument: `sonar()` does not gate
-      //    on vision at all — the gate is on the continuous GUIDE — so this keystroke sounds and speaks
-      //    exactly as it did. Passing `viz: 'cego'` was us forcing a flag that no longer has a reader.
       if (f) motor.sonar.sonar({ i: 0, x: f.at.x, y: f.at.y });
-      e.preventDefault();
       return;
     }
-    if (!dir) return;
-    e.preventDefault();
 
-    if (e.shiftKey) {
+    // THE READING MODE — what `Shift` + arrow used to be. `actions.ts` carries the reason at length: a
+    // command has no `shiftKey`, because the eyes, the face, the voice and the pad have no Shift to hold, so
+    // the chord was a reading mode for keyboard children and for nobody else.
+    if (ehLer(c.action)) {
+      lendo = !lendo;
+      motor.say(motor.t(lendo ? 'a11y.reading.on' : 'a11y.reading.off'));
+      if (lendo) grade.focar();
+      return;
+    }
+
+    const dir = direcaoDe(c.action);
+    if (!dir) return;
+
+    if (lendo) {
       const d = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[dir] as [number, number];
       const i = grade.mover(d[0], d[1]);
       grade.focar();
@@ -374,23 +391,7 @@ export function criarJogo(ctx: GameCtx): GameInstance {
       return;
     }
     jogar(dir);
-  });
-
-  // 7. TOUCH: a swipe, and four large targets for whoever does not swipe. The buttons exist in the markup;
-  //    here they only gain the intent. The engine's `padPxPerMm` already sizes them in REAL millimetres.
-  let toqueX = 0, toqueY = 0;
-  região.addEventListener('touchstart', (e: TouchEvent) => {
-    toqueX = e.changedTouches[0].clientX; toqueY = e.changedTouches[0].clientY;
-  }, { passive: true });
-  região.addEventListener('touchend', (e: TouchEvent) => {
-    const dx = e.changedTouches[0].clientX - toqueX;
-    const dy = e.changedTouches[0].clientY - toqueY;
-    if (Math.hypot(dx, dy) < 24) return; // a tap is not a swipe
-    jogar(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-  }, { passive: true });
-  for (const b of doc.querySelectorAll<HTMLButtonElement>('[data-dir]')) {
-    b.addEventListener('click', () => jogar(b.dataset.dir as Direction));
-  }
+  };
 
   doc.querySelector('#p2-again')?.addEventListener('click', () => {
     novaRodada();
@@ -428,7 +429,37 @@ export function criarJogo(ctx: GameCtx): GameInstance {
     //    `dictionaries` at every drawing, so a `setLocale` changes every row at once and the preset itself
     //    is immutable. Measured on 10.x: a preset built with a resolved `t` at boot stayed in the boot
     //    language forever — «Acima» after `setLocale('en')`. H2 moved us to keys.
-    hooks: { preset: criarPreset(), isNavigable: () => true, accommodations: RESPOSTAS_DAS_ACOMODACOES },
+    //    🔴 AND `onCommand` IS WHY THIS OBJECT MATTERS MORE THAN IT LOOKS. `mount` replaces the whole game
+    //    half, so a handler given to `createGame` and not repeated here is silently dropped — measured with
+    //    a probe on 2026-10-03: 0 commands that way, all of them this way. It is the game's ONE door for
+    //    input, and it is what makes the gamepad, the eyes, the face, the hands, the voice and the scan
+    //    reach this board at all.
+    //
+    //    📌 `onScreenPad` ASKS THE ENGINE FOR THE PAD (ADR-0166) instead of this game drawing one. Four
+    //    `[data-dir]` buttons lived in `app/index.html` with their own CSS and their own `click` handlers,
+    //    and `src/standalone.ts` sized them through `padPxPerMm` by hand. The engine's `initTouch` mounts
+    //    the pad, sizes it in real millimetres, names its buttons from this `preset`, remaps it, and presses
+    //    the controller — so the pad arrives wired to everything a hand-built one was cut off from.
+    hooks: {
+      preset: criarPreset(),
+      isNavigable: () => true,
+      accommodations: RESPOSTAS_DAS_ACOMODACOES,
+      onCommand: aoComando,
+      onScreenPad: true,
+      //    🔴 `declines` IS IN THE GAME HALF TOO, AND LEAVING IT OUT COST A REAL LINE. Measured on the built
+      //    page on 2026-10-03: `motor.problems` carried «there is no neural voice: a child who cannot read
+      //    gets the system voice, which a school Chromebook may not have for the child's language». The
+      //    shell DOES pass `declines: { noPauseActor, noNeuralVoice }` to `createGame` — and `mount`
+      //    replaced the whole half, so the decline was erased a few milliseconds later. The console only
+      //    ever showed the PRE-MOUNT snapshot, which is why it looked clean for weeks.
+      //
+      //    📌 ONLY `noNeuralVoice`, because only that one is the GAME's. The 27 MB of ONNX runtime against a
+      //    school tablet's precache budget is this cartridge's decision and travels with it into any shell.
+      //    `noPauseActor` is the SHELL's — a cartridge in the platform shares one pause card with every
+      //    other game, so the actor comes from the platform and a cartridge that declared it would be
+      //    answering for a card it does not own.
+      declines: { noNeuralVoice: true },
+    },
 
     /**
      * ONE TICK OF THE HOST'S LOOP.

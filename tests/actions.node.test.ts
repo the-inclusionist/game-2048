@@ -21,10 +21,12 @@
 import { describe, expect, it } from 'vitest';
 import { isAction, presetActions, presetProblems } from '@the-inclusionist/engine/core/actions.js';
 import {
-  ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, acoesComRotulo, criarPreset, direcaoDe,
-  ehAtalhoDoSistema, ehSonar,
+  ACAO_DE_LER, ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, acoesComRotulo, criarPreset, direcaoDe,
+  ehLer, ehSonar,
 } from '../app/js/actions.ts';
 import pt from '../app/js/i18n/pt.ts';
+import en from '../app/js/i18n/en.ts';
+import es from '../app/js/i18n/es.ts';
 
 /**
  * A `word` that echoes the key, so the test measures WHICH key the engine's `wordsOf` asked for — never a
@@ -89,34 +91,62 @@ describe('reading what `actionOf` gives back — a boundary, not a lookup', () =
   });
 });
 
-describe('the keystrokes that are NOT the game’s', () => {
-  const mods = (m: Partial<Record<'ctrlKey' | 'altKey' | 'metaKey', boolean>> = {}) =>
-    ({ ctrlKey: false, altKey: false, metaKey: false, ...m });
+// ========================= THE CHORD GUARD LEFT WITH THE KEYBOARD LISTENER =========================
+// 🔴 A WHOLE DESCRIBE STOOD HERE — «the keystrokes that are NOT the game's» — around `ehAtalhoDoSistema`,
+//    five assertions holding that `Ctrl`, `Alt` and `Cmd` hand the key back to the system while `Shift` stays
+//    the game's as the reading mode's modifier. Every one of them was true, and the whole block lost its
+//    subject on 2026-10-03: this game no longer listens to `keydown`.
+//
+//    📏 The defect it was born from is worth keeping in writing, because it is the kind that comes back:
+//    measured in the browser on 2026-09-11, `Ctrl+S` played a move AND was swallowed, so the browser's Save
+//    never opened — `KeyS` is `down` in the engine's solo scheme and the handler never asked about
+//    modifiers. Assistive technology lives on modifier chords (NVDA on `Insert`/`CapsLock`, VoiceOver on
+//    `Ctrl+Option`, the Windows Magnifier on `Win` + keys), so a game that `preventDefault()`s them takes
+//    away the software the child uses to reach the game at all.
+//
+//    📌 THE QUESTION IS THE ENGINE'S NOW, and asking it twice is the defect ADR-0223 names. `input/key-default`
+//    decides that a press belongs to something else and `controller.press()` answers `toPlay: false`, so it
+//    reaches nobody. A gate here would be a second answer to a question this game no longer asks.
 
-  it('[Zero] a bare key is the game’s', () => {
-    expect(ehAtalhoDoSistema(mods())).toBe(false);
+describe('the position that switches pushing for reading', () => {
+  it('[Right] 🔴 it is a DIAMOND position, so it cannot collide with a push', () => {
+    // The same argument as the sonar's, one position over. If reading were a direction it would have to be
+    // one of the four that play, and the child would have no way to ask for it without moving a tile.
+    expect(ACAO_DE_LER).toBe('action2');
+    expect(ACAO_PARA_DIRECAO[ACAO_DE_LER], 'reading must not also mean a push').toBeUndefined();
+    expect(ACAO_DE_LER, 'and it is not the sonar either').not.toBe(ACAO_DO_SONAR);
   });
 
-  it('[Many] ⚠️ Ctrl, Alt and Cmd each hand the key back to the system', () => {
-    // Measured in the browser on 2026-09-11: `Ctrl+S` played a move and was SWALLOWED, so the browser's Save
-    // never opened. `KeyS` is `down` in the engine's solo scheme, and the handler never asked about modifiers.
-    for (const k of ['ctrlKey', 'altKey', 'metaKey'] as const) {
-      expect(ehAtalhoDoSistema(mods({ [k]: true })), k).toBe(true);
+  it('[Interface] 🔴 it is NAMED, which is what makes it reachable by anything but a keyboard', () => {
+    // ⚠️ THIS IS THE WHOLE REASON IT EXISTS. It was `Shift` + arrow until 2026-10-03, and a `VirtualCommand`
+    //    carries `{ action, pressed, source, player }` — no `shiftKey`, because the eyes, the face, the
+    //    hands, the voice, the gamepad and the on-screen pad have no Shift to hold. An unnamed position
+    //    would also appear on the remap screen as a blank row, which ADR-0074 refuses: to a child using a
+    //    screen reader that is a button that exists and has no name.
+    const p = criarPreset();
+    expect(p[ACAO_DE_LER], 'a position this game reads must be named').toBeTruthy();
+    expect(p[ACAO_DE_LER]?.labelKey).toBe('act.ler');
+    expect(pt[p[ACAO_DE_LER]!.labelKey as keyof typeof pt], 'and the key resolves in pt-BR').toBeTruthy();
+    expect(pt[p[ACAO_DE_LER]!.hintKey as keyof typeof pt], 'the hint too').toBeTruthy();
+  });
+
+  it('[Right] the guard answers for it, and for nothing near it', () => {
+    expect(ehLer(ACAO_DE_LER)).toBe(true);
+    expect(ehLer(ACAO_DO_SONAR), 'the sonar is not the reading mode').toBe(false);
+    for (const d of ['up', 'down', 'left', 'right']) expect(ehLer(d), d).toBe(false);
+    expect(ehLer(null)).toBe(false);
+    expect(ehLer(undefined)).toBe(false);
+    expect(ehLer('shiftKey'), 'what it replaced is not a position').toBe(false);
+  });
+
+  it('[Many] ⚠️ the three announcements it switches between exist in all three languages', () => {
+    // A mode with no sentence is a mode a blind child cannot tell she is in. `motor.say` reads these.
+    for (const k of ['a11y.reading.on', 'a11y.reading.off'] as const) {
+      expect(pt[k as keyof typeof pt], `pt ${k}`).toBeTruthy();
+      expect(en[k as keyof typeof en], `en ${k}`).toBeTruthy();
+      expect(es[k as keyof typeof es], `es ${k}`).toBeTruthy();
     }
-  });
-
-  it('[Exception] ⚠️ but SHIFT is the game’s, and that is the whole reading mode', () => {
-    // Shift + arrow moves the READING cursor instead of pushing the board — the APG deviation declared in
-    // `ui/board-dom.ts`. Treating Shift as a system chord would delete it, and a mutation that adds it here
-    // has to fail loudly rather than quietly remove the way a blind child inspects the board.
-    expect(ehAtalhoDoSistema({ ctrlKey: false, altKey: false, metaKey: false }), 'Shift is not even read here')
-      .toBe(false);
-  });
-
-  it('[Boundary] a screen reader’s chord is left alone even on a key this game uses', () => {
-    // The cost is not "one shortcut missed": assistive technology LIVES on modifier chords, and a game that
-    // calls `preventDefault()` on them takes them from the software the child needs to reach the game at all.
-    expect(ehAtalhoDoSistema(mods({ ctrlKey: true, altKey: true })), 'VoiceOver-style Ctrl+Option').toBe(true);
+    expect(pt['a11y.reading.on'], 'on and off must not read the same').not.toBe(pt['a11y.reading.off']);
   });
 });
 
@@ -146,8 +176,20 @@ describe('the rows the remapping panel shows', () => {
     // and the result must be EMPTY, not a list of raw keys.
     const semPalavras = acoesComRotulo((_k) => null);
     expect(semPalavras).toEqual([]);
-    // And the one row the preset does NOT declare must not appear even when every known key resolves.
-    expect(acoesComRotulo(word).some((l) => l.action === 'action2'),
+    // And a row the preset does NOT declare must not appear even when every known key resolves.
+    //
+    // ⚠️ THE LITERAL WAS `action2` UNTIL 2026-10-03, AND IT ROTTED INTO THE OPPOSITE OF A GATE. `action2`
+    //    became this game's reading mode, so the assertion went from «an undeclared position stays out» to
+    //    «a declared one stays out» — and it failed, which is the lucky outcome. Had the preset gained the
+    //    position without this row being read, the gate would have gone on passing about nothing.
+    //
+    // 📌 THE CROSS-CHECK IS WHAT KEEPS THAT FROM BEING SILENT NEXT TIME: the literal is asserted to be
+    //    absent from `ACOES_USADAS` FIRST. If somebody later gives this game an `action3`, the gate says so
+    //    in a sentence instead of quietly measuring a position that is now declared.
+    const naoUsada = 'action3';
+    expect(ACOES_USADAS, `${naoUsada} must still be a position this game does not read`)
+      .not.toContain(naoUsada);
+    expect(acoesComRotulo(word).some((l) => l.action === naoUsada),
       'a position this game does not use').toBe(false);
   });
 

@@ -152,37 +152,22 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 .p2-hud__line { margin: 0 0 calc(4 * var(--px)); }
 .p2-hud__line b { font-size: calc(9 * var(--px)); }
 
-/* ============================ THE FOUR TOUCH TARGETS ============================
- * `--alvo-toque` comes from `padPxPerMm` (engine), in real MILLIMETRES measured on the device — WCAG 2.5.5. A
- * guess in pixels would be large on a monitor and tiny on a school tablet, which is where it matters. */
-.p2-pad {
-  position: absolute;
-  left: calc(8 * var(--px));
-  bottom: calc(6 * var(--px));
-  display: grid;
-  grid-template-areas: '. up .' 'left . right' '. down .';
-  gap: calc(2 * var(--px));
-}
-.p2-pad-btn {
-  min-width: var(--alvo-toque, calc(22 * var(--px)));
-  min-height: var(--alvo-toque, calc(22 * var(--px)));
-  font-size: calc(8 * var(--px));
-  background: #24528f;
-  color: #f6f8ff;
-  border: calc(1 * var(--px)) solid #58a0e8;
-  border-radius: calc(2 * var(--px));
-  cursor: pointer;
-}
-.p2-pad-btn:focus-visible { outline: calc(2 * var(--px)) solid #ffd23f; }
-.p2-pad-btn--up { grid-area: up; }
-.p2-pad-btn--left { grid-area: left; }
-.p2-pad-btn--right { grid-area: right; }
-.p2-pad-btn--down { grid-area: down; }
-
-/* A FINE pointer (a mouse) does not need the targets: whoever has a keyboard and a mouse uses the arrows.
-   Hiding them buys space on a 320-logical-pixel screen — and a pointer `@media` is the right question to ask,
-   not the window's width. */
-@media (pointer: fine) { .p2-pad { display: none; } }
+/* ============================ THE TOUCH PAD HAS NO RULE HERE ANY MORE ============================
+ * 🔴 A `.p2-pad` GRID AND A `.p2-pad-btn` STOOD HERE UNTIL 2026-10-03, sized from a `--alvo-toque` that
+ * `src/standalone.ts` computed with the engine's `padPxPerMm` and wrote onto `:root` by hand. The cartridge
+ * asks for `onScreenPad: true` now and `input/touch.initTouch` mounts the engine's pad — sized in real
+ * millimetres from the same function, named from this game's `preset`, remappable, and pressing
+ * `engine.controller` like every other transport.
+ *
+ * 📌 A `@media (pointer: fine) { display: none }` went with them, and that rule was ours to lose: which
+ * pointers get a pad is a question about the device and the child's reach, and the engine's touch layer is
+ * where it is already answered for every game. Keeping a second answer here is the shape of defect this
+ * whole week has been about.
+ *
+ * ⚠️ 📏 AND THE PAD/HUD COLLISION GOES WITH IT AS A MEASUREMENT, not as a claim: the hand-built pad was 92.8
+ * logical pixels square at y 81.2‥174 against a HUD column running 42‥140.7 — 59.5 of overlap, with the
+ * score and «Jogar outra vez» underneath the arrows. Whether the engine's pad lands anywhere near the HUD is
+ * a different question with a different answer, and it has to be re-measured rather than assumed. */
 
 /* ============================ TOOLS, OUTSIDE THE CANVAS ============================
  * They do not scale with k, on purpose: `ui/layout` decided that only the UI INSIDE the game follows the

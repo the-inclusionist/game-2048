@@ -71,6 +71,23 @@ const hooks: CartridgeHooks = Object.freeze({
   accommodations: RESPOSTAS_DAS_ACOMODACOES,
   dictionaries,
   isNavigable: () => true,
+  /**
+   * 🔴 THE ON-SCREEN PAD IS ASKED FOR IN BOTH HALVES, AND THE DUPLICATION IS THE POINT (ADR-0166).
+   *
+   * It is also on the INSTANCE's hooks in `app/js/boot/main.ts`, because `mount` replaces the whole game
+   * half and would otherwise take it away. It has to be HERE as well for a reason of ORDER, measured in the
+   * browser on 2026-10-03: `input/touch-bindings.attach()` begins with
+   *
+   *     const tc = ctx.$('#touch-controls'); if (!tc) return;   // nothing to wire
+   *
+   * and it runs inside `createGame`, while `drawPad()` only writes `#touch-controls` for a cartridge whose
+   * `onScreenPad` is true. Declared only on the instance, the pad is drawn at `mount` — after `attach` has
+   * already given up — so the `pointerdown`/`touchstart` listeners that REVEAL it are never wired. 📏 The
+   * pad existed in the document with its buttons correctly named from this game's `preset`, stayed
+   * `hidden`, and no touch brought it back. Nothing reports that: `padGapProblems` asks whether the pad's
+   * map has gaps, not whether anybody can see it.
+   */
+  onScreenPad: true,
 });
 
 /**

@@ -51,23 +51,20 @@
             <button id="p2-again" class="p2-btn" type="button" data-i18n="end.again">Jogar outra vez</button>
           </div>
 
-          <!-- THE FOUR TOUCH TARGETS. They exist for whoever does not swipe and for whoever plays with a
-               single pointer; the engine's `padPxPerMm` sizes them in REAL millimetres (WCAG 2.5.5).
+          <!-- 🔴 FOUR TOUCH BUTTONS STOOD HERE UNTIL 2026-10-03, and the engine mounts the pad now. The
+               cartridge asks for it with `onScreenPad: true` (ADR-0166) and `input/touch.initTouch` writes
+               it: sized in real millimetres, named from this game's own `preset`, remappable, and — the part
+               ours could never have — pressing `engine.controller`, so the pad goes through the same door as
+               the gamepad, the eyes, the face, the voice and the one-button scan.
 
-               ⚠️ THE `aria-label`s ARE TRANSLATED NOW, and until 2026-09-11 they were not: the sentences were
-               hardcoded in Portuguese here, so a child playing in English or Spanish heard the touch buttons
-               in a language she may not read. `data-i18n-aria` is the engine's own hook (`core/i18n` applies
-               it alongside `data-i18n`), and the keys are the SAME ones `app/js/actions.ts` gives the engine
-               for naming the keyboard positions — one sentence, one place, two surfaces.
+               Ours were `<button data-dir="up">` with their own CSS, their own `click` handlers in
+               `boot/main.ts` and their own sizing call in `src/standalone.ts`. The Dev, on the fourth thing
+               of this shape in one week: «Não é para usar meios próprios de entender controle».
 
-               The Portuguese stays in the attribute as the pre-translation fallback, exactly as `data-i18n`
-               does for the visible text above. -->
-          <div class="p2-pad" aria-hidden="false">
-            <button class="p2-pad-btn p2-pad-btn--up" type="button" data-dir="up" data-i18n-aria="act.up" aria-label="Empurrar para cima">▲</button>
-            <button class="p2-pad-btn p2-pad-btn--left" type="button" data-dir="left" data-i18n-aria="act.left" aria-label="Empurrar para a esquerda">◀</button>
-            <button class="p2-pad-btn p2-pad-btn--right" type="button" data-dir="right" data-i18n-aria="act.right" aria-label="Empurrar para a direita">▶</button>
-            <button class="p2-pad-btn p2-pad-btn--down" type="button" data-dir="down" data-i18n-aria="act.down" aria-label="Empurrar para baixo">▼</button>
-          </div>
+               📌 THEIR `aria-label`s ARE NOT LOST. `data-i18n-aria` pointed at `act.up`/`act.down`/
+               `act.left`/`act.right`, which are the SAME keys `criarPreset()` gives the engine — so the
+               engine's pad names its buttons from the dictionary entries that already existed, and the
+               sentence a child hears is unchanged in all three languages. -->
 
           <!-- THE ENGINE'S ACCESSIBILITY BAR, and the element is EMPTY on purpose: `createGame` writes and wires
                every button. Blind mode, TTS, Libras, the TEA/calm level, the typography cycle and the language
