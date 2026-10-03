@@ -22,7 +22,9 @@
     · `#stage-wrap` / `#stage` / `#game-region` — what `ui/layout` measures and scales.
     · `#cvd` — an EMPTY `<svg>`. `installCvdFilters()` fills it at run time, so this game copies not one line
       of the engine's markup (finding 7).
-    · the ids of the typography panel, which is borrowed whole.
+    · `#title-icons` — an EMPTY `<div>` inside `#game-region`, the engine's own id for the accessibility bar.
+      It once read "the ids of the typography panel, which is borrowed whole"; the panel went back to the
+      engine on 2026-10-03 (Part Five, E1) and the bar came home to its own id (E2).
 
   ⚠️ AND `#game-region` DOES NOT CONTAIN THE BOARD IN THE HTML. The canvas and the `role="grid"` grid are built
   by `boot/main.ts`, because both layers read the SAME geometry (`app/js/geometry.ts`) and duplicating it here
@@ -66,25 +68,40 @@
             <button class="p2-pad-btn p2-pad-btn--right" type="button" data-dir="right" data-i18n-aria="act.right" aria-label="Empurrar para a direita">▶</button>
             <button class="p2-pad-btn p2-pad-btn--down" type="button" data-dir="down" data-i18n-aria="act.down" aria-label="Empurrar para baixo">▼</button>
           </div>
+
+          <!-- THE ENGINE'S ACCESSIBILITY BAR, and the element is EMPTY on purpose: `createGame` writes and wires
+               every button. Blind mode, TTS, Libras, the TEA/calm level, the typography cycle and the language
+               arrive without this game writing one of them.
+
+               ⚠️ IT MOVED HERE ON 2026-10-03, FROM A `#p2-a11y` OF OUR OWN UNDER `<main>` (Part Five, E2). The
+               old note said the engine's `#title-icons` rule was "the platformer's title screen" and that our own
+               id "takes the layout back and keeps everything else". Both halves were wrong, and each cost the
+               child something measurable:
+
+                 · The rule is `position:absolute; top:0; left:50%` against the nearest POSITIONED ancestor, and
+                   `.game-region` is `position:relative`. Inside the region it anchors to the region — which is
+                   what ADR-0148 §3 describes and what `ui/top-band.reserveTopBand` measures. Outside it, `main`
+                   was the containing block, which is the defect the old note diagnosed correctly and then fixed
+                   on the wrong side.
+                 · `.pi-btn` is sized by `--alvo-min`, and `ui/layout` writes that variable ON THE REGION
+                   (`ui/layout.js:95`, 22·k px). Outside the region the variable was out of scope and every icon
+                   fell back to a literal 44 px, so the bar stopped growing with the scale while the board grew.
+                 · The engine measured the bar wherever it was and wrote `--barra-a11y-h` on the region
+                   accordingly. 📏 Measured on the live deploy with the bar under `<main>`: 375 px of reservation
+                   on a region 171 px tall. A nonsense number, written every frame, read by nobody.
+
+               🔴 AND OUR `.p2-a11y` RULE IS WHAT MADE THE ICONS UNCLICKABLE. It was `display:flex; flex-wrap:
+               wrap`, which made the engine's `<p class="pause-icons-cap">` — the line naming the pointed icon —
+               an ordinary flex ITEM. Its text changes width on every hover, the wrapping row reflows, and the
+               icons slide sideways from under the cursor: 📏 hovering `idioma` moved it from x=260 to x=121, 139
+               px out. The engine's own rule has the caption `position:absolute; top:100%; pointer-events:none`
+               and the row `flex-wrap:nowrap` — out of flow, below the bar, and incapable of moving anything.
+               The Dev, finding it: «a pior parte foi a mensagem que deveria aparecer embaixo do painel aparecendo
+               no mouse». -->
+          <div class="pause-icons" id="title-icons" role="group" aria-label="Atalhos de acessibilidade" data-i18n-aria="a11y.shortcuts"></div>
         </section>
       </div>
     </div>
-
-    <!-- THE ENGINE'S ACCESSIBILITY BAR HANGS HERE, and the element is EMPTY on purpose: `createGame` writes
-         and wires the buttons since engine 8.0.0. Blind mode, TTS, Libras and the TEA/calm level arrive
-         without this game writing one of them — and before that release none of the four was reachable here
-         at all.
-
-         ⚠️ AND THE ID IS OURS, NOT THE ENGINE'S `#title-icons`. Measured in the browser: the engine's
-         stylesheet styles that id as `position:absolute; top:10px; left:50%`, which is the PLATFORMER'S title
-         screen — the bar floating over the title art. Here `main` is the containing block, so the bar landed
-         on top of the HUD, and `elementFromPoint` over the score column returned a `.pi-btn`. It is the same
-         defect shape as the canvas that once painted over this HUD.
-
-         Using our own id takes the layout back and keeps everything else: `.pi-btn` is styled by class, so
-         the buttons arrive fully dressed. This is what `a11yBarHost` is for, in the engine's own words — it
-         can offer the icons, but it cannot guess where they fit in another game's design. -->
-    <div id="p2-a11y" class="p2-a11y"></div>
 
     <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the
          engine's `ui/layout` decided for everything that is not the game's world.

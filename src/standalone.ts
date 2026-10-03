@@ -57,15 +57,26 @@ const motor = createGame({
       doc,
       win,
       cvdHost: doc.querySelector('#cvd'),
-      // WHERE THE ACCESSIBILITY BAR GOES. Outside `#game-region` on purpose: inside it, everything scales by
-      // the integer `k` of ADR-0001 along with the 320×180 board, and these controls are not part of the
-      // picture — they are chrome, and `ui/layout` keeps chrome at 16 px text and 44 px touch.
+      // 🔴 NO `a11yBarHost`, AND THE ABSENCE IS THE DECISION (Part Five, E2 — 2026-10-03). Without it the
+      //    engine looks for its own `A11Y_BAR_SELECTOR = '#title-icons'` (`boot/create-game.js:231`, read at
+      //    `:577`), and `app/index.html` now carries exactly that id, inside `#game-region`.
       //
-      // ⚠️ AND IT IS THE ENGINE THAT MOUNTS THE BAR NOW. Measured by the engine across the local catalogue:
-      // five of six games had no accessibility bar at all, this one among them, because `initPauseIcons` had
-      // to be called by each game's composition root and five roots never remembered. The child who depends
-      // on blind mode, TTS or Libras opened those five and had nowhere to go.
-      a11yBarHost: doc.querySelector('#p2-a11y'),
+      //    The line used to read `a11yBarHost: doc.querySelector('#p2-a11y')`, with a host element of our own
+      //    under `<main>`, and the reason given was that inside the region "everything scales by the integer
+      //    `k` of ADR-0001 … these controls are chrome". The premise was simply false: nothing scales
+      //    `#game-region`'s children by transform — `ui/layout` writes `width`/`height` on the region and
+      //    publishes `--ui-fs`, `--tap` and `--alvo-min` ON IT. Being inside is what puts those rulers in
+      //    scope, so the bar's buttons grow with the board instead of sitting at a literal 44 px while it
+      //    grows past them.
+      //
+      //    ⚠️ AND THE HOST OPTION IS NOT A MISTAKE IN THE ENGINE — it is for a game whose first screen is
+      //    somewhere else entirely. Reaching for it to escape a CSS rule we had misread is what produced the
+      //    bar at the bottom of the page, the 375 px reservation nobody read, and the caption that pushed
+      //    icons out from under the pointer. The whole of Part Five is that one habit.
+      //
+      //    📌 It is still the ENGINE that mounts and wires the bar, which is the point of the measurement
+      //    behind ADR-0148: five of six games in the catalogue had no accessibility bar at all, because
+      //    `initPauseIcons` had to be called by each game's composition root and five roots never remembered.
       // WHERE THE PAUSE CARD HANGS. `#game-region` is the engine's own fallback, and naming it explicitly
       // costs one line and removes a guess.
       pauseHost: doc.querySelector('#game-region'),

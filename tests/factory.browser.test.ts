@@ -29,14 +29,16 @@ function montarShell(): GameInstance {
   const motor = createGame({
     declaration: cartridge.declaration,
     ...cartridge.hooks,
-    // ⚠️ `a11yBarHost` IS NOT OPTIONAL FOR A FAITHFUL SHELL. Omitting it made gate 3 count zero icons —
-    //    the engine fell back to looking for `#title-icons`, found nothing, and reported a problem instead
-    //    of mounting. A harness that is not a shell proves nothing about shells.
+    // ⚠️ NO `a11yBarHost`, AND THAT IS NOW THE FAITHFUL SHELL (Part Five, E2). This block used to pass
+    //    `doc.querySelector('#p2-a11y')` under a note saying the option "IS NOT OPTIONAL FOR A FAITHFUL
+    //    SHELL. Omitting it made gate 3 count zero icons". The observation was right and the conclusion was
+    //    backwards: the engine fell back to `#title-icons` and found nothing because the HARNESS did not
+    //    build that element. `montarCasca` builds it now, inside the region, exactly as `app/index.html`
+    //    does — so omitting the option is what makes this a shell rather than what breaks it.
     host: {
       doc: document,
       win: window,
       cvdHost: document.querySelector('#cvd'),
-      a11yBarHost: document.querySelector('#p2-a11y'),
       pauseHost: document.querySelector('#game-region'),
     },
     declines: { noPauseActor: true, noNeuralVoice: true },
@@ -68,11 +70,16 @@ function montarCasca(): void {
   const regiao = document.createElement('section');
   regiao.id = 'game-region';
   regiao.tabIndex = -1;
+  // THE ACCESSIBILITY BAR, INSIDE THE REGION AND UNDER THE ENGINE'S OWN ID — the page's shape since E2. It
+  // used to be a `#p2-a11y` appended to `<body>` beside the region, which is where the Dev's three defects
+  // came from; `app/index.html` carries the comment with the measurements.
   const barra = document.createElement('div');
-  barra.id = 'p2-a11y';
+  barra.id = 'title-icons';
+  barra.className = 'pause-icons';
+  regiao.append(barra);
   const cvd = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   cvd.id = 'cvd';
-  document.body.append(p('sr-status', 'status', 'polite'), p('sr-alert', 'alert', 'assertive'), regiao, barra, cvd);
+  document.body.append(p('sr-status', 'status', 'polite'), p('sr-alert', 'alert', 'assertive'), regiao, cvd);
 }
 
 const regiao = () => document.querySelector<HTMLElement>('#game-region')!;
@@ -98,10 +105,13 @@ describe('importing the cartridge does nothing', () => {
     const a = montarShell();
     a.teardown();
     const b = montarShell();
-    expect(document.querySelectorAll('#p2-a11y').length, 'one host').toBe(1);
+    expect(document.querySelectorAll('#title-icons').length, 'one host').toBe(1);
     expect(document.querySelectorAll('.pi-btn').length, 'one set of icons, not two').toBeGreaterThan(0);
-    const icones = document.querySelectorAll('#p2-a11y .pi-btn').length;
+    const icones = document.querySelectorAll('#title-icons .pi-btn').length;
     expect(document.querySelectorAll('.pi-btn').length, 'and none outside the host').toBe(icones);
+    // E2: and the host is INSIDE the region, which is what puts `--alvo-min` in scope for `.pi-btn` and what
+    // makes `reserveTopBand` measure the bar against the region rather than against the whole page.
+    expect(regiao().querySelector('#title-icons'), 'the bar is the region’s own child').toBeTruthy();
     b.teardown();
   });
 });

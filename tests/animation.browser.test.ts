@@ -102,14 +102,28 @@ describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
     // It is the seam between `animation.ts` (arithmetic) and the CSS (resolving the `calc`). If they
     // diverged, the drawn tile and the computed tile would be in different places — and no node test would
     // see it.
+    //
+    // ⚠️ THE TOLERANCE IS A NUMBER WITH A REASON, and it was `toBeCloseTo(…, 5)` until 2026-10-03 — a demand
+    // for agreement to within 5·10⁻⁶ logical pixels. 📏 That is BELOW THE BROWSER'S OWN RESOLUTION: layout is
+    // snapped to 1/64 of a CSS pixel, which at k=4 is 1/256 of a logical one, so the old digit count was not
+    // measuring placement at all. It passed by luck of the coordinates, and E3's move of the board (`BOARD_X`
+    // 164→174, `BOARD_Y` 16→40) was enough to break the luck: the measured gap became 7.3·10⁻⁶ on a value of
+    // 185.18 — a relative error of 4·10⁻⁸, which is double-precision noise in `(b.x - r.x) / K` and nothing
+    // else.
+    //
+    // 📌 A HUNDREDTH OF A LOGICAL PIXEL is the band that means something here. The smallest defect this file
+    // exists to catch is the 2-logical-pixel offset the flexbox grid produced in September; the smallest
+    // misplacement anyone could see is a fraction of one. 0.01 is two hundred times tighter than the first
+    // and a thousand times looser than the arithmetic noise, so it fails for placement and never for floats.
+    const FOLGA = 0.01;
     const r = slide(linha(0, 0, 0, 4), 'left');
     for (const t of [0, 0.35, 0.7, 1]) {
       const esperado = posicaoDe(r.movimentos[0], t);
       camada.desenhar([esperado], false, papelFixo);
       for (const el of visiveis()) el.style.position = 'absolute';
       const medido = caixaLogica(visiveis()[0]);
-      expect(medido.x, `t=${t}`).toBeCloseTo(esperado.x, 5);
-      expect(medido.y, `t=${t}`).toBeCloseTo(esperado.y, 5);
+      expect(Math.abs(medido.x - esperado.x), `t=${t} on x`).toBeLessThan(FOLGA);
+      expect(Math.abs(medido.y - esperado.y), `t=${t} on y`).toBeLessThan(FOLGA);
     }
   });
 

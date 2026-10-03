@@ -110,12 +110,42 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 /* A visible and THICK focus ring: 2 logical px become 2·k real px, so it does not vanish as the screen grows. */
 .p2-cell:focus-visible { outline: calc(2 * var(--px)) solid #f6f8ff; outline-offset: calc(-1 * var(--px)); }
 
-/* ============================ HUD ============================ */
+/* ============================ HUD ============================
+ * 🔴 `top` IS THE ENGINE'S OWN RESERVATION, READ RATHER THAN GUESSED (ADR-0148 §3; Part Five, E3).
+ *
+ * `ui/top-band.reserveTopBand` measures the accessibility bar, the line that names the pointed icon and a
+ * light gap, and writes the total as `--barra-a11y-h` on `#game-region`. This column is that element's
+ * child, so the variable is in scope and the HUD follows the band EXACTLY — including the two logical pixels
+ * it grows by when the child picks Playwrite BR, whose higher floor takes the name line from 16 px to 20 px.
+ *
+ * It used to be `top: calc(16 * var(--px))`, and 📏 the engine named the consequence at every boot: «the game
+ * draws over the accessibility bar (h1.p2-hud__title…)» — measured on 2026-10-03 with the title's box at
+ * logical y 16‥40 against a bar occupying y 0‥22. The line was in `motor.problems` and `src/standalone.ts`
+ * printed it to the console; nobody read it for three weeks.
+ *
+ * 🔴 AND IT IS A FLOOR, NOT THE RAW VARIABLE — `max(…, TOP_BAND)`. Two different things make the measured
+ * band drop below the room this game actually reserves, and in both the HUD would walk up the screen while
+ * the child is reading it:
+ *   · The bar RETRACTS after five seconds of stillness (the Dev, 2026-10-03 — E5 of Part Five). A retract is
+ *     a `transform`, so the bar's rectangle leaves the top of the region, and the engine's next measurement
+ *     — `reserveTopBand` runs inside `applyResolution`, so the next resize — would publish a band of almost
+ *     nothing. The canvas half is immune because it reserves the constant `TOP_BAND`; without this floor the
+ *     DOM half would not be, and the two layers coming apart is the one thing `geometry.ts` exists to stop.
+ *   · A host that mounts no bar at all reserves nothing. There the floor costs 40 logical pixels of unused
+ *     top, which is a straight trade for never moving text out from under a child mid-sentence (ADR-0148's
+ *     own reasoning for counting the name line whether or not a name is showing).
+ * The variable still WINS whenever it is larger, which is the case that matters: an engine release that
+ * grows the band moves the HUD with it, without this file being touched.
+ *
+ * ⚠️ `left`, `width` AND THE 40 RESTATE `HUD_X`, `HUD_W` AND `TOP_BAND` FROM `app/js/geometry.ts`, because
+ * CSS cannot import them. That is a second copy of three numbers, so a browser gate measures this box
+ * against the constants — `width` moved from 148 to 158 when the board narrowed to 138, and a stale literal
+ * here would have left a 10-pixel strip of dead column nobody could see. */
 .p2-hud {
   position: absolute;
   left: calc(8 * var(--px));
-  top: calc(16 * var(--px));
-  width: calc(148 * var(--px));
+  top: calc(max(var(--barra-a11y-h, 0px), 40 * var(--px)) + 2 * var(--px));
+  width: calc(158 * var(--px));
   font-size: calc(7 * var(--px));
 }
 .p2-hud__title { font-size: calc(11 * var(--px)); margin: 0 0 calc(6 * var(--px)); line-height: 1.1; }
@@ -157,13 +187,25 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 /* ============================ TOOLS, OUTSIDE THE CANVAS ============================
  * They do not scale with k, on purpose: `ui/layout` decided that only the UI INSIDE the game follows the
  * scale. Outside it, 16 px text and 44 px targets, which is WCAG's floor. */
-/* THE ENGINE'S ACCESSIBILITY BAR. The row is ours; the buttons inside are not — `.pi-btn` comes fully styled
- * from the engine's stylesheet, sized by `--tap`, which `ui/layout` keeps at a real 44 px.
+/* 🔴 THE ACCESSIBILITY BAR HAS NO RULE IN THIS FILE, AND THAT IS THE FIX (Part Five, E2 — 2026-10-03).
  *
- * ⚠️ WHY WE LAY IT OUT AT ALL: the engine also ships `#title-icons{position:absolute;top:10px;left:50%}`, and
- * using that id put the bar on top of the score column — the platformer floats it over its title art, which is
- * a different page. Our own id keeps the buttons and drops the overlay. */
-.p2-a11y { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; padding: 8px 12px 4px; }
+ * A `.p2-a11y { display:flex; flex-wrap: wrap; … }` stood here. One declaration of it — `flex-wrap: wrap` —
+ * made the engine's `<p class="pause-icons-cap">`, the line that names the icon under the pointer, an ordinary
+ * flex ITEM of the same row as the icons. The caption's text changes width on every hover, so the row reflowed
+ * and the icons moved sideways out from under the cursor: 📏 hovering `idioma` took it from x=260 to x=121.
+ * Some icons could not be clicked at all, which is what the Dev found on the live deploy.
+ *
+ * The engine's own two rules are the answer, and they were always there:
+ *   `#title-icons              { position:absolute; top:0; left:50%; flex-wrap:nowrap; white-space:nowrap }`
+ *   `#title-icons .pause-icons-cap { position:absolute; top:100%; pointer-events:none }`
+ * The caption is OUT OF FLOW and below the bar, so it cannot move an icon however long its text gets, and the
+ * row cannot wrap. Those come from `@the-inclusionist/engine/style.css` the moment the host element carries
+ * the engine's id — which is why E2 renamed it rather than restyling it.
+ *
+ * 📌 THE SIZE COMES FROM THE REGION TOO. `.pi-btn` reads `--alvo-min` (22·k px), and `ui/layout` writes that
+ * variable on `#game-region`. The bar used to live under `<main>`, out of scope, so every icon took the
+ * literal 44 px fallback and stopped growing with the scale. Anything this file added here would be a third
+ * ruler beside those two. */
 
 .p2-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 16px; }
 .p2-tools__label { font-size: 16px; }
@@ -175,22 +217,22 @@ main { width: 100%; display: flex; flex-direction: column; align-items: center; 
 }
 .p2-btn:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
 
-/* THE TOUCH FLOOR FOR EVERY PANEL THIS PAGE OWNS — `#viz`, `#ctrl` and `#typo`.
+/* THE TOUCH FLOOR FOR AN OVERLAY MOUNTED OUTSIDE THE REGION — WCAG 2.5.5, restated rather than inherited.
  *
- * The engine sizes `.mode-btn` with `min-height: var(--tap)`, and `--tap` is declared on `#game-region`,
- * where `ui/layout` keeps it at a real 44 px. All three overlays are children of `<main>`, OUTSIDE that
- * element, so the variable is not in scope and the declaration resolves to nothing — silently, because an
- * invalid `var()` falls back to `auto` rather than erroring. The WCAG 2.5.5 floor is restated here rather
- * than inherited by luck.
+ * The engine sizes `.mode-btn` with `min-height: var(--alvo-min, 44px)`, and `ui/layout` writes `--alvo-min`
+ * on `#game-region` (22·k px). An overlay card appended to `<body>` or `<main>` is outside that element, so
+ * the variable is out of scope — and the fallback is what saves it. This rule says the floor out loud so it
+ * does not depend on the engine keeping that fallback.
  *
- * ⚠️ THIS RULE USED TO BE `.p2-viz .mode-btn`, and the narrow selector was hiding two more cases. The
- * colour-correction rows were the only panel in the page whose floor anybody had restated; the remap panel
- * and the typography panel have the same parent and had been shipping without it. Widening the selector to
- * `.overlay` is what the note above always described, and it repairs both.
+ * ⚠️ THE SUBJECT OF THIS RULE CHANGED ON 2026-10-03, and the note above it did not until now. It read "every
+ * panel THIS PAGE OWNS — `#viz`, `#ctrl` and `#typo`", and E1 of Part Five deleted all three: engine 11.0.0
+ * mounts the typography panel (`boot/create-game.js:1134`) and the key-remap panel (`:2973`) itself, and the
+ * 🚥 icon in the bar replaces the colour chooser. The three ids are gone; `.overlay` is the ENGINE's class,
+ * so what the selector reaches now is the engine's own cards. Keeping the floor is still right — the reason
+ * is the variable's scope, which does not care whose card it is.
  *
- * 📌 The rest of what these cards look like is the engine's: `.overlay`, `.overlay__card` (including the same
- * 420 px cap the old `.p2-viz` section set by hand) and `.ctrl-row` all come from its stylesheet, so the
- * control reads the same here as in every other game. */
+ * 📌 The rest of what these cards look like is the engine's: `.overlay`, `.overlay__card` and `.ctrl-row` all
+ * come from its stylesheet, so the control reads the same here as in every other game. */
 .overlay .mode-btn { min-height: 44px; }
 
 /* ============================ MOTION ============================
