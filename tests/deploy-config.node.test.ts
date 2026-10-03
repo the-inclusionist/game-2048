@@ -11,7 +11,7 @@
 // This gate reads the file at test time and refuses the shapes that produce silent failure. It is small
 // because the file is small; what matters is that the four fields nobody can see from the dashboard are
 // still what they must be.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -122,6 +122,28 @@ describe('D7 — functions/heavy/[[path]].ts mirrors the engine\'s current MIRRO
     // the function's `[...]` tuples and comparing to the engine's length.
     const tuplasNoFn = [...BLOCO.matchAll(/\[\s*['"]/g)].length;
     expect(tuplasNoFn, 'extra tuples would route to R2 keys that no longer exist').toBe(ENGINE_FOLDERS.length);
+  });
+});
+
+describe('D8 — post-build-cloudflare.mjs is chained into every production build', () => {
+  // 📌 CF Pages reads `_headers` ONLY FROM `pages_build_output_dir`'s ROOT (`dist/`); a `_headers` sitting
+  //    inside `dist/<slug>/` is silently ignored. The post-build writes the file at the right place
+  //    (`dist/_headers`) with the prefix read from `INCL_BASE`. If `npm run build` ever stops chaining it,
+  //    deployments go out without the Cache-Control the catalogue depends on — ADR-0117's shared cache
+  //    story quietly weakens, and nobody sees it until the next audit.
+
+  const PKG = JSON.parse(readFileSync(join(RAIZ, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
+
+  it('[Zero] 🔴 `npm run build` runs the post-build between the two targets', () => {
+    expect(PKG.scripts.build, 'the full build').toMatch(/vite build\s*&&\s*node scripts\/post-build-cloudflare\.mjs/);
+  });
+
+  it('[Zero] 🔴 `npm run build:app` runs it too — the app alone is the delivery route', () => {
+    expect(PKG.scripts['build:app']).toMatch(/vite build\s*&&\s*node scripts\/post-build-cloudflare\.mjs/);
+  });
+
+  it('[Interface] the script exists at the referenced path', () => {
+    expect(existsSync(join(RAIZ, 'scripts', 'post-build-cloudflare.mjs')), 'the file in `scripts/`').toBe(true);
   });
 });
 
