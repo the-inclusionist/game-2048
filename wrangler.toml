@@ -1,0 +1,41 @@
+# Cloudflare Pages (ADR-0117) — this file defines the Pages project for this game. It lives at the repo
+# root because that is wrangler's convention; most of what it configures is only read at deploy time.
+#
+# ⚠️ ONE PROJECT PER GAME WHILE THERE IS ONLY ONE GAME. When the second cartridge arrives, this
+# `wrangler.toml` migrates into a platform repo and the games are copied to `platform/dist/game-<slug>/`.
+# Until then each game is its own deploy under `o-inclusionista.jrocha.dev.br/game-<slug>/`, and the Pages
+# Function at `functions/heavy/[[path]].ts` points every one at the same R2 bucket — shared origin,
+# shared `incl-pesados-v2` cache (ADR-0117).
+
+name = "game-2048"
+compatibility_date = "2024-11-15"
+pages_build_output_dir = "dist"
+
+# The game's path under the shared origin. Read by `vite.config.ts` at build (see `base: process.env.INCL_BASE`
+# inside the `defineGameBuild({ config })` block). CF Pages's own safety rule: variables prefixed `INCL_` are
+# product variables; the prefix stays.
+[vars]
+INCL_BASE = "/game-2048/"
+
+# The R2 bucket that serves `/heavy/*` — SHARED across every game on the origin (ADR-0117). The bucket is
+# the Dev's: filled by `the-inclusionist-lfs/upload-to-r2.ps1` and served publicly at
+# `https://lfs-oinclusionista.jrocha.dev.br` — the address the engine's catalogue points at for Vosk,
+# Whisper, Moonshine, eSpeak, fonts and Libras. The bucket also carries upstream mirrors (Kokoro, MediaPipe,
+# onnxruntime) laid out as `MIRROR_FOLDERS`, so `inclusionist-heavy --base` can deliver any game without
+# reaching external hosts.
+#
+# 📌 2048 declines neural voice (H3's `declines.noNeuralVoice: true`) and does not opt into reading, so this
+# game draws nothing from the bucket at run time. The binding is still declared for parity: a game that
+# turns `uses.neuralVoice` on later needs no new binding.
+#
+# ⚠️ THE BUCKET LAYOUT IS LFS-SHAPED FOLDERS, not the entry-level `heavy/<host><path>` the delivery expects.
+# `functions/heavy/[[path]].ts` is what translates between the two, through the engine's `MIRROR_FOLDERS`
+# table — see D7 of Part Four and the function's own header for the drift risk the inlined table carries.
+[[r2_buckets]]
+binding = "LFS"
+bucket_name = "the-inclusionist-lfs"
+# 🔴 BUCKET IN THE EUROPEAN JURISDICTION, measured by the Dev's S3 URL (`.eu.r2.cloudflarestorage.com`).
+# Without this field the binding looks in the global namespace and the Pages Functions deploy fails with
+# «bucket not found», even with the right name and open permissions — the pitfall the Dev named by name
+# in the 2026-10-02 deploy at 19h53.
+jurisdiction = "eu"
