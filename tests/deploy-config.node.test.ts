@@ -84,6 +84,47 @@ describe('D3 — <base href="/" /> in app/index.html', () => {
   });
 });
 
+describe('D7 — functions/heavy/[[path]].ts mirrors the engine\'s current MIRROR_FOLDERS', async () => {
+  // 📌 THE DRIFT RISK THE PASTED GUIDE NAMES BY ITS OWN NAME: Pages Functions `esbuild` under CF Pages
+  //    treats `@the-inclusionist/engine/platform/heavy-mirror.js` as external, so the function copies the
+  //    table verbatim. A silently drifted copy would 404 a whole class of files at run time; this gate
+  //    catches it at test time by reading the engine's live table and comparing to the copy.
+
+  const FUNCTION = readFileSync(join(RAIZ, 'functions', 'heavy', '[[path]].ts'), 'utf8');
+
+  // Extract the function's own MIRROR_FOLDERS literal — a tuple-of-tuples. The regex scopes to the array
+  // block that assigns the constant, so prose mentions of `MIRROR_FOLDERS` elsewhere do not match.
+  const BLOCO = FUNCTION.slice(FUNCTION.indexOf('const MIRROR_FOLDERS'), FUNCTION.indexOf('];', FUNCTION.indexOf('const MIRROR_FOLDERS')));
+
+  // The engine's current table, loaded from its runtime module — same source `require()` in the
+  // keep-in-sync note of the function's own header.
+  const engineModule = await import('@the-inclusionist/engine/platform/heavy-mirror.js');
+  const ENGINE_FOLDERS = engineModule.MIRROR_FOLDERS as ReadonlyArray<readonly [string, string]>;
+
+  it('[Cross-check] the function\'s table and the engine\'s are the same shape', () => {
+    expect(ENGINE_FOLDERS.length, 'the engine has entries to compare against').toBeGreaterThan(0);
+    expect(BLOCO.length, 'the function has a table literal').toBeGreaterThan(0);
+  });
+
+  it('[Zero] 🔴 every (prefix, folder) in the engine appears in the function', () => {
+    const faltam: string[] = [];
+    for (const [prefix, folder] of ENGINE_FOLDERS) {
+      // The literal in the function is written as `['prefix', 'folder']`; match the pair under single OR
+      // double quotes, since a future author may swap.
+      const esperado = new RegExp(`\\[\\s*['"]${prefix.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}['"]\\s*,\\s*['"]${folder.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}['"]\\s*\\]`);
+      if (!esperado.test(BLOCO)) faltam.push(`${prefix} → ${folder}`);
+    }
+    expect(faltam, 'the function\'s copy is behind the engine').toEqual([]);
+  });
+
+  it('[Zero] 🔴 and the function has no entries the engine does not', () => {
+    // The reverse — a dead entry the function copies but the engine no longer serves. Measured by counting
+    // the function's `[...]` tuples and comparing to the engine's length.
+    const tuplasNoFn = [...BLOCO.matchAll(/\[\s*['"]/g)].length;
+    expect(tuplasNoFn, 'extra tuples would route to R2 keys that no longer exist').toBe(ENGINE_FOLDERS.length);
+  });
+});
+
 describe('D4 — no relative `fetch()` or `Texture.from()` paths', () => {
   // 📌 THE PASTED GUIDE'S OWN 🔴 RULE: a relative asset URL in runtime code resolves against the DOCUMENT
   //    URL, not the base URL, so `fetch('./assets/foo.map.txt')` under `/game-2048/` finds it there but
