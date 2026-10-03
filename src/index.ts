@@ -88,6 +88,66 @@ const hooks: CartridgeHooks = Object.freeze({
    * map has gaps, not whether anybody can see it.
    */
   onScreenPad: true,
+  /**
+   * 🔴 THE 🌗 ICON EXISTS ONLY FOR A GAME THAT HANDS IN THIS WRITER. `iconsThatAct` asks
+   * `contrast: (w) => w.theme` and the root answers `theme: Boolean(ctx.setPlayerTheme)` — so without this
+   * line the engine's whole contrast axis is simply not mounted, and the absence looks from the outside like
+   * this game having its own controls. The engine says so itself: «a gap the consumer reads as a choice is
+   * the worst kind». That is exactly what happened here — a `◐ Alto contraste` button of our own, and a
+   * month of believing the engine offered nothing.
+   *
+   * ⚠️ IT HAS TO BE ON THE MODULE-LEVEL HOOKS, not the instance's, and that is not a style choice.
+   * `boot/create-game.js:812` captures `const setGameTheme = cartridge.setPlayerTheme` and hands it to
+   * `initPauseIcons` on the very next line, so the writer the engine calls forever is the one present at
+   * `createGame`. A `mount` cannot replace it — the opposite of `onCommand`, which only works THROUGH mount.
+   * 📏 Both were measured; neither is documented as an ordering rule, and getting either backwards fails in
+   * silence.
+   *
+   * 📌 SO IT WRITES AN ATTRIBUTE AND NOT A FIELD. This function cannot close over an instance — a
+   * module-level «current instance» pointer is the defect spec D14 names, and the one `tests/
+   * factory.browser.test.ts` exists to catch. `data-tema` on the root element is state that belongs to the
+   * PAGE, readable by any instance and by the stylesheet; `app/js/boot/main.ts` observes it and repaints.
+   */
+  setPlayerTheme: (_i: number, tema: string) => {
+    /*
+     * 🔴 THE ENGINE'S CYCLE IS STUCK, AND THIS STEPS AROUND IT WITHOUT TAKING THE AXIS BACK.
+     *
+     * 📏 Measured on the built page, 2026-10-03: the 🌗 icon moves `padrao → hc3` on the first press and
+     * then reports `hc3` for ever. The cause is two lines that disagree about where the theme lives:
+     *
+     *   · `ui/pause-icons.js:539`  `const v = nextTheme((P()[i] || {}).visual ?? DEFAULT_VISUAL)`
+     *   · `boot/create-game.js:935` `setPlayerTheme: (i, theme) => { setGameTheme(i, theme);
+     *                                 worldState = { ...worldState, tema: theme }; applyCrt(); }`
+     *
+     * The next step is computed from `player.visual`; the press writes `worldState`. Nothing ever writes the
+     * THEME into `player.visual` — the two places that do write it (`create-game.js:980` and `:1544`) are
+     * the CORRECTION and the SIMULATION, which is why the 🚥 icon cycles correctly and this one does not.
+     * And the public `players` type is `{ ctrl, audioSink? }[]`, with no `visual` at all, so no cartridge can
+     * populate it either. A child who needs 7:1 cannot reach it, and cannot switch the 3:1 back off.
+     *
+     * ⚠️ THIS IS THE G1 PREDICTION COMING TRUE ON THE OTHER ICON. Part Five recorded «G1 predicted the 🚥
+     * icon would stick after one click because `players` is typed without `visual` … the icon cycles
+     * correctly» and drew the lesson «reading a type is not measuring a behaviour». The lesson holds; the
+     * conclusion that the gap was harmless does not. I measured the icon that has an engine-side default and
+     * concluded about the one that does not.
+     *
+     * 📌 SELF-HEALING, so the step disappears the day the engine is fixed: an incoming value that is NOT
+     * `hc3` means the engine computed a real next step, and it is used as given. Only the stuck case — being
+     * handed `hc3` when `hc3` or later is already showing — advances on this side.
+     *
+     * ⚠️ WHAT IS NOT FIXED HERE is the engine's own announcement: `srSay` says `SHORT_THEME[v.tema]`, so a
+     * child using narration hears «3:1» at every level. Saying it a second time from this game would be two
+     * voices disagreeing over one control, which is worse. It is reported, not papered over.
+     */
+    const CICLO = ['hc3', 'hc45', 'hc7'] as const;
+    const atual = document.documentElement.dataset.tema;
+    const preso = tema === 'hc3' && (atual === 'hc3' || atual === 'hc45' || atual === 'hc7');
+    const proximo = preso
+      ? (CICLO[CICLO.indexOf(atual as typeof CICLO[number]) + 1] ?? 'padrao')
+      : tema;
+    if (proximo === 'padrao') delete document.documentElement.dataset.tema;
+    else document.documentElement.dataset.tema = proximo;
+  },
 });
 
 /**

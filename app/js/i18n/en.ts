@@ -44,9 +44,6 @@ export const en: Dicionario = {
   'a11y.reading.on': 'Reading on: the arrows walk the squares.',
   'a11y.reading.off': 'Reading off: the arrows push the tiles again.',
 
-  'tools.typography': 'Typeface',
-  'tools.contrast': 'High contrast',
-  'tools.keys': 'Keys',
 
   'end.win': 'You reached 2048. That is eleven doublings, start to finish.',
   'end.stuck': 'No moves left. The largest tile was {value}, which is {doubles} doublings.',

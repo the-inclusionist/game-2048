@@ -47,9 +47,6 @@ export const es: Dicionario = {
   'a11y.reading.on': 'Lectura activada: las flechas recorren las casillas.',
   'a11y.reading.off': 'Lectura desactivada: las flechas vuelven a empujar las fichas.',
 
-  'tools.typography': 'Tipografía',
-  'tools.contrast': 'Alto contraste',
-  'tools.keys': 'Teclas',
 
   'end.win': 'Llegaste a 2048. Son once duplicaciones, de principio a fin.',
   'end.stuck': 'No quedan jugadas. La ficha más alta fue {value}, que son {doubles} duplicaciones.',

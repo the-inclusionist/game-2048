@@ -50,7 +50,12 @@ describe('pillar 3’s three languages', () => {
     //
     // 📌 And the list is the METER the comment above describes. Two is fine. If it reaches a dozen, the
     //    signal is not that Spanish resembles Portuguese — it is that somebody stopped translating.
-    const LEGITIMAS: readonly Chave[] = ['tools.contrast', 'tools.keys'];
+    // 🔴 THE LIST IS EMPTY SINCE 2026-10-03, and that is the meter reading the comment above asks for. Both
+    //    entries were `tools.*` keys — the words on this game's own toolbar — and the toolbar is gone: E1
+    //    deleted the typography, colour and keys buttons once it was measured that engine 11.0.0 mounts all
+    //    three, and the ◐ contrast button followed when the engine's 🌗 axis turned out to be mounted by
+    //    declaring `setPlayerTheme`. The exceptions went with their subject rather than outliving it.
+    const LEGITIMAS: readonly Chave[] = [];
     for (const [nome, dict] of Object.entries(IDIOMAS)) {
       const iguais = chaves.filter((k) => dict[k] === pt[k] && !LEGITIMAS.includes(k));
       expect(iguais, nome).toEqual([]);

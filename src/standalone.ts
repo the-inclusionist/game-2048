@@ -204,19 +204,6 @@ requestAnimationFrame(tick);
 //    engine's own null-spread defect in `migrateScheme` is unchanged and still reported — but it is no
 //    longer this game's to work around, because this game no longer writes that store.
 
-// HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
-// `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels
-// is the IDEA (paint by field 2 of the contract), and it lives in `render/palette`.
-const hc = $<HTMLButtonElement>('#toggle-hc');
-hc?.addEventListener('click', () => {
-  const ligado = document.documentElement.dataset.hc === '1';
-  document.documentElement.dataset.hc = ligado ? '0' : '1';
-  hc.setAttribute('aria-pressed', String(!ligado));
-  motor.scenes.draw();
-  motor.say(hc.textContent ?? '');
-});
-
-
 // THE BAR FOLDS AWAY AFTER FIVE SECONDS WITH NOBODY REACHING FOR IT (the Dev, 2026-10-03), and comes back
 // when a pointer heads for the top band, when a finger lands there, or when focus enters it. Never while one
 // of the engine's menus is open.
@@ -226,12 +213,16 @@ hc?.addEventListener('click', () => {
 //    over would be a cartridge reaching past its own `region` for something it did not build (ADR-0139 §4).
 //
 // 📌 AND THIS IS THE ENGINE'S JOB, written down in `app/js/ui/a11y-bar-retract.ts` rather than acted on: every
-//    game in the catalogue has the same twelve icons over the same top band, so one copy in the engine serves
-//    all of them and twelve copies in twelve games is the `initPauseIcons` mistake ADR-0148 exists to end.
-//    Writing to `the-inclusionist-engine` needs the Dev's authorisation; this change does not have it. The
-//    module reaches into nothing — it takes its nodes and its clock — so moving it there is a copy of one file.
+//    game in the catalogue has the same icons over the same top band, so one copy in the engine serves all of
+//    them. Writing to `the-inclusionist-engine` needs the Dev's authorisation; this change does not have it.
 const barraA11y = $<HTMLElement>('#title-icons');
 if (barraA11y) montarRecolhimentoDaBarra({ barra: barraA11y, regiao, doc, win });
+
+// 🔴 THE `◐ Alto contraste` HANDLER STOOD HERE, and it was the last control this shell owned. It flipped
+//    `documentElement.dataset.hc` and called `motor.scenes.draw()`. The engine mounts the 🌗 icon for any
+//    cartridge that hands in `setPlayerTheme` (`iconsThatAct`: `contrast: (w) => w.theme`), and this one
+//    now does — in `src/index.ts`, because the root captures that writer at `createGame` and a `mount`
+//    cannot replace it. The shell owns no control of its own any more: the engine's bar has them all.
 
 // 🔴 THE SHELL NO LONGER TOUCHES INPUT AT ALL, and the three lines that stood here are why this note exists.
 //    They called `padPxPerMm` and wrote `--alvo-toque` onto `:root` so that four hand-built `[data-dir]`

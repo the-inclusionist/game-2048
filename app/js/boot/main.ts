@@ -34,7 +34,7 @@ import { criarDeclaracao, RESPOSTAS_DAS_ACOMODACOES } from '../declaration.ts';
 import { narrarJogada, narrarSemMovimento } from '../narration.ts';
 import { LOGICAL_H, LOGICAL_W } from '../geometry.ts';
 import { pintarTabuleiro } from '../render/board-canvas.ts';
-import { FUNDO_DA_TELA } from '../render/palette.ts';
+import { FUNDO_DA_TELA, type Nivel } from '../render/palette.ts';
 import { criarGradeDom } from '../ui/board-dom.ts';
 import { criarCamadaDePecas } from '../ui/tiles-layer.ts';
 
@@ -226,7 +226,39 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   const aoVoltarAVer = () => { if (doc.visibilityState === 'visible') desenhar(); };
   doc.addEventListener('visibilitychange', aoVoltarAVer);
 
-  const altoContraste = () => doc.documentElement.dataset.hc === '1';
+  /**
+   * THE REDRAW THE THEME NEEDS. `src/index.ts`'s `setPlayerTheme` writes `data-tema` on the root element and
+   * has no way to reach this instance; this is the other end of that seam.
+   *
+   * 📌 A `MutationObserver` AND NOT A POLL, and not a callback the cartridge hands upward either: the
+   * attribute is already the shared truth (the stylesheet could read it too), and observing it keeps the
+   * per-instance half entirely inside the instance — `teardown` disconnects it, so a swapped cartridge does
+   * not leave a second observer repainting a board that left the page.
+   */
+  const observadorDoTema = new MutationObserver(() => desenhar());
+  observadorDoTema.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
+
+  /**
+   * THE CONTRAST THEME, READ WHERE THE ENGINE PUT IT.
+   *
+   * 🔴 `setPlayerTheme` IS CAPTURED ONCE, AT `createGame`. `boot/create-game.js:812` does
+   * `const setGameTheme = cartridge.setPlayerTheme` and hands that closure to `initPauseIcons` on the next
+   * line, so the writer the engine calls for the rest of the page's life is the one declared on the
+   * CARTRIDGE's module-level hooks — a `mount` cannot replace it. That writer cannot close over an instance
+   * (spec D14 forbids a module-level «current instance»), so `src/index.ts` writes the chosen theme onto
+   * `documentElement.dataset.tema` and this instance reads it. The attribute is the seam.
+   *
+   * ⚠️ AND `data-tema` IS ALSO THE REDRAW SIGNAL, which is why the observer exists below: nothing in the
+   * engine calls back into this game's drawing after a theme change, and without it the child would press
+   * 🌗, hear «Alto contraste, 7:1» and see the old board until her next move.
+   *
+   * 📌 It replaced `dataset.hc === '1'` — a boolean of this game's own, written by a `◐ Alto contraste`
+   * button that duplicated the engine's icon.
+   */
+  const temaAtual = (): Nivel | null => {
+    const v = doc.documentElement.dataset.tema;
+    return v === 'hc3' || v === 'hc45' || v === 'hc7' ? v : null;
+  };
   const papelDa = (i: number) => declaration.roleAt({ x: i % SIZE, y: Math.floor(i / SIZE) });
 
   /**
@@ -239,8 +271,9 @@ export function criarJogo(ctx: GameCtx): GameInstance {
    * an afternoon.
    */
   function quadro(pecas: readonly Peca[]): void {
-    pintarTabuleiro(figura, { papel: papelDa, altoContraste: altoContraste(), pecas });
-    camadaDePecas.desenhar(pecas, altoContraste(), papelDa);
+    const tema = temaAtual();
+    pintarTabuleiro(figura, { papel: papelDa, tema, pecas });
+    camadaDePecas.desenhar(pecas, tema, papelDa);
   }
 
   /** The board AT REST: what is seen between moves, and the final frame of every animation. */
@@ -493,6 +526,7 @@ export function criarJogo(ctx: GameCtx): GameInstance {
 
       win.removeEventListener('resize', aoRedimensionar);
       doc.removeEventListener('visibilitychange', aoVoltarAVer);
+      observadorDoTema.disconnect();
       delete janela.__incl2048;
       tela.remove();
       camadaDePecas.raiz.remove();

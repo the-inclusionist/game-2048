@@ -72,7 +72,7 @@ describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
 
   it('[Right] at rest it sits exactly over the square — as the canvas would draw it', () => {
     const pecas = pecasParadas(linha(2, 0, 0, 8));
-    camada.desenhar(pecas, false, papelFixo);
+    camada.desenhar(pecas, null, papelFixo);
     for (const el of visiveis()) {
       // ⚠️ `position: absolute` is applied by the test because the real stylesheet is not loaded; what is
       // being verified is the TRANSFORM the module wrote, resolved by the browser.
@@ -88,7 +88,7 @@ describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
     const casas = Array.from({ length: SIZE * SIZE }, (_, i) => cellRect(i).x);
     const vistos: number[] = [];
     for (const t of [0.2, 0.4, 0.6, 0.8]) {
-      camada.desenhar(pecasNoInstante(r.movimentos, t), false, papelFixo);
+      camada.desenhar(pecasNoInstante(r.movimentos, t), null, papelFixo);
       for (const el of visiveis()) el.style.position = 'absolute';
       const x = caixaLogica(visiveis()[0]).x;
       vistos.push(x);
@@ -119,7 +119,7 @@ describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
     const r = slide(linha(0, 0, 0, 4), 'left');
     for (const t of [0, 0.35, 0.7, 1]) {
       const esperado = posicaoDe(r.movimentos[0], t);
-      camada.desenhar([esperado], false, papelFixo);
+      camada.desenhar([esperado], null, papelFixo);
       for (const el of visiveis()) el.style.position = 'absolute';
       const medido = caixaLogica(visiveis()[0]);
       expect(Math.abs(medido.x - esperado.x), `t=${t} on x`).toBeLessThan(FOLGA);
@@ -128,22 +128,22 @@ describe('the drawn tile lands on the pixel the arithmetic asked for', () => {
   });
 
   it('[Zero] tiles left over from the previous frame disappear instead of hanging around', () => {
-    camada.desenhar(pecasParadas(linha(2, 4, 8, 16)), false, papelFixo);
+    camada.desenhar(pecasParadas(linha(2, 4, 8, 16)), null, papelFixo);
     expect(visiveis()).toHaveLength(4);
-    camada.desenhar(pecasParadas(linha(2, 0, 0, 0)), false, papelFixo);
+    camada.desenhar(pecasParadas(linha(2, 0, 0, 0)), null, papelFixo);
     expect(visiveis(), 'three ghost tiles would stay on screen').toHaveLength(1);
   });
 
   it('[Interface] the number is TEXT in the DOM, and the element leaves the accessibility tree', () => {
-    camada.desenhar(pecasParadas(linha(2048, 0, 0, 0)), false, papelFixo);
+    camada.desenhar(pecasParadas(linha(2048, 0, 0, 0)), null, papelFixo);
     expect(visiveis()[0].textContent, 'real text, not a painted glyph').toBe('2048');
     expect(camada.raiz.getAttribute('aria-hidden'), '`board-dom` is what answers for the grid').toBe('true');
   });
 
   it('[Boundary] the pool REUSES the elements — it does not recreate sixteen nodes per frame', () => {
-    camada.desenhar(pecasParadas(linha(2, 4, 0, 0)), false, papelFixo);
+    camada.desenhar(pecasParadas(linha(2, 4, 0, 0)), null, papelFixo);
     const primeiro = visiveis()[0];
-    camada.desenhar(pecasParadas(linha(8, 16, 0, 0)), false, papelFixo);
+    camada.desenhar(pecasParadas(linha(8, 16, 0, 0)), null, papelFixo);
     expect(visiveis()[0], 'a new node every frame loses state and makes the text flicker').toBe(primeiro);
     expect(visiveis()[0].textContent).toBe('8');
   });

@@ -87,21 +87,87 @@ export const MOLDURA: Cor = 0x2b3145;
 export const FUNDO_DA_TELA: Cor = 0x0d1018;
 
 /**
- * HIGH CONTRAST BY ROLE — the quiz's finding 8, solved on the game's side because this is where it lives.
+ * HIGH CONTRAST BY ROLE, AT THE THREE LEVELS THE ENGINE NAMES — `hc3`, `hc45`, `hc7` (ADR-0104's contrast axis).
  *
- * The engine's `hcnew` modes repaint the platformer's TILE TEXTURES, and this game does not have its tiles.
- * What travels is the IDEA, and it comes from field 2 of the contract: paint by ROLE, not by value. Whatever
- * can merge (`goal`) gets the highlight colour; whatever merely takes up space (`structure`) stays grey; a
- * free square (`free`) stays background. The child with low vision starts seeing THE MOVE instead of
- * memorising the board.
+ * The IDEA is field 2 of the contract: paint by ROLE, not by value. Whatever can merge (`goal`) gets the
+ * highlight colour; whatever merely takes up space (`structure`) stays grey; a free square (`free`) stays
+ * background. The child with low vision starts seeing THE MOVE instead of memorising the board.
+ *
+ * ========================= 🔴 WHAT THE LEVELS MEASURE, AND WHAT I GOT WRONG =========================
+ * Until 2026-10-03 this game refused the engine's axis and shipped a `◐ Alto contraste` toggle of its own.
+ * The argument, written in `tests/visual.node.test.ts` and repeated for a month, was arithmetic: three roles
+ * pairwise at 7:1 would need 49:1 between the extremes and the WCAG scale stops at 21, so `hc7` was not hard
+ * but IMPOSSIBLE.
+ *
+ * 📏 THE ARITHMETIC WAS RIGHT AND THE QUESTION WAS WRONG. The engine says what the levels mean, in the words
+ * a child reads (`i18n/en.js:570`):
+ *
+ *   · `hc3`  — «Background recedes + outlines + colour by role; platform vs background ~3:1 (AA graphics)»
+ *   · `hc45` — «More contrast (AA text): lighter platforms and a darker background»
+ *   · `hc7`  — «Maximum contrast (AAA text): almost black and white»
+ *
+ * FIGURE against BACKGROUND — one pair — never role against role. «Almost black and white» is the engine
+ * telling anyone who reads it how `hc7` is reached. I measured the pairs nobody asked about and concluded a
+ * control the child needs could not exist.
+ *
+ * So each level below holds every role against the SCREEN BACKGROUND of that level, and the background
+ * darkens as the level rises, which is exactly what the engine describes. `tests/palette.node.test.ts` has
+ * the ratios as a gate.
  */
-export const HC_POR_PAPEL: Readonly<Record<string, Cor>> = {
-  goal: 0xffd23f,
-  structure: 0x6b7280,
-  free: 0x101319,
-  hazard: 0xff5b3a,
-  climb: 0x8a5a2b,
-  water: 0x2f6fae,
-  gate: 0x9a8a6f,
-  key: 0xffe06a,
+export type Nivel = 'hc3' | 'hc45' | 'hc7';
+
+/**
+ * ========================= THE FOUR PAIRS THAT HAD TO HOLD AT ONCE =========================
+ * These numbers were SOLVED, not chosen, and the search is in the gate below. Four demands meet here:
+ *
+ *   1. figure vs screen background, at the level's own ratio — the engine's definition of the level;
+ *   2. the NUMBER inside a tile vs that tile, at the same ratio — it is text, and text is why the levels
+ *      are named after 1.4.3's thresholds;
+ *   3. every role vs the FRAME, at 3:1 (WCAG 1.4.11) — and the frame is the pair that actually exists,
+ *      because two tiles never touch: `GAP` of frame runs between them;
+ *   4. the empty square vs the frame, at 3:1 — 📏 the first palette I wrote had `free` equal to the
+ *      background and the frame nearly so, which at `hc7` gave 1.00: the board's grid would have vanished
+ *      and the child would have been left looking for sixteen squares that were not drawn.
+ *
+ * 🔴 THE GEOMETRY FORCES LIGHT TILES ON A DARK BOARD, and that is not a taste. The frame must separate from
+ * a near-black background (≥3:1 puts its luminance over 0.10) and the tiles must separate from the frame
+ * (≥3:1 again puts them over 0.40). A mid-grey `structure` cannot satisfy both. The engine says the same
+ * thing in the child's words at `hc45`: «lighter platforms and a darker background».
+ */
+export const FUNDO_DA_TELA_POR_NIVEL: Readonly<Record<Nivel, Cor>> = {
+  hc3: 0x0d1018,
+  hc45: 0x05060a,
+  hc7: 0x000000,
 };
+
+/** The frame between the squares, per level — the surface every role is measured against for 1.4.11. */
+export const MOLDURA_POR_NIVEL: Readonly<Record<Nivel, Cor>> = {
+  hc3: 0x616161,
+  hc45: 0x646464,
+  hc7: 0x5a5a5a,
+};
+
+/**
+ * The role colours per level. `free` is the background itself at every level — an empty square IS the screen
+ * showing through, and what makes it readable as a square is the frame around it, which is demand 4 above.
+ */
+export const PAPEL_POR_NIVEL: Readonly<Record<Nivel, Readonly<Record<string, Cor>>>> = {
+  hc3: {
+    goal: 0xffd23f, structure: 0xb8b8b8, free: 0x0d1018,
+    hazard: 0xff8a6a, climb: 0xc79a5a, water: 0x7fb2e0, gate: 0xcabb97, key: 0xffe06a,
+  },
+  hc45: {
+    goal: 0xffe04a, structure: 0xd2d2d2, free: 0x05060a,
+    hazard: 0xffa58a, climb: 0xd9b67a, water: 0xa8cdee, gate: 0xdcd0b4, key: 0xffea8a,
+  },
+  hc7: {
+    goal: 0xffffff, structure: 0xe1e1e1, free: 0x000000,
+    hazard: 0xffffff, climb: 0xe1e1e1, water: 0xe1e1e1, gate: 0xe1e1e1, key: 0xffffff,
+  },
+};
+
+/** The colour a role takes at a level, with `free` as the honest fallback for a role this game never draws. */
+export function corDoPapel(papel: string, nivel: Nivel): Cor {
+  const tabela = PAPEL_POR_NIVEL[nivel];
+  return tabela[papel] ?? tabela.free;
+}

@@ -100,35 +100,30 @@
       </div>
     </div>
 
-    <!-- OUTSIDE #game-region, so it does NOT scale with k: text always 16px and targets 44px, as the
-         engine's `ui/layout` decided for everything that is not the game's world.
+    <!-- 🔴 THE LAST BUTTON OF THIS GAME'S OWN TOOLBAR WENT ON 2026-10-03, and the row with it.
 
-         ⚠️ THIS ROW HELD FOUR BUTTONS UNTIL 2026-10-03, AND THREE OF THEM WERE DUPLICATES. The Dev, looking
-         at the live deploy: «há redundância de botões… duplicam botões do painel de acessibilidade rápida».
-         Measured against engine 11.0.0 the same day — the engine mounts every one of the three itself:
+         Four stood here in Part One. E1 deleted three of them — 🔤 typography, 🚥 colour correction and
+         ⌨ keys — once it was measured that engine 11.0.0 mounts every one itself. The fourth, `◐ Alto
+         contraste`, was KEPT, with an argument written out at length right here and gated in
+         `tests/visual.node.test.ts`: the engine's axis is `hc3`/`hc45`/`hc7`, three levels named after a
+         ratio, and `hc7` was «not hard but IMPOSSIBLE» because three roles pairwise at 7:1 need 49:1
+         between the extremes while the WCAG scale stops at 21.
 
-           · 🔤 Tipografia      → the engine mounts the 🔤 icon AND calls `initSettingsTypo`
-                                  (`boot/create-game.js:1134`).
-           · 🚥 Correção de cor → the engine mounts the 🚥 icon, measured cycling correctly on the live
-                                  deploy: desligado → protanopia → deuteranopia → tritanopia → desligado.
-           · ⌨ Teclas          → the engine calls `initSettingsControls` (`boot/create-game.js:2973`).
+         The Dev: «Por que ainda há botão de alto contraste na parte de baixo da tela? Isso é redundante,
+         não?»
 
-         📌 THE CLAIMS THAT KEPT THEM HERE WERE BOTH STALE. G2 recorded «nothing in the engine opens
-         `ui/settings-controls`» against engine 8 — true then, false since 11.0.0, and it sat in this file as
-         a live justification for three weeks. G1 predicted the 🚥 icon would «stick after one click» because
-         `players` is typed without `visual`; the type is STILL that way and the icon cycles correctly
-         anyway. 🔴 Reading a type is not measuring a behaviour.
+         📏 THE ARITHMETIC WAS RIGHT AND THE QUESTION WAS WRONG. The engine states what the levels mean, in
+         the sentences a child reads (`i18n/en.js:570`): «platform vs background ~3:1», «lighter platforms
+         and a darker background», «almost black and white». FIGURE against BACKGROUND — one pair — never
+         role against role. Measured with this game's own `contraste()`: `hc7` reaches 21.00:1 for the goal
+         tile and 16.06:1 for structure. Not impossible; not even tight.
 
-         ✅ THE ◐ STAYS, and its reason did not expire. The engine's contrast axis is still `hc3`/`hc45`/`hc7`
-         — three levels named after a RATIO — and `hc7` is not hard but IMPOSSIBLE: three roles pairwise at
-         7:1 need 49:1 between the extremes, and the WCAG scale stops at 21. Mounting the engine's axis would
-         offer a child one row that works, one that is a coincidence and one that cannot exist. The arithmetic
-         is gated in `tests/visual.node.test.ts`. This button repaints by the contract's ROLE (field 2), which
-         is the quiz's finding 8: the engine's `hcnew` modes repaint the platformer's tile textures, and this
-         game has no such tiles. -->
-    <div class="p2-tools">
-      <button id="toggle-hc" class="p2-btn" type="button" aria-pressed="false">◐ <span data-i18n="tools.contrast">Alto contraste</span></button>
-    </div>
+         🔴 AND THE ENGINE WAS NEVER OFFERING NOTHING. `iconsThatAct` mounts the 🌗 icon for whoever hands in
+         `setPlayerTheme`, and this cartridge handed in none — so the axis was missing because of us. The
+         engine's own words for this shape: «a gap the consumer reads as a choice is the worst kind».
+
+         `src/index.ts` declares the writer now, the icon is in the bar at the top with the other twelve, and
+         the palette lives in `app/js/render/palette.ts` with the four pairs it has to satisfy. -->
 
     <svg id="cvd" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"></svg>
   </main>

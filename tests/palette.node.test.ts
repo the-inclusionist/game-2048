@@ -14,8 +14,8 @@
 import { describe, expect, it } from 'vitest';
 import { OBJETIVO } from '../app/js/board.ts';
 import {
-  FUNDO, FUNDO_DA_TELA, HC_POR_PAPEL, MOLDURA, TINTA_CLARA, TINTA_ESCURA,
-  contraste, fundoDe, inkFor, luminancia,
+  FUNDO, FUNDO_DA_TELA, FUNDO_DA_TELA_POR_NIVEL, MOLDURA, MOLDURA_POR_NIVEL, TINTA_CLARA, TINTA_ESCURA,
+  contraste, corDoPapel, fundoDe, inkFor, luminancia, type Nivel,
 } from '../app/js/render/palette.ts';
 
 const AA = 4.5;
@@ -93,30 +93,93 @@ describe('every tile is legible — WCAG 1.4.3 as a gate', () => {
   });
 });
 
-describe('high contrast BY ROLE — the quiz’s finding 8, solved on the game’s side', () => {
-  it('[Right] the three roles this game uses are in the table', () => {
-    for (const papel of ['goal', 'structure', 'free']) {
-      expect(HC_POR_PAPEL[papel], papel).toBeTypeOf('number');
+// ========================= THE CONTRAST AXIS IS THE ENGINE'S, AND THIS IS ITS ARITHMETIC =========================
+// 🔴 A DESCRIBE CALLED «high contrast BY ROLE» STOOD HERE, around a single `HC_POR_PAPEL` table, and beside it
+// in `tests/visual.node.test.ts` stood the argument that kept this game's own `◐ Alto contraste` button alive
+// for a month: three roles pairwise at 7:1 would need 49:1 between the extremes, the WCAG scale stops at 21,
+// therefore `hc7` was «not hard but IMPOSSIBLE».
+//
+// 📏 THE ARITHMETIC WAS RIGHT AND THE QUESTION WAS WRONG. The engine states what its levels mean, in the
+// sentences a child reads (`i18n/en.js:570`): «platform vs background ~3:1», «lighter platforms and a darker
+// background», «almost black and white». FIGURE against BACKGROUND — one pair — never role against role. And
+// role against role is not even a pair that exists on this board: two tiles never touch, because `GAP` of
+// FRAME runs between them, which is why the frame is what every role is measured against below.
+//
+// The four demands are solved simultaneously in `app/js/render/palette.ts`; these assertions are the solver's
+// constraints, kept where they can fail.
+describe('the three contrast levels the engine offers, measured', () => {
+  const EXIGE: Readonly<Record<Nivel, number>> = { hc3: 3, hc45: 4.5, hc7: 7 };
+  const NAO_TEXTO = 3;                           // WCAG 1.4.11, for a component against what surrounds it
+  const NIVEIS = ['hc3', 'hc45', 'hc7'] as const;
+  const PAPEIS = ['goal', 'structure'] as const; // `free` IS the background; it is handled on its own below
+
+  it('[Cross-check] 🔴 `hc7` is REACHABLE — the claim that killed this axis for a month', () => {
+    // The single assertion that retires the old argument. If this ever fails, the levels are wrong, not the
+    // engine — and the fix is a palette, not a button of our own.
+    const r = contraste(corDoPapel('goal', 'hc7'), FUNDO_DA_TELA_POR_NIVEL.hc7);
+    expect(r, 'goal against the screen at hc7').toBeGreaterThanOrEqual(7);
+    expect(r, 'and it is not even tight — the scale stops at 21').toBeGreaterThan(20);
+  });
+
+  it('[Many] 🔴 every figure meets its level against the SCREEN — the engine’s own definition', () => {
+    for (const n of NIVEIS) {
+      for (const p of PAPEIS) {
+        expect(contraste(corDoPapel(p, n), FUNDO_DA_TELA_POR_NIVEL[n]), `${p} at ${n}`)
+          .toBeGreaterThanOrEqual(EXIGE[n]);
+      }
     }
   });
 
-  it('[Right] the three roles separate from each other by 1.4.11 — which is 3:1, not 4.5', () => {
-    // ⚠️ THIS THRESHOLD WAS WRONG IN THIS FILE'S FIRST VERSION, and the error is worth keeping written down:
-    // I required 4.5:1 between two FILL colours. 4.5 is WCAG 1.4.3, which is about TEXT. A tile colour against
-    // a tile colour is a non-text component, and the criterion is **1.4.11 (Non-text Contrast), 3:1**.
-    // This is not the bar being lowered to pass: it is the right criterion replacing one cited by mistake —
-    // and the search for a grey satisfying 4.5 against the yellow AND 3 against the near-black had no
-    // solution, which is how the mistake surfaced.
-    const NAO_TEXTO = 3;
-    expect(contraste(HC_POR_PAPEL.goal, HC_POR_PAPEL.structure)).toBeGreaterThanOrEqual(NAO_TEXTO);
-    expect(contraste(HC_POR_PAPEL.goal, HC_POR_PAPEL.free)).toBeGreaterThanOrEqual(NAO_TEXTO);
-    expect(contraste(HC_POR_PAPEL.structure, HC_POR_PAPEL.free)).toBeGreaterThanOrEqual(NAO_TEXTO);
+  it('[Many] the NUMBER inside a tile meets the level too — the levels are named after a text threshold', () => {
+    for (const n of NIVEIS) {
+      for (const p of PAPEIS) {
+        const cor = corDoPapel(p, n);
+        expect(contraste(cor, inkFor(cor)), `number on ${p} at ${n}`).toBeGreaterThanOrEqual(EXIGE[n]);
+      }
+    }
   });
 
-  it('[Right] the number stays legible over any role colour', () => {
-    for (const [papel, cor] of Object.entries(HC_POR_PAPEL)) {
-      expect(contraste(cor, inkFor(cor)), papel).toBeGreaterThanOrEqual(AA);
+  it('[Many] 🔴 every role separates from the FRAME at 1.4.11 — the pair that actually exists', () => {
+    // Two tiles never touch: `GAP` logical pixels of frame run between them. Measuring `goal` against
+    // `structure` — which the old argument did — measures a pair the child never sees adjacent.
+    for (const n of NIVEIS) {
+      for (const p of [...PAPEIS, 'free'] as const) {
+        expect(contraste(corDoPapel(p, n), MOLDURA_POR_NIVEL[n]), `${p} against the frame at ${n}`)
+          .toBeGreaterThanOrEqual(NAO_TEXTO);
+      }
     }
+  });
+
+  it('[Zero] 🔴 and the EMPTY square never disappears into the frame', () => {
+    // 📏 The defect this is born from: the first palette had `free` equal to the background and the frame
+    //    nearly so, which at `hc7` gave exactly 1.00 — the grid gone, the child looking for sixteen squares
+    //    that were not drawn. It is the same assertion as the row above for `free`, stated on its own because
+    //    it is the one that was actually broken.
+    for (const n of NIVEIS) {
+      expect(contraste(FUNDO_DA_TELA_POR_NIVEL[n], MOLDURA_POR_NIVEL[n]), `empty square at ${n}`)
+        .toBeGreaterThanOrEqual(NAO_TEXTO);
+    }
+  });
+
+  it('[Many] the levels are a STAIRCASE, not three names for one palette', () => {
+    // Each level demands more than the one below, so each must deliver more: a child who moves up and sees
+    // nothing change has been given a dead control (ADR-0106 §5).
+    const r = NIVEIS.map((n) => contraste(corDoPapel('structure', n), FUNDO_DA_TELA_POR_NIVEL[n]));
+    for (let i = 0; i < r.length - 1; i++) {
+      expect(r[i + 1], `${NIVEIS[i + 1]} harder than ${NIVEIS[i]}`).toBeGreaterThan(r[i]);
+    }
+  });
+
+  it('[Right] every role this game draws has a colour at every level', () => {
+    for (const n of NIVEIS) {
+      for (const p of ['goal', 'structure', 'free']) {
+        expect(corDoPapel(p, n), `${p} at ${n}`).toBeTypeOf('number');
+      }
+    }
+  });
+
+  it('[Zero] an unknown role falls back to `free`, never to nothing', () => {
+    for (const n of NIVEIS) expect(corDoPapel('nao-existe', n)).toBe(corDoPapel('free', n));
   });
 });
 

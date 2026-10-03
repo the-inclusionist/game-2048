@@ -16,46 +16,28 @@ import { describe, expect, it } from 'vitest';
 import {
   CORRECOES_OFERECIDAS, SIMULACOES_CONHECIDAS, ehCorrecao, estadoDa, filtroCssDe,
 } from '../app/js/visual.ts';
-import { contraste } from '../app/js/render/palette.ts';
 
-describe('why the CONTRAST axis is not mounted — arithmetic, not preference', () => {
-  // Engine 9.0.0 added `setTemaDoJogador`, so the door this game once cited as missing is open. The axis is
-  // still not mounted, and the reason changed from "no door" to something a test can hold: the three themes
-  // are named after ratios — `hc3` (3:1), `hc45` (4.5:1), `hc7` (7:1) — and this game answers an axis with
-  // ROLE colours, of which it has three: goal, structure, free.
-  it('[Cross-check] the WCAG scale stops at 21:1, and that is the whole argument', () => {
-    expect(contraste(0x000000, 0xffffff)).toBeCloseTo(21, 5);
-  });
-
-  it('[Boundary] 🔴 three roles CANNOT be pairwise 7:1 — it would need 49:1 between the extremes', () => {
-    // For luminances A > B > C, contrast is multiplicative across the middle:
-    //   c(A,C) = (A+0.05)/(C+0.05) = c(A,B) · c(B,C)
-    // So demanding 7:1 on both neighbouring pairs demands 49:1 end to end, and the scale has 21.
-    // ⚠️ THIS IS NOT "HARD", IT IS IMPOSSIBLE, and the difference matters: no palette anyone designs later
-    // can satisfy `hc7` with three roles. Mounting that row would be offering the child a setting that
-    // cannot exist — the dead control of ADR-0106 §5, dressed as a colour choice.
-    const TETO = contraste(0x000000, 0xffffff);
-    expect(7 * 7).toBeGreaterThan(TETO);
-  });
-
-  it('[Boundary] and 4.5:1 pairwise survives only as a hairline', () => {
-    // 4.5 · 4.5 = 20.25 against a ceiling of 21, so the extremes are forced to very near pure black and pure
-    // white, and the middle role is pinned into a luminance band about 0.008 wide. A palette with one usable
-    // grey is not a palette; it is a coincidence waiting for someone to adjust a colour.
-    const TETO = contraste(0x000000, 0xffffff);
-    expect(4.5 * 4.5).toBeLessThan(TETO);
-    const alto = (1 + 0.05) / 4.5 - 0.05;   // the middle's highest allowed luminance
-    const baixo = 4.5 * 0.05 - 0.05;        // and its lowest
-    expect(alto - baixo, 'the whole room a third colour has').toBeLessThan(0.01);
-  });
-
-  it('[Right] 3:1 is the level this game already answers, and it is the one it offers', () => {
-    // `tests/palette.node.test.ts` asserts the three roles separate by 1.4.11's 3:1 with the real colours.
-    // Here the point is only that 3:1 is the level the arithmetic leaves room for.
-    const TETO = contraste(0x000000, 0xffffff);
-    expect(3 * 3).toBeLessThan(TETO);
-  });
-});
+// ========================= THE ARGUMENT THAT STOOD HERE WAS WRONG, AND IT COST A MONTH =========================
+// 🔴 A DESCRIBE CALLED «why the CONTRAST axis is not mounted — arithmetic, not preference» held four
+// assertions proving that three roles pairwise at 7:1 would need 49:1 between the extremes while the WCAG
+// scale stops at 21. The arithmetic was correct. It was answering a question the engine never asked.
+//
+// 📏 WHAT THE ENGINE ACTUALLY ASKS, in the sentences a child reads (`i18n/en.js:570`):
+//     hc3  — «Background recedes + outlines + colour by role; platform vs background ~3:1 (AA graphics)»
+//     hc45 — «More contrast (AA text): lighter platforms and a darker background»
+//     hc7  — «Maximum contrast (AAA text): almost black and white»
+// FIGURE against BACKGROUND. One pair. «Almost black and white» is the engine telling anyone who reads it
+// how `hc7` is reached — and measured with this game's own `contraste()`, `hc7` reaches 21.00:1.
+//
+// 🔴 AND THE AXIS WAS NEVER MISSING FROM THE ENGINE. `iconsThatAct` mounts the 🌗 icon for whoever hands in
+// `setPlayerTheme` (`contrast: (w) => w.theme`); this cartridge handed in none, so the control was absent
+// because of US. The engine's own words for the shape: «a gap the consumer reads as a choice is the worst
+// kind». I read our gap as the engine's choice and wrote a test to defend it.
+//
+// 📌 WHERE THE ARITHMETIC LIVES NOW: `tests/palette.node.test.ts`, around the four pairs that are real —
+// figure vs screen at the level's ratio, number vs tile at the same, every role vs the FRAME at 1.4.11, and
+// the empty square vs the frame. The Dev found it in one sentence: «Por que ainda há botão de alto contraste
+// na parte de baixo da tela? Isso é redundante, não?»
 
 describe('what the control offers', () => {
   it('[Many] the four values of the axis, and the default is a NAME rather than an absence', () => {
@@ -182,10 +164,30 @@ describe('E1 — the shell mounts no panel the engine already mounts', () => {
     }
   });
 
-  it('[Right] ✅ but the ◐ contrast button STAYS — its reason is arithmetic, not a version', () => {
-    // `hc7` needs 49:1 between the extremes with three roles and the WCAG scale stops at 21. The axis is
-    // still three-level on 11.0.0 (measured 2026-10-03), so mounting it would offer one row that works,
-    // one coincidence and one impossibility. The arithmetic gate is the first describe in this file.
-    expect(HTML).toMatch(/id="toggle-hc"/);
+  it('[Zero] 🔴 nor the ◐ contrast button — the last one, and the one I argued hardest to keep', () => {
+    // This assertion is the INVERSE of what stood here hours ago: «✅ but the ◐ contrast button STAYS — its
+    // reason is arithmetic, not a version». The arithmetic measured role against role; the engine's levels
+    // measure figure against background. The header of this file has the correction in full.
+    expect(HTML, 'the engine mounts 🌗 for a cartridge that declares `setPlayerTheme`')
+      .not.toMatch(/id="toggle-hc"/);
+    expect(SHELL, 'and the shell no longer flips a theme of its own').not.toMatch(/dataset\.hc\b/);
+  });
+
+  it('[Right] ✅ and the cartridge hands in the writer that mounts the engine’s icon', () => {
+    // The other half, and the one that makes the deletion a MOVE rather than a loss: `iconsThatAct` asks
+    // `contrast: (w) => w.theme`, answered from `Boolean(ctx.setPlayerTheme)`. Without this the control
+    // would simply be gone, which is worse than the duplicate it replaced.
+    const CARTUCHO = readFileSync(join(import.meta.dirname, '..', 'src', 'index.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map((linha) => linha.replace(/(^|[^:])\/\/.*$/, '$1'))
+      .join('\n');
+    expect(CARTUCHO, 'the 🌗 icon exists only for a game that hands in this writer')
+      .toMatch(/setPlayerTheme\s*:/);
+    // 📌 ON THE MODULE-LEVEL HOOKS AND NOT THE INSTANCE'S: `create-game.js:812` captures the writer once, at
+    //    `createGame`, and hands it to `initPauseIcons` on the next line — a `mount` cannot replace it.
+    expect(CARTUCHO.indexOf('setPlayerTheme'), 'it has to be in the cartridge-level hooks')
+      .toBeGreaterThan(CARTUCHO.indexOf('const hooks'));
   });
 });

@@ -24,7 +24,9 @@ import { SIZE, slide, type Board } from '../app/js/board.ts';
 import { pecasNoInstante, pecasParadas } from '../app/js/animation.ts';
 import { BOARD, BOARD_X, BOARD_Y, LOGICAL_H, LOGICAL_W, TILE, cellRect } from '../app/js/geometry.ts';
 import { pintarTabuleiro } from '../app/js/render/board-canvas.ts';
-import { FUNDO_DA_TELA, HC_POR_PAPEL, MOLDURA, fundoDe } from '../app/js/render/palette.ts';
+import {
+  FUNDO_DA_TELA, FUNDO_DA_TELA_POR_NIVEL, MOLDURA, MOLDURA_POR_NIVEL, corDoPapel, fundoDe,
+} from '../app/js/render/palette.ts';
 
 interface Retangulo { cor: number; x: number; y: number; w: number; h: number }
 
@@ -55,13 +57,13 @@ const PECAS = CASAS + SIZE * SIZE;
 describe('pintarTabuleiro — the figure, and only the figure', () => {
   it('[Right] it clears before drawing, or the previous frame stays underneath for ever', () => {
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas: [] });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas: [] });
     expect(d.limpezas()).toBe(1);
   });
 
   it('[Zero] a board with no tiles: background, frame and the 16 empty squares — nothing else', () => {
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas: [] });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas: [] });
     expect(d.rects).toHaveLength(PECAS);
     expect(d.rects[0]).toEqual({ cor: FUNDO_DA_TELA, x: 0, y: 0, w: LOGICAL_W, h: LOGICAL_H });
     expect(d.rects[1]).toEqual({ cor: MOLDURA, x: BOARD_X, y: BOARD_Y, w: BOARD, h: BOARD });
@@ -69,7 +71,7 @@ describe('pintarTabuleiro — the figure, and only the figure', () => {
 
   it('[Right] the EMPTY squares always exist, in the hole’s colour, and in no tile’s colour', () => {
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas: pecasParadas(COM_PAR) });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas: pecasParadas(COM_PAR) });
     for (let i = 0; i < SIZE * SIZE; i++) {
       const casa = d.rects[CASAS + i];
       expect({ x: casa.x, y: casa.y, w: casa.w, h: casa.h }, `square ${i}`).toEqual(cellRect(i));
@@ -80,7 +82,7 @@ describe('pintarTabuleiro — the figure, and only the figure', () => {
   it('[Many] each tile becomes ONE rectangle, over the squares, in the colour of its value', () => {
     const d = desenhoDeMentira();
     const pecas = pecasParadas(COM_PAR);
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas });
     expect(d.rects).toHaveLength(PECAS + pecas.length);
     pecas.forEach((p, k) => {
       expect(d.rects[PECAS + k]).toEqual({ cor: fundoDe(p.exponent), x: p.x, y: p.y, w: TILE, h: TILE });
@@ -91,7 +93,7 @@ describe('pintarTabuleiro — the figure, and only the figure', () => {
     const r = slide(linha(0, 0, 0, 2), 'left');
     const meio = pecasNoInstante(r.movimentos, 0.5);
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas: meio });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas: meio });
     const pintada = d.rects[PECAS];
     expect(pintada.x).toBeGreaterThan(cellRect(0).x);
     expect(pintada.x).toBeLessThan(cellRect(3).x);
@@ -104,7 +106,7 @@ describe('pintarTabuleiro — the figure, and only the figure', () => {
     const r = slide(COM_PAR, 'left');
     for (const pecas of [pecasParadas(COM_PAR), pecasNoInstante(r.movimentos, 0.5)]) {
       const d = desenhoDeMentira();
-      pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas });
+      pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas });
       for (const rect of d.rects) {
         expect(rect.x).toBeGreaterThanOrEqual(0);
         expect(rect.y).toBeGreaterThanOrEqual(0);
@@ -118,25 +120,52 @@ describe('pintarTabuleiro — the figure, and only the figure', () => {
     const d = desenhoDeMentira();
     const papel = (i: number) => (i === 0 || i === 1 ? 'goal' as const : 'structure' as const);
     const pecas = pecasParadas(COM_PAR);
-    pintarTabuleiro(d.g, { papel, altoContraste: true, pecas });
-    expect(d.rects[CASAS + 0].cor, 'SQUARE 0 follows the role too').toBe(HC_POR_PAPEL.goal);
-    expect(d.rects[CASAS + 2].cor).toBe(HC_POR_PAPEL.structure);
+    pintarTabuleiro(d.g, { papel, tema: 'hc3', pecas });
+    expect(d.rects[CASAS + 0].cor, 'SQUARE 0 follows the role too').toBe(corDoPapel('goal', 'hc3'));
+    expect(d.rects[CASAS + 2].cor).toBe(corDoPapel('structure', 'hc3'));
     // ⚠️ The proof that the VALUE stopped being in charge: tile 0 is worth 2 and tile 3 is worth 8, and both
     // come out in the colour of THEIR ROLE. Without this line, a high contrast that kept looking at the value
     // would go unnoticed.
-    expect(d.rects[PECAS + 0].cor, 'tile worth 2, role goal').toBe(HC_POR_PAPEL.goal);
-    expect(d.rects[PECAS + 3].cor, 'tile worth 8, role structure').toBe(HC_POR_PAPEL.structure);
+    expect(d.rects[PECAS + 0].cor, 'tile worth 2, role goal').toBe(corDoPapel('goal', 'hc3'));
+    expect(d.rects[PECAS + 3].cor, 'tile worth 8, role structure').toBe(corDoPapel('structure', 'hc3'));
+  });
+
+  it('[Many] 🔴 the SCREEN and the FRAME move with the level too — a level that repaints only the figures is half a level', () => {
+    // 📏 THE DEFECT THIS CATCHES, measured while writing the palette on 2026-10-03: with the background and
+    //    the frame left at their `padrao` values, `hc7` painted near-white tiles on the old slate frame and
+    //    the EMPTY squares came out at a ratio of 1.00 against it — the board's grid vanished, and a child
+    //    who asked for maximum contrast got sixteen squares she could not find.
+    const fundos = new Set<number>();
+    const molduras = new Set<number>();
+    for (const nivel of ['hc3', 'hc45', 'hc7'] as const) {
+      const d = desenhoDeMentira();
+      pintarTabuleiro(d.g, { papel: () => 'free' as const, tema: nivel, pecas: [] });
+      expect(d.rects[0].cor, `${nivel} screen`).toBe(FUNDO_DA_TELA_POR_NIVEL[nivel]);
+      expect(d.rects[1].cor, `${nivel} frame`).toBe(MOLDURA_POR_NIVEL[nivel]);
+      fundos.add(d.rects[0].cor);
+      molduras.add(d.rects[1].cor);
+    }
+    expect(fundos.size, 'three levels that share one background are not three levels').toBe(3);
+    expect(molduras.size, 'nor one frame').toBe(3);
+  });
+
+  it('[Right] `padrao` is the game’s own art, and no level colour leaks into it', () => {
+    const d = desenhoDeMentira();
+    pintarTabuleiro(d.g, { papel: () => 'goal' as const, tema: null, pecas: [] });
+    expect(d.rects[0].cor, 'the screen').toBe(FUNDO_DA_TELA);
+    expect(d.rects[1].cor, 'the frame').toBe(MOLDURA);
+    expect(d.rects[CASAS].cor, 'an empty square keeps the value ramp, not the role').toBe(fundoDe(0));
   });
 
   it('[Zero] an unknown role falls back to `free` instead of vanishing — painting nothing is worse than painting the background', () => {
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: () => 'nonexistent' as never, altoContraste: true, pecas: [] });
-    expect(d.rects[CASAS].cor).toBe(HC_POR_PAPEL.free);
+    pintarTabuleiro(d.g, { papel: () => 'nonexistent' as never, tema: 'hc3', pecas: [] });
+    expect(d.rects[CASAS].cor).toBe(corDoPapel('free', 'hc3'));
   });
 
   it('[Exception] an empty board paints no tile, and it is not a special case in the code', () => {
     const d = desenhoDeMentira();
-    pintarTabuleiro(d.g, { papel: papelFixo, altoContraste: false, pecas: pecasParadas(VAZIO) });
+    pintarTabuleiro(d.g, { papel: papelFixo, tema: null, pecas: pecasParadas(VAZIO) });
     expect(d.rects).toHaveLength(PECAS);
   });
 });

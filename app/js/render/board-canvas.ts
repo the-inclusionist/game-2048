@@ -17,13 +17,16 @@ import type { Role } from '@the-inclusionist/engine/core/contract.js';
 import type { Peca } from '../animation.ts';
 import { SIZE } from '../board.ts';
 import { BOARD, BOARD_X, BOARD_Y, LOGICAL_H, LOGICAL_W, TILE, cellRect } from '../geometry.ts';
-import { FUNDO_DA_TELA, HC_POR_PAPEL, MOLDURA, fundoDe } from './palette.ts';
+import {
+  FUNDO_DA_TELA, FUNDO_DA_TELA_POR_NIVEL, MOLDURA, MOLDURA_POR_NIVEL, corDoPapel, fundoDe, type Nivel,
+} from './palette.ts';
 
 export interface PinturaOpts {
   /** Each square's role, from the declaration. It is field 2 of the contract, and it rules high contrast. */
   readonly papel: (i: number) => Role;
   /** High contrast on? Then paint by ROLE and not by value. */
-  readonly altoContraste: boolean;
+  /** The engine's contrast level, or `null` for `padrao` — the four values of ADR-0104's theme axis. */
+  readonly tema: Nivel | null;
   /**
    * THE TILES, already positioned — in logical pixels, not in square indices.
    *
@@ -49,14 +52,18 @@ export interface PinturaOpts {
 export function pintarTabuleiro(g: Drawing, o: PinturaOpts): void {
   g.clear();
 
-  g.beginFill(FUNDO_DA_TELA).drawRect(0, 0, LOGICAL_W, LOGICAL_H).endFill();
-  g.beginFill(MOLDURA).drawRect(BOARD_X, BOARD_Y, BOARD, BOARD).endFill();
+  // 🔴 THE SCREEN AND THE FRAME MOVE WITH THE LEVEL TOO, and the first version of this change left them
+  //    fixed. At `hc7` that put near-black tiles on the old slate frame and the empty squares disappeared
+  //    into it — 📏 a ratio of 1.00 between `free` and the frame. A contrast level that only repaints the
+  //    FIGURES is half a level.
+  g.beginFill(o.tema ? FUNDO_DA_TELA_POR_NIVEL[o.tema] : FUNDO_DA_TELA).drawRect(0, 0, LOGICAL_W, LOGICAL_H).endFill();
+  g.beginFill(o.tema ? MOLDURA_POR_NIVEL[o.tema] : MOLDURA).drawRect(BOARD_X, BOARD_Y, BOARD, BOARD).endFill();
 
   // THE EMPTY SQUARES — the holes in the board. They depend on no tile: there are 16, always, and that is what
   // keeps the board looking like a board while the tiles fly over it.
   for (let i = 0; i < SIZE * SIZE; i++) {
     const r = cellRect(i);
-    const cor = o.altoContraste ? (HC_POR_PAPEL[o.papel(i)] ?? HC_POR_PAPEL.free) : fundoDe(0);
+    const cor = o.tema ? corDoPapel(o.papel(i), o.tema) : fundoDe(0);
     g.beginFill(cor).drawRect(r.x, r.y, r.w, r.h).endFill();
   }
 
@@ -67,9 +74,7 @@ export function pintarTabuleiro(g: Drawing, o: PinturaOpts): void {
     // carry a `papel` field the caller had to fill in, and a caller who forgot silently got the colour by
     // VALUE instead of the colour by role: high contrast switched off with nobody asking. Since the tile
     // already knows the square it belongs to (`at`), the field was redundant — and a redundant field drifts.
-    const cor = o.altoContraste
-      ? (HC_POR_PAPEL[o.papel(p.at)] ?? HC_POR_PAPEL.free)
-      : fundoDe(p.exponent);
+    const cor = o.tema ? corDoPapel(o.papel(p.at), o.tema) : fundoDe(p.exponent);
     g.beginFill(cor).drawRect(p.x, p.y, TILE, TILE).endFill();
   }
 }

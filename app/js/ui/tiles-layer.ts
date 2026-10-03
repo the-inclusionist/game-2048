@@ -22,7 +22,7 @@
 import { SIZE } from '../board.ts';
 import type { Peca } from '../animation.ts';
 import { BOARD, BOARD_X, BOARD_Y, TILE, fontFor } from '../geometry.ts';
-import { HC_POR_PAPEL, fundoDe, inkFor } from '../render/palette.ts';
+import { corDoPapel, fundoDe, inkFor, type Nivel } from '../render/palette.ts';
 
 export interface CamadaDePecas {
   readonly raiz: HTMLElement;
@@ -33,7 +33,7 @@ export interface CamadaDePecas {
    * the tile already knows the square it belongs to, and a field the caller has to remember to fill in is a
    * field they eventually forget — and the failure mode is high contrast switching itself off, silently.
    */
-  desenhar(pecas: readonly Peca[], altoContraste: boolean, papel: (i: number) => string): void;
+  desenhar(pecas: readonly Peca[], tema: Nivel | null, papel: (i: number) => string): void;
 }
 
 const px = (n: number) => `calc(${n} * var(--px))`;
@@ -87,7 +87,7 @@ export function criarCamadaDePecas(doc: Document): CamadaDePecas {
 
   return {
     raiz,
-    desenhar(pecas, altoContraste, papel) {
+    desenhar(pecas, tema, papel) {
       pecas.forEach((p, n) => {
         const el = pegar(n + 1);
         const texto = String(2 ** p.exponent);
@@ -103,8 +103,8 @@ export function criarCamadaDePecas(doc: Document): CamadaDePecas {
         // more contrast over the background the canvas will draw at that same position. Both layers read the
         // same palette, so the digit is never illegible over its own tile.
         const papelDaCasa = papel(p.at);
-        const fundo = altoContraste
-          ? (HC_POR_PAPEL[papelDaCasa] ?? HC_POR_PAPEL.free)
+        const fundo = tema
+          ? corDoPapel(papelDaCasa, tema)
           : fundoDe(p.exponent);
         el.style.color = cor(inkFor(fundo));
 
