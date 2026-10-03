@@ -177,15 +177,29 @@ describe('the vocabulary shown to a child', () => {
     expect(p[ACAO_DO_SONAR]?.labelKey).toBe('act.sonar');
   });
 
-  it('[Cross-check] and every key it asks for exists in the dictionary', () => {
-    // The pairing that no type checks: `criarPreset` asks for keys, and those keys must be in the game's
-    // dictionaries, or the engine will leave the position unnamed and `problems` will say so.
+  it('[Cross-check] 🔴 and every key it asks for exists in all THREE dictionaries (D6)', async () => {
+    // The pairing that no type checks: `criarPreset` asks for keys, and those keys must be in EVERY
+    // language the cartridge declares, or the engine's root will leave the position unnamed in whichever
+    // locale is missing. The engine's rule (D3 note DN) is specific: «a declared key missing in every
+    // language becomes a line of `problems`; a key present in some but not others leaves the surface
+    // unnamed in the missing language». For the preset — which the remap screen and the sonar read every
+    // frame — unnamed is worse than silent: it is a button a screen reader reads as nothing.
+    //
+    // 📌 WIDENED FROM PT-ONLY IN D6 OF PART FOUR. The pasted guide (the pattern game-platformer applies
+    // to its `game-keys.ts`) names this cross-check as the one that catches a translation gap before CF
+    // Pages ships it.
+    const en = (await import('../app/js/i18n/en.ts')).default;
+    const es = (await import('../app/js/i18n/es.ts')).default;
     const p = criarPreset();
     const chaves = [
       ...Object.values(p).map((e) => e?.labelKey),
       ...Object.values(p).map((e) => e?.hintKey),
     ].filter((s): s is string => typeof s === 'string');
-    for (const k of chaves) expect(Object.keys(pt), k).toContain(k);
+    for (const k of chaves) {
+      expect(Object.keys(pt), `pt: ${k}`).toContain(k);
+      expect(Object.keys(en), `en: ${k}`).toContain(k);
+      expect(Object.keys(es), `es: ${k}`).toContain(k);
+    }
   });
 
   it('[One] the sonar carries a HINT key, because it is the one position nobody can guess', () => {
