@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 📌 THE SHARED ORIGIN'S ROOT (D3 of Part Four). CF Pages serves this game at
+     `o-inclusionista.jrocha.dev.br/game-2048/`, and the shared `incl-pesados-v2` cache (ADR-0117) lives at
+     the origin ROOT — not under this subpath. `<base href="/" />` points every unqualified relative URL
+     against the origin root, so `/vendor/fonts.css` and the engine's `/heavy/<host><path>` land where every
+     other game on the catalogue finds them. Vite's absolute `src=`/`href=` references the production build
+     writes (D2) are not affected: they resolve against the ORIGIN too and keep the `/game-2048/` prefix. -->
+<base href="/" />
 <title>2048 · Potência de 2</title>
 <!--
   THE SHELL, and it is a contract before it is a page.
