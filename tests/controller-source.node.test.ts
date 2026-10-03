@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 // ========================= THE STRUCTURAL HALF =========================
 describe('this game mounts no transport of its own', () => {
   /** The game's own sources, comments stripped — the trap this repository has fallen into three times. */
-  const FONTES = ['app/js/boot/main.ts', 'src/standalone.ts', 'app/js/actions.ts']
+  const FONTES = ['app/js/boot/main.ts', 'src/standalone.ts', 'app/js/actions.ts', 'app/js/ui/a11y-bar-retract.ts']
     .map((rel) => ({
       nome: rel,
       texto: readFileSync(join(import.meta.dirname, '..', rel), 'utf8')
@@ -49,14 +49,76 @@ describe('this game mounts no transport of its own', () => {
     expect(FONTES.find((f) => f.nome === 'app/js/actions.ts')!.texto).toMatch(/criarPreset/);
   });
 
-  for (const escuta of ['keydown', 'keyup', 'touchstart', 'touchend', 'touchmove']) {
-    it(`[Zero] 🔴 it does not listen for \`${escuta}\` — the engine owns that transport`, () => {
+  // ========================= THE RULE, IN THE DEV'S WORDS =========================
+  // «A única fonte de informação para o jogo vinda do meio externo é o virtualController, o jogo não pode ler
+  //  teclas, botões de joystick nem nada, quem deve ler os mecanismos de hardware é o virtualController.»
+  //
+  // 🔴 SO THE LIST IS EVERY DEVICE EVENT, not the three this file started with. It began as
+  // `keydown/keyup/touch*` — the listeners E8 happened to delete — and a list shaped by what was removed
+  // measures the last defect, never the next one. A pointer, a mouse, a wheel and a gamepad are the same
+  // question asked with different hardware, and the engine's controller is the answer to all of them.
+  //
+  // 📌 WHAT IS NOT ON THE LIST, and why. `visibilitychange` and `resize` are not input: they say the page
+  // changed, not that the child did something. `focus`/`focusin` is the browser reporting where attention
+  // went, which every accessible widget must know. `click` on a `<button>` is widget ACTIVATION, reached by
+  // key, pointer, switch or screen reader alike — the engine's own pause card is wired that way. The rule is
+  // about reading DEVICES, and these are not devices.
+  const EVENTOS_DE_DISPOSITIVO = [
+    'keydown', 'keyup', 'keypress',
+    'touchstart', 'touchend', 'touchmove', 'touchcancel',
+    'pointerdown', 'pointerup', 'pointermove', 'pointerenter', 'pointerover',
+    'mousedown', 'mouseup', 'mousemove', 'wheel',
+    'gamepadconnected', 'gamepaddisconnected',
+  ];
+
+  /**
+   * 🔴 ONE FILE IS EXCEPTED, BY NAME AND WITH ITS REASON — which is the only kind of exception this repository
+   * keeps (the same rule `tests/i18n.node.test.ts` states about its own list: «an exception with a reason is a
+   * decision, an exception without one is an oversight that learned to pass»).
+   *
+   * `app/js/ui/a11y-bar-retract.ts` reads `pointermove` and `pointerdown`. It does it to decide whether the
+   * ENGINE'S accessibility bar should fold away or come back — the Dev's request: «deve aparecer novamente
+   * quando o mouse se dirige em sua direção ou se há um toque na tela no lugar onde ele deveria estar.»
+   *
+   * ⚠️ THAT CANNOT GO THROUGH THE CONTROLLER, and the reason is in the controller's own shape: a
+   * `VirtualCommand` carries a POSITION (`up`, `action1`) and never a coordinate. «Is the pointer heading for
+   * the top band?» is a question about WHERE the pointer is, which no position can answer. So the feature is
+   * not expressible under this rule by any game — which is the argument, measured, for it belonging to the
+   * engine, where reading the hardware is legitimate. It is written down in that file and awaits the Dev's
+   * authorisation to move.
+   *
+   * 📌 WHAT THE EXCEPTION DOES NOT COVER is the thing the rule is about: the assertion below holds that
+   * nothing this file reads ever reaches the game's play path. It moves a bar; it cannot move a tile.
+   */
+  const EXCECAO = 'app/js/ui/a11y-bar-retract.ts';
+
+  it('[Zero] 🔴 the excepted file never turns a pointer into a move', () => {
+    // The rule is «the only source of information for the game from outside is the virtualController». This
+    // file may read a pointer to show a bar; if it ever reached `jogar`, `controller.press` or the command
+    // handler, it would be a second source of game intent — exactly what the rule forbids.
+    const f = FONTES.find((x) => x.nome === EXCECAO)!;
+    expect(f.texto, 'it plays the game').not.toMatch(/jogar\s*\(/);
+    expect(f.texto, 'it presses the controller').not.toMatch(/controller\s*\.\s*press/);
+    expect(f.texto, 'it reaches the command handler').not.toMatch(/aoComando|onCommand/);
+  });
+
+  for (const escuta of EVENTOS_DE_DISPOSITIVO) {
+    it(`[Zero] 🔴 the game does not listen for \`${escuta}\` — that is the controller's to read`, () => {
       const ofensas = FONTES
-        .filter((f) => new RegExp(`addEventListener\\(\\s*['"\`]${escuta}['"\`]`).test(f.texto))
+        .filter((f) => f.nome !== EXCECAO)
+        .filter((f) => new RegExp('addEventListener\\s*\\(\\s*[\'"`]' + escuta + '[\'"`]').test(f.texto))
         .map((f) => f.nome);
-      expect(ofensas, `${escuta} is the engine's to hear — press engine.controller instead`).toEqual([]);
+      expect(ofensas, `${escuta} is hardware — press engine.controller instead of reading it`).toEqual([]);
     });
   }
+
+  it('[Zero] 🔴 nor does it poll the gamepad, which is the one device with no event to forbid', () => {
+    // `navigator.getGamepads()` is read in a loop rather than listened to, so a list of event names would
+    // never catch it. The engine mounts the gamepad transport (ADR-0224) and presses the controller with it.
+    for (const f of FONTES) {
+      expect(f.texto, `${f.nome} reads the gamepad itself`).not.toMatch(/getGamepads\s*\(/);
+    }
+  });
 
   it('[Zero] 🔴 and it draws no touch pad of its own — `onScreenPad` asks the engine for one', () => {
     // Four `[data-dir]` buttons with their own CSS and their own `click` handlers. The engine's `initTouch`

@@ -42,13 +42,9 @@ export const es: Dicionario = {
   'act.right': 'Empujar hacia la derecha',
   'act.sonar': 'Dónde hay una unión',
   'act.sonar.hint': 'Dice dónde hay una unión posible, hacia qué lado y a qué distancia.',
-  'act.ler': 'Leer el tablero',
-  'act.ler.hint': 'Cambia lo que hacen las flechas: empujar las fichas o recorrer las casillas para oír cada una.',
   'help.push': 'Empuja el tablero hacia un lado. Todas las fichas se mueven a la vez: las flechas mueven el tablero, no un cursor.',
   'help.merge': 'Dos fichas con el mismo número que se encuentran se vuelven una sola, con el doble: 2 y 2 hacen 4.',
   'help.goal': 'Después de cada jugada aparece una ficha nueva. Sigue doblando hasta llegar a la ficha 2048.',
-  'a11y.reading.on': 'Lectura activada: las flechas recorren las casillas.',
-  'a11y.reading.off': 'Lectura desactivada: las flechas vuelven a empujar las fichas.',
 
 
   'end.win': 'Llegaste a 2048. Son once duplicaciones, de principio a fin.',

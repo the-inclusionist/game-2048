@@ -21,8 +21,7 @@
 import { describe, expect, it } from 'vitest';
 import { isAction, presetActions, presetProblems } from '@the-inclusionist/engine/core/actions.js';
 import {
-  ACAO_DE_LER, ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, acoesComRotulo, criarPreset, direcaoDe,
-  ehLer, ehSonar,
+  ACAO_DO_SONAR, ACAO_PARA_DIRECAO, ACOES_USADAS, acoesComRotulo, criarPreset, direcaoDe, ehSonar,
 } from '../app/js/actions.ts';
 import pt from '../app/js/i18n/pt.ts';
 import en from '../app/js/i18n/en.ts';
@@ -108,45 +107,40 @@ describe('reading what `actionOf` gives back — a boundary, not a lookup', () =
 //    decides that a press belongs to something else and `controller.press()` answers `toPlay: false`, so it
 //    reaches nobody. A gate here would be a second answer to a question this game no longer asks.
 
-describe('the position that switches pushing for reading', () => {
-  it('[Right] 🔴 it is a DIAMOND position, so it cannot collide with a push', () => {
-    // The same argument as the sonar's, one position over. If reading were a direction it would have to be
-    // one of the four that play, and the child would have no way to ask for it without moving a tile.
-    expect(ACAO_DE_LER).toBe('action2');
-    expect(ACAO_PARA_DIRECAO[ACAO_DE_LER], 'reading must not also mean a push').toBeUndefined();
-    expect(ACAO_DE_LER, 'and it is not the sonar either').not.toBe(ACAO_DO_SONAR);
+// ========================= 🔴 THE INVERSE OF THE BLOCK THAT STOOD HERE =========================
+// For one day this file gated a reading position — `ACAO_DE_LER = 'action2'` — that toggled the four
+// directions between playing and walking a cursor. 📏 The Dev found it on the built page: one press of the
+// engine pad's «2, Ler o tabuleiro» and every direction, from every transport, stopped moving tiles. «Os
+// direcionais no 2048 são para fazer as peças deslizarem pelo tabuleiro na direção especificada, não?»
+//
+// So the assertions below hold the OPPOSITE property, and that is the point: a gate that said «the mode is
+// reachable» has become one that says «no mode exists to reach».
+describe('nothing this game declares can take the directional', () => {
+  it('[Zero] 🔴 the four directions are the ONLY positions that map to a push', () => {
+    // If a fifth position ever maps to a direction, it can be pressed instead of playing — which is the shape
+    // of the defect, independently of what the fifth one is called.
+    expect(Object.keys(ACAO_PARA_DIRECAO).sort()).toEqual(['down', 'left', 'right', 'up']);
   });
 
-  it('[Interface] 🔴 it is NAMED, which is what makes it reachable by anything but a keyboard', () => {
-    // ⚠️ THIS IS THE WHOLE REASON IT EXISTS. It was `Shift` + arrow until 2026-10-03, and a `VirtualCommand`
-    //    carries `{ action, pressed, source, player }` — no `shiftKey`, because the eyes, the face, the
-    //    hands, the voice, the gamepad and the on-screen pad have no Shift to hold. An unnamed position
-    //    would also appear on the remap screen as a blank row, which ADR-0074 refuses: to a child using a
-    //    screen reader that is a button that exists and has no name.
-    const p = criarPreset();
-    expect(p[ACAO_DE_LER], 'a position this game reads must be named').toBeTruthy();
-    expect(p[ACAO_DE_LER]?.labelKey).toBe('act.ler');
-    expect(pt[p[ACAO_DE_LER]!.labelKey as keyof typeof pt], 'and the key resolves in pt-BR').toBeTruthy();
-    expect(pt[p[ACAO_DE_LER]!.hintKey as keyof typeof pt], 'the hint too').toBeTruthy();
+  it('[Zero] 🔴 and this game declares no position beyond the four and the sonar', () => {
+    // 📌 THE VOCABULARY IS THE SURFACE. Every declared position is a button on the engine's pad, a stop of the
+    //    one-button scan, a row on the remap screen and a word the voice can say — so a position that does
+    //    something other than play is reachable by a child who never went looking for it.
+    expect([...ACOES_USADAS].sort()).toEqual(['action1', 'down', 'left', 'right', 'up']);
+    expect(ACOES_USADAS, 'the reading mode is gone').not.toContain('action2');
   });
 
-  it('[Right] the guard answers for it, and for nothing near it', () => {
-    expect(ehLer(ACAO_DE_LER)).toBe(true);
-    expect(ehLer(ACAO_DO_SONAR), 'the sonar is not the reading mode').toBe(false);
-    for (const d of ['up', 'down', 'left', 'right']) expect(ehLer(d), d).toBe(false);
-    expect(ehLer(null)).toBe(false);
-    expect(ehLer(undefined)).toBe(false);
-    expect(ehLer('shiftKey'), 'what it replaced is not a position').toBe(false);
+  it('[Interface] the preset names exactly those positions, and no more', () => {
+    expect(presetActions(criarPreset()).sort()).toEqual([...ACOES_USADAS].sort());
   });
 
-  it('[Many] ⚠️ the three announcements it switches between exist in all three languages', () => {
-    // A mode with no sentence is a mode a blind child cannot tell she is in. `motor.say` reads these.
-    for (const k of ['a11y.reading.on', 'a11y.reading.off'] as const) {
-      expect(pt[k as keyof typeof pt], `pt ${k}`).toBeTruthy();
-      expect(en[k as keyof typeof en], `en ${k}`).toBeTruthy();
-      expect(es[k as keyof typeof es], `es ${k}`).toBeTruthy();
+  it('[Zero] the words of the retired mode are gone from every dictionary', () => {
+    // A key with no reader is rot, and these three would read as a feature to whoever found them.
+    for (const dict of [pt, en, es]) {
+      for (const k of ['act.ler', 'act.ler.hint', 'a11y.reading.on', 'a11y.reading.off']) {
+        expect(dict[k as keyof typeof dict], k).toBeUndefined();
+      }
     }
-    expect(pt['a11y.reading.on'], 'on and off must not read the same').not.toBe(pt['a11y.reading.off']);
   });
 });
 

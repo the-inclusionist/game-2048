@@ -37,36 +37,35 @@ import type { Direction } from './board.ts';
  */
 export const ACAO_DO_SONAR: Action = 'action1';
 
-/**
- * THE POSITION THAT SWITCHES BETWEEN PUSHING AND READING.
- *
- * 🔴 IT REPLACED `Shift` + arrow ON 2026-10-03, and the reason is the same one that retired `Alt+S` above,
- * one level up. A modifier chord is not a position: it exists only where there is a KEYBOARD. The engine
- * carries every transport to the game as a `VirtualCommand` — `{ action, pressed, source, player }` — and a
- * command has no `shiftKey`, because the eyes, the face, the hands, the voice, the gamepad and the on-screen
- * pad have no Shift to hold. So `Shift` + arrow was a reading mode for keyboard children and for nobody
- * else, while the four pushes worked for everyone.
- *
- * As a position it is remappable, it is checked against every other binding, it is named on the remap screen,
- * the scan can land on it, and a child playing with her face reaches it exactly as she reaches `left`.
- *
- * 📌 A MODE AND NOT FOUR MORE POSITIONS. Giving the cursor its own up/down/left/right would double this
- * game's vocabulary and put eight near-identical rows on the remap screen; what a child learns here is «the
- * arrows do the other thing now», which is one thing to learn instead of four.
- */
-export const ACAO_DE_LER: Action = 'action2';
+// ========================= 🔴 A READING MODE STOOD HERE FOR ONE DAY, AND IT TOOK THE GAME AWAY =========================
+// `ACAO_DE_LER = 'action2'` toggled the four directions between pushing the board and walking a cursor over it. I added it
+// in E8 as the engine-native replacement for `Shift` + arrow, and the reasoning was sound as far as it went: a
+// `VirtualCommand` carries no modifiers, so the chord only ever worked for a child with a keyboard.
+//
+// 📏 WHAT IT COST, reproduced on the built page: ONE press of `action2` — a labelled button on the engine's on-screen pad
+// («2, Ler o tabuleiro»), a key, a stop of the one-button scan, a spoken command — and every direction from every
+// transport stopped playing. All four moved a selector and none moved a tile, with no way back a child would find.
+//
+// The Dev: «ao usar o direcional eu uso um seletor para "andar" pelo tabuleiro, num jogo onde isso não faz o menor
+// sentido! Os direcionais no 2048 são para fazer as peças deslizarem pelo tabuleiro na direção especificada, não?»
+//
+// 📌 THE LESSON IS NOT «THE CHORD WAS BETTER». It is that in this game the directional has ONE meaning, and any mode that
+// borrows it is a mode that can strand the child mid-round. Reading the board is already answered by things that take no
+// direction: the grid is real DOM with a label on every cell, which a screen reader walks on its own, and the sonar
+// (`ACAO_DO_SONAR`) says where a merge is without moving anything.
+
 
 /**
- * The four directions, which in this game PUSH THE BOARD rather than move a cursor — unless the reading mode
- * is on, when the same four move the reading cursor (`ACAO_DE_LER`). In 2048 pushing IS the verb, so arrows
- * that only navigated would leave a child who plays by positions unable to play at all.
+ * The four directions, and in this game they PUSH THE BOARD. Always — there is no mode in which they do
+ * anything else. Pushing IS the verb of a 2048, so a direction that navigated instead would leave a child who
+ * plays by positions unable to play at all.
  */
 export const ACAO_PARA_DIRECAO: Readonly<Partial<Record<Action, Direction>>> = {
   left: 'left', right: 'right', up: 'up', down: 'down',
 };
 
 /** Every engine position this game actually reads. The preset must name all of them, and nothing else. */
-export const ACOES_USADAS: readonly Action[] = ['up', 'down', 'left', 'right', ACAO_DO_SONAR, ACAO_DE_LER];
+export const ACOES_USADAS: readonly Action[] = ['up', 'down', 'left', 'right', ACAO_DO_SONAR];
 
 /**
  * The push this key means, or `undefined` — and the guard is the point.
@@ -84,11 +83,6 @@ export function direcaoDe(action: string | null | undefined): Direction | undefi
 /** Is this the sonar's position? Same boundary, same reason — one place that knows the answer. */
 export function ehSonar(action: string | null | undefined): boolean {
   return action === ACAO_DO_SONAR;
-}
-
-/** Is this the position that switches between pushing and reading? */
-export function ehLer(action: string | null | undefined): boolean {
-  return action === ACAO_DE_LER;
 }
 
 // ========================= `ehAtalhoDoSistema` LEFT ON 2026-10-03, AND SO DID ITS SUBJECT =========================
@@ -131,7 +125,6 @@ export function criarPreset(): ActionPreset {
     left: { labelKey: 'act.left' },
     right: { labelKey: 'act.right' },
     [ACAO_DO_SONAR]: { labelKey: 'act.sonar', hintKey: 'act.sonar.hint' },
-    [ACAO_DE_LER]: { labelKey: 'act.ler', hintKey: 'act.ler.hint' },
   };
 }
 

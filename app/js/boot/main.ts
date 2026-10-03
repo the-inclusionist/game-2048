@@ -28,7 +28,7 @@ import {
 import {
   criarAnimador, criarRelogioDeQuadros, duracaoDaJogada, pecasParadas, querMenosMovimento, type Peca,
 } from '../animation.ts';
-import { criarPreset, direcaoDe, ehLer, ehSonar } from '../actions.ts';
+import { criarPreset, direcaoDe, ehSonar } from '../actions.ts';
 import { SLIDES } from '../how-to-play.ts';
 import type { GameCtx, GameInstance } from '../cartridge-types.ts';
 import { criarDeclaracao, RESPOSTAS_DAS_ACOMODACOES } from '../declaration.ts';
@@ -124,18 +124,9 @@ export function criarJogo(ctx: GameCtx): GameInstance {
   let pontos = 0;
   let heading: 'n' | 'e' | 's' | 'w' | 'none' = 'none';
   let acabou = false;
-  /**
-   * Are the four directions moving the READING CURSOR instead of pushing the board?
-   *
-   * 📌 PER INSTANCE, like everything else in this block, and for the reason spec D14 names: a module-level
-   * `let` here would mean the second game on a page inherited the first child's reading mode.
-   *
-   * ⚠️ It is a MODE and not a modifier since 2026-10-03. `Shift` + arrow could only ever be held by a child
-   * with a keyboard; the position (`ACAO_DE_LER`) is reachable from the gamepad, the eyes, the face, the
-   * hands, the voice, the on-screen pad and the one-button scan, because all of them press the same
-   * controller.
-   */
-  let lendo = false;
+  // 🔴 A `let lendo` STOOD HERE and `app/js/actions.ts` carries why it went: one press of a position toggled
+  //    the four directions between playing and walking a cursor, and a child who hit it by accident — the pad has
+  //    a labelled button for it — could not play any more.
 
   let rng: Rng = createRng(Date.now() & 0x7fffffff);
 
@@ -407,27 +398,11 @@ export function criarJogo(ctx: GameCtx): GameInstance {
       return;
     }
 
-    // THE READING MODE — what `Shift` + arrow used to be. `actions.ts` carries the reason at length: a
-    // command has no `shiftKey`, because the eyes, the face, the voice and the pad have no Shift to hold, so
-    // the chord was a reading mode for keyboard children and for nobody else.
-    if (ehLer(c.action)) {
-      lendo = !lendo;
-      motor.say(motor.t(lendo ? 'a11y.reading.on' : 'a11y.reading.off'));
-      if (lendo) grade.focar();
-      return;
-    }
-
+    // 🔴 A DIRECTION PLAYS. There is no branch here and there must not be one: the Dev found the version that
+    //    had one by pressing the pad's «2» and discovering that every direction, from every transport, had
+    //    stopped moving tiles. In a 2048 the directional has ONE meaning.
     const dir = direcaoDe(c.action);
-    if (!dir) return;
-
-    if (lendo) {
-      const d = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[dir] as [number, number];
-      const i = grade.mover(d[0], d[1]);
-      grade.focar();
-      srSay(grade.raiz.querySelector<HTMLElement>(`[data-i="${i}"]`)?.getAttribute('aria-label') ?? '');
-      return;
-    }
-    jogar(dir);
+    if (dir) jogar(dir);
   };
 
   doc.querySelector('#p2-again')?.addEventListener('click', () => {

@@ -33,7 +33,7 @@ import { createGame, type Engine } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
 import paginaHtml from '../app/index.html?raw';
 import { cartridge } from '../src/index.ts';
-import { ACAO_DE_LER, ACAO_DO_SONAR, ACOES_USADAS } from '../app/js/actions.ts';
+import { ACAO_DO_SONAR, ACOES_USADAS } from '../app/js/actions.ts';
 import type { GameInstance } from '../app/js/cartridge-types.ts';
 
 let motor: Engine;
@@ -146,20 +146,22 @@ describe('the game receives through the engine’s controller', () => {
     for (const a of ACOES_USADAS) expect(chegaram, `${a} never arrived`).toContain(a);
   });
 
-  it('[Exception] 🔴 the reading mode is reachable by a transport with no Shift to hold', () => {
-    // ⚠️ THIS IS WHY `ACAO_DE_LER` EXISTS. It was `Shift` + arrow until 2026-10-03, and a `VirtualCommand`
-    //    carries `{ action, pressed, source, player }` with no modifiers — because the eyes, the face, the
-    //    hands, the voice, the gamepad and the on-screen pad have no Shift. Pressed here as the HANDS, which
-    //    is a child who could never have held it.
+  it('[Zero] 🔴 NO declared position stops the directional from playing', () => {
+    // 📏 THE DEFECT THIS REPLACES, found by the Dev on the built page: `action2` toggled a reading mode, and
+    //    one press of it — from the engine pad's labelled «2» button, a key, a scan stop or a spoken word —
+    //    left every direction from every transport moving a selector and none moving a tile. «Os direcionais
+    //    no 2048 são para fazer as peças deslizarem pelo tabuleiro na direção especificada, não?»
+    //
+    // 🔴 THE GATE PRESSES EVERY NON-DIRECTIONAL POSITION FIRST, and only then plays. A mode toggled by any of
+    //    them would show up here as a board that stopped answering — which is exactly how it reached
+    //    production unnoticed.
+    const naoDirecionais = ACOES_USADAS.filter((a) => !['up', 'down', 'left', 'right'].includes(a));
+    expect(naoDirecionais.length, 'a game with no other position cannot prove this').toBeGreaterThan(0);
+    for (const a of naoDirecionais) motor.controller.press(a, 'gestos', 0);
+
     const antes = mundo().board.slice();
-    expect(motor.controller.press(ACAO_DE_LER, 'gestos', 0), 'reading reached play').toBe(true);
-    // In reading mode the four directions walk the squares instead of pushing: the board must NOT change.
     for (const dir of ['left', 'up', 'right', 'down'] as const) motor.controller.press(dir, 'gestos', 0);
-    expect(mundo().board, 'the arrows pushed the board while the child was reading it').toEqual(antes);
-    // And switching back restores the verb.
-    motor.controller.press(ACAO_DE_LER, 'gestos', 0);
-    for (const dir of ['left', 'up', 'right', 'down'] as const) motor.controller.press(dir, 'gestos', 0);
-    expect(mundo().board, 'reading mode never switched off').not.toEqual(antes);
+    expect(mundo().board, 'a position was pressed and the directional stopped playing').not.toEqual(antes);
   });
 
   it('[Zero] a RELEASE is not a move — this game acts on the edge', () => {
