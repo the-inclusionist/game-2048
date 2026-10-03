@@ -1,4 +1,4 @@
-# Plan — game-2048: engine 8 ✅ → engine 9 ✅ → the cartridge conversion ✅ → engine 11 ✅ → Cloudflare delivery ⬜
+# Plan — game-2048: engine 8 ✅ → engine 9 ✅ → cartridge ✅ → engine 11 ✅ → Cloudflare ✅ → give the UI back to the engine ⬜
 
 **Legend:** ✅ done · 🆕 newly possible (engine 9.0.0) · ⬜ not started · 🔴 defect · ⏸ waiting on Dev · 🚫 n/a
 
@@ -480,3 +480,93 @@ absolute reference under `/game-2048/`.)
 - The engine's six «Pedido (C)» asks — multi-seat / per-seat / gamepad-title / `inclusionist-heavy --base`
   layout. 2048 is single-player and declines the pause actor, so none of the six affect this cartridge.
 - Nothing is written to `the-inclusionist-engine`.
+
+---
+
+## Part five — giving the UI back to the engine
+
+### Context
+
+The Dev, 2026-10-03, looking at the live deploy: *«Por que você preferiu usar o que tinha ao invés de
+priorizar a engine, se adaptando à ela?»* — four hand-rolled buttons duplicating the engine's own bar, the
+bar at the bottom instead of the top, and a caption that shifts the buttons horizontally so some cannot be
+clicked.
+
+**The honest answer: H0–H12 was an API migration and nothing in it asked «should this still exist?».** Every
+step asked what a thing is called now. The four buttons were built in Part One against engine 8, when the
+doors were genuinely shut — and three of them opened without anyone re-measuring.
+
+### What was measured, 2026-10-03, against the live deploy and 11.0.0
+
+| Our control | What the engine 11 already does | Verdict |
+|---|---|---|
+| `🔤 Tipografia` | mounts the 🔤 icon AND calls `initSettingsTypo` itself (`create-game.js:1134`) | **triplicated** |
+| `🚥 Correção de cor` | mounts the 🚥 icon; **measured cycling correctly** on the live page (`desligado → protanopia → deuteranopia → tritanopia → desligado`) | **duplicated** |
+| `⌨ Teclas` | calls `initSettingsControls` itself (`create-game.js:2973`) | **triplicated** |
+| `◐ Alto contraste` | no icon; the axis is still `hc3`/`hc45`/`hc7` | **stays ours** — G1's arithmetic did not expire |
+
+🔴 **Two of my own claims were wrong, and in different ways:**
+
+- **G2 said «NOTHING in the engine opens `ui/settings-controls`».** True on engine 8, false on 11 — the
+  engine calls it at `create-game.js:2973`. Never re-measured.
+- **G1 predicted the 🚥 icon «would read the default on every click and stick after one», and H12 re-asserted
+  it.** The TYPE still lacks `visual` on `players` — I read the type and inferred the behaviour. The icon
+  cycles perfectly. 📌 **Reading a type is not measuring a behaviour.**
+
+### The bar's real contract — ADR-0148 §3, erratum of 2026-09-13, issue #160
+
+The engine mounts the bar, measures it, and writes **`--barra-a11y-h`** on `#game-region`: the bar's offset,
+the bar, **the line of the pointed icon's NAME under it**, and a light gap. The game reads that variable and
+leaves the room free. The engine's own words:
+
+> *«The name line is counted whether or not a name is showing — reserving only while pointing would move the
+> game under the child's finger.»*
+
+**That sentence describes the Dev's bug and its fix, dated two days after I hand-rolled around it.**
+
+📏 **Measured on the live deploy:** `--barra-a11y-h` reads **375px** on a `#game-region` that is 171px tall.
+The engine measured our misplaced bar, produced a nonsense reservation, wrote it — and nothing read it. The
+engine already knew.
+
+### The caption bug, in one line of our CSS
+
+```css
+.p2-a11y { display:flex; flex-wrap: wrap; … }      /* ours — the caption becomes a flex item */
+```
+```css
+#title-icons        { position:absolute; top:0; flex-wrap:nowrap }   /* the engine's — ONE row, at the top */
+#title-icons .pause-icons-cap
+                    { position:absolute; top:100%; pointer-events:none }  /* out of flow, below, unclickable */
+```
+
+📏 Measured: hovering the `idioma` icon moves it from `x=260` to `x=121` — **139 px out from under the
+cursor**, because the caption's text changes width and the wrapping row reflows.
+
+### Standing rules (unchanged)
+
+- Nothing in `the-inclusionist-engine` without the Dev's authorisation.
+- Commits are mine, pushes are the Dev's.
+- Each gate born red with the mutation confirmed before green counts.
+
+### The order
+
+| | Step | Status |
+|---|---|---|
+| **E1** | **The three redundant controls are gone.** `src/standalone.ts` 380 → 213 lines; `app/index.html` 190 → 124. Out: the `🔤`/`🚥`/`⌨` buttons, the `#typo`/`#ctrl`/`#viz` overlays, our `initSettingsTypo` and `initSettingsControls` calls, the `word` helper, `acoesComRotulo`'s only caller, the shell's `createStorage`. `◐ Alto contraste` stays — the axis is still `hc3`/`hc45`/`hc7` and G1's arithmetic did not expire. Gates whose subject was deleted were replaced, not just removed: `tests/visual.node.test.ts` now holds **E1 — the shell mounts no panel the engine already mounts** (the inverted property — a regression is somebody re-adding a control the child would meet twice). 🔴 **AND THE DELETION EXPOSED A BIGGER DEFECT.** The engine builds the remap panel's `ControlsStore` inline (`create-game.js:2973`), and its `resetKB` writes `kb.p3 = factory.p3` — the schemes with the 42 nulls — straight through `saveKB(store, kb)`, which is `store.setJSON(CKEY, kb)` with no filter. **Measured end to end**, engine functions and engine data only: `saveKB(store, KB_DEFAULTS)` then `loadKB(store, null)` **throws TypeError**. The G4b lockout went from «ours to work around» to «every game's, and unreachable by any consumer» — `semNulos` has no hook left. `app/js/keyboard-save.ts` is kept in the tree, uncalled, as the measured shape of the fix the engine needs. 286 assertions green. | ✅ `E1` |
+| **E2** | **The bar moves to the top, as `#title-icons`, with the engine's own CSS.** Our `.p2-a11y` rule goes; the host element is renamed and placed where the engine's `reserveTopBand` can measure it against `#game-region`. Drop `host.a11yBarHost` so the engine finds it by its own `A11Y_BAR_SELECTOR`. | ⬜ |
+| **E3** | **Read `--barra-a11y-h` and leave the room free (ADR-0148).** The game's own HUD moves down by the reserved band. The engine's `barIntruderProblems` gate is what says whether we got it right — `motor.problems` must carry no «the game draws over the accessibility bar» line. | ⬜ |
+| **E4** | **Gates.** (a) 🔴 hovering ANY bar icon moves NO other icon — the Dev's bug as a measurement, in the browser project. (b) the game mounts no panel the engine already mounts (source gate: no `initSettingsTypo`/`initSettingsControls` in our source). (c) `--barra-a11y-h` is sane — smaller than the region's own height — and `motor.problems` has no bar-intruder line. | ⬜ |
+
+### Verification — E-tier
+
+```bash
+npm run typecheck && npx vitest run
+```
+
+```bash
+npm run build
+```
+
+- From **E1** onward, the suite shrinks: the tests for the deleted panels go with them.
+- From **E3** onward, `motor.problems` is the engine's own verdict on whether the bar has its room.
+- Nothing is deployed by me; every push and every `wrangler deploy` is the Dev's.

@@ -74,3 +74,52 @@ describe('what we write instead', () => {
     expect(JSON.stringify(KB_DEFAULTS)).toBe(antes);
   });
 });
+
+describe('E1 — 🔴 the lockout is the ENGINE’s now, and no consumer can reach it', async () => {
+  // ========================= WHAT CHANGED ON 2026-10-03 =========================
+  // Part Five's E1 deleted this game's remap panel, because engine 11.0.0 mounts one itself
+  // (`boot/create-game.js:2973`). That moved the G4b lockout from «ours to work around» to «the engine's,
+  // and unreachable»: the engine builds the `ControlsStore` inline, so `semNulos` has no hook left.
+  //
+  //   store: {
+  //     saveKB: (conf) => { …; keyboardConfig.save(conf); },
+  //     resetKB: () => { kb.p3 = factory.p3; kb.p4 = factory.p4; keyboardConfig.save(kb); … },
+  //   }
+  //
+  // 🔴 `factory.p3` AND `factory.p4` ARE THE SCHEMES WITH THE 42 NULLS. Pressing «Restaurar padrões» in
+  //    3- or 4-player mode persists them directly, and `saveKB(store, kb)` is `store.setJSON(CKEY, kb)` —
+  //    no filter anywhere on the way.
+  //
+  // 📌 THIS TEST CLOSES THE LOOP INSTEAD OF READING IT. Everything above is source-reading; the assertion
+  //    below runs the engine's OWN save and load against a memory store and reports what a child's second
+  //    boot would do. Reading a chain is not measuring it — the lesson of the 🚥 icon, three hours earlier
+  //    in this same session.
+  const { createStorage, memoryBackend } = await import('@the-inclusionist/engine/platform/storage.js');
+  const { saveKB, loadKB, KB_DEFAULTS: FACTORY } = await import('@the-inclusionist/engine/input/keyboard.js');
+
+  it('[Cross-check] the factory the engine would save still carries nulls', () => {
+    // If this fails the engine fixed its data and the whole block below is about a closed defect — which is
+    // the good day this assertion exists to announce.
+    expect(temNulo(FACTORY), 'p3/p4 hold null for positions a seat cannot reach').toBe(true);
+  });
+
+  it('[Zero] 🔴 save-then-load of the engine’s own factory THROWS — the child’s second boot', () => {
+    // The exact round trip «Restaurar padrões» performs: the engine writes the factory map (nulls and all)
+    // through its own `saveKB`, and the next boot reads it back through its own `loadKB`.
+    const store = createStorage(memoryBackend());
+    saveKB(store, FACTORY);
+    expect(
+      () => loadKB(store, null),
+      'this is the blank page a child meets after remapping a key and reloading',
+    ).toThrow(TypeError);
+  });
+
+  it('[Exception] ⚠️ and a map WITHOUT nulls survives the same round trip', () => {
+    // The control: the defect is the nulls, not the round trip. `semNulos` still produces a map that
+    // survives — which is why the function is kept in the tree even though nothing calls it any more. It is
+    // the shape of the fix the engine needs, ready to hand over.
+    const store = createStorage(memoryBackend());
+    saveKB(store, semNulos(FACTORY));
+    expect(() => loadKB(store, null)).not.toThrow();
+  });
+});

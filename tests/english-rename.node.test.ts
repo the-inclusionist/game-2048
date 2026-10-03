@@ -112,13 +112,9 @@ describe('H1 — the old Portuguese names never come back', () => {
     });
   }
 
-  it('[Interface] and the DOM dataset contract is NOT swept with the identifiers', () => {
-    // The engine's `axisRows` writes `data-eixo` / `data-valor` into the HTML, and `buttonChoice(dataset)`
-    // reads `dataset.eixo` and `dataset.valor` back out. These are not TypeScript names — they are the
-    // engine's DOM contract (measured 2026-10-02 at `render/viz-axes-labels.js:65`). An over-eager rename
-    // would turn `[data-eixo]` into `[data-axis]` and the panel would silently stop reacting.
-    const shell = arquivos.find((a) => a.nome === 'src/standalone.ts')!.texto;
-    expect(shell, 'the selector reads the engine’s own markup').toContain('[data-eixo][data-valor]');
-    expect(shell, 'and it does NOT read a parallel contract we invented').not.toContain('[data-axis]');
-  });
+  // 📌 A SENTINEL STOOD HERE until 2026-10-03: it asserted `src/standalone.ts` read `[data-eixo][data-valor]`
+  //    (the engine's own DOM contract for the colour-axis rows) and had not been swept into `[data-axis]`
+  //    by H1's rename. E1 of Part Five deleted the shell's colour-vision panel — engine 11.0.0 mounts the
+  //    🚥 icon itself — so the selector it guarded no longer exists. The DOM-contract LESSON survives in
+  //    this file's header; the assertion had nothing left to read.
 });

@@ -136,74 +136,49 @@ describe('the value arriving from the DOM is data, not a promise', () => {
 // came out of the game's height alone. `scripts/layout-check.mjs` measures the consequence on four real
 // screens; these two assertions hold the SHAPE that produced it, because a future panel added to the page
 // would reproduce the defect long before anyone re-ran a browser.
-describe('the colour-correction panel opens, rather than occupying the page', () => {
-  const html = readFileSync(join(import.meta.dirname, '..', 'app', 'index.html'), 'utf8');
-
-  it('[Cross-check] the rows are still there to be found at all', () => {
-    // A gate whose subject vanished is the failure it exists to catch, wearing a green tick.
-    expect(html, 'the radiogroup the engine fills').toMatch(/id="p2-viz"[^>]*role="radiogroup"/);
-  });
-
-  it('[Zero] 🔴 they sit inside an overlay that is `hidden` at rest — not in the page’s flex column', () => {
-    // The overlay is `position: fixed` in the engine's stylesheet, which is the whole point: a fixed element
-    // is out of flow and takes NO height from `<main>`, so the stage stops competing with it.
-    const bloco = html.slice(html.indexOf('<div id="viz"'), html.indexOf('id="p2-viz"'));
-    expect(bloco, 'the panel is an overlay').toContain('class="overlay"');
-    expect(bloco, 'and it is closed until asked for').toContain('hidden');
-  });
-
-  it('[Right] and a LABELLED button opens it, which is what answers the engine’s objection', () => {
-    // ⚠️ The reason the rows were open in the first place is real and recorded: `ui/visual-axes-panel` says a
-    //    control that exists to be FOUND by someone who sees poorly, hidden in a closed box, is "almost the
-    //    same as not having moved it". That was written about a `<select>`. What keeps it answered here is
-    //    that the opener is a button with WORDS in the same row as «Alto contraste» — so this asserts the
-    //    label, not merely the button.
-    expect(html).toMatch(/id="open-viz"[\s\S]{0,160}data-i18n="eixo\.correcao\.titulo"/);
-    const tools = html.slice(html.indexOf('class="p2-tools"'), html.indexOf('</div>', html.indexOf('class="p2-tools"')));
-    expect(tools, 'beside the other three, not off on its own').toContain('id="open-viz"');
-  });
-});
-
-describe('Escape closes a panel, because the ENGINE routes the key — since engine 11.0.0', () => {
-  // ⚠️ G11 OF PART TWO WROTE THIS BLOCK AGAINST 9.0.0, where `createGame` installed no keydown router and
-  //    the shell had to add two document-level listeners (`aoCapturar` for the capture flow and `aoEscapar`
-  //    for the Escape chain). H11 of Part Three remeasured against 11.0.0 and found both routes installed
-  //    INSIDE `createGame` — capture at `boot/create-game.js:3006`, Escape at `ui/menu-nav.js:494`. The
-  //    shell's two listeners were double delivery; H11 removed them. This gate now asserts the engine does
-  //    the routing — so a regression would be noticed.
-  //
-  // 📌 The forward gate still reads SOURCE, not behaviour: the behavioural proof is `tests/factory.
-  //    browser.test.ts` booting with the live engine. What the source read catches is somebody re-adding
-  //    the dead listeners (noise) or dropping `inEscapeChain: true` from the overlay registrations (which
-  //    is what makes a panel reachable by Escape).
-  const bruto = readFileSync(join(import.meta.dirname, '..', 'src', 'standalone.ts'), 'utf8');
-  const shell = bruto
+// ========================= WHAT THIS SHELL NO LONGER MOUNTS (E1, Part Five) =========================
+// Two describes stood here until 2026-10-03: one for the `#viz` colour-correction overlay (built in G11,
+// whose layout fix was correct work on a panel that should not have existed) and one for the Escape chain
+// across our three overlays. Both lost their subject when E1 deleted the panels — engine 11.0.0 mounts
+// every one of them itself.
+//
+// 📌 THE GATE THAT REPLACES THEM HOLDS THE OPPOSITE PROPERTY, and that is the point: the old ones asserted
+// our panels were well formed; this one asserts they are ABSENT. A regression here is somebody re-adding a
+// control the child would then meet twice — which is the defect the Dev found on the live deploy.
+describe('E1 — the shell mounts no panel the engine already mounts', () => {
+  const SHELL = readFileSync(join(import.meta.dirname, '..', 'src', 'standalone.ts'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .split('\n')
     .map((linha) => linha.replace(/(^|[^:])\/\/.*$/, '$1'))
     .join('\n');
+  const HTML = readFileSync(join(import.meta.dirname, '..', 'app', 'index.html'), 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
 
-  it('[Cross-check] stripping the comments left the CODE, not an empty string', () => {
-    expect(shell, 'the engine call survives').toMatch(/createGame\s*\(/);
-    expect(shell.length).toBeLessThan(bruto.length * 0.6);
+  it('[Cross-check] stripping comments left the CODE, not an empty string', () => {
+    expect(SHELL, 'the engine call survives').toMatch(/createGame\s*\(/);
+    expect(HTML, 'the markup survives').toContain('<title>');
   });
 
-  it('[Zero] 🔴 every overlay this file registers asks to be in the escape chain', () => {
-    // The engine's menu-nav walks `escapeTarget()` and closes by id — but only overlays that opted in with
-    // `inEscapeChain: true` are candidates. A panel registered without the flag would open and have no
-    // door to Escape, which is the defect the WCAG community calls «the quiet trap».
-    const registers = [...shell.matchAll(/overlays\.register\s*\(/g)].length;
-    const chainEntries = [...shell.matchAll(/inEscapeChain:\s*true/g)].length;
-    expect(registers, 'the shell registers overlays').toBeGreaterThan(0);
-    expect(chainEntries, 'every one of them opts into the engine’s chain').toBe(registers);
+  it('[Zero] 🔴 it does not call `initSettingsTypo` — the engine does, at create-game.js:1134', () => {
+    expect(SHELL).not.toMatch(/initSettingsTypo\s*\(/);
   });
 
-  it('[Zero] 🔴 and the shell does NOT install its own document-level keydown listener', () => {
-    // 📏 Measured 2026-10-02: engine 11 routes capture AND Escape inside `createGame`. A `document.
-    //    addEventListener('keydown', …)` in this file would be double delivery — redundant, confusing to
-    //    read, and the exact dead code the plan rule says to remove.
-    expect(shell).not.toMatch(/document\.addEventListener\s*\(\s*['"]keydown['"]/);
-    expect(shell).not.toMatch(/\baoCapturar\b/);
-    expect(shell).not.toMatch(/\baoEscapar\b/);
+  it('[Zero] 🔴 nor `initSettingsControls` — the engine does, at create-game.js:2973', () => {
+    // 📌 G2 recorded «nothing in the engine opens ui/settings-controls» against engine 8. True then, false
+    //    since 11.0.0 — and it stayed in the shell as a live justification for three weeks.
+    expect(SHELL).not.toMatch(/initSettingsControls\s*\(/);
+  });
+
+  it('[Zero] 🔴 and the markup carries none of the three overlays', () => {
+    for (const id of ['typo', 'ctrl', 'viz']) {
+      expect(HTML, `#${id} belongs to the engine now`).not.toMatch(new RegExp(`id="${id}"`));
+    }
+  });
+
+  it('[Right] ✅ but the ◐ contrast button STAYS — its reason is arithmetic, not a version', () => {
+    // `hc7` needs 49:1 between the extremes with three roles and the WCAG scale stops at 21. The axis is
+    // still three-level on 11.0.0 (measured 2026-10-03), so mounting it would offer one row that works,
+    // one coincidence and one impossibility. The arithmetic gate is the first describe in this file.
+    expect(HTML).toMatch(/id="toggle-hc"/);
   });
 });

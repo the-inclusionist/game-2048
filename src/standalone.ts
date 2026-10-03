@@ -14,21 +14,10 @@ import '@the-inclusionist/engine/style.css';
 
 import { createGame } from '@the-inclusionist/engine';
 import { createRng } from '@the-inclusionist/engine/core/rng.js';
-import { createStorage } from '@the-inclusionist/engine/platform/storage.js';
-import { CORRECTION_LABEL, buttonChoice, axisRows } from '@the-inclusionist/engine/ui/visual-axes-panel.js';
-import type { Correction } from '@the-inclusionist/engine/render/viz-axes.js';
 // `GameDeclaration` once imported here for the local placeholder; the cartridge owns the shape now (H9).
-import { initSettingsTypo } from '@the-inclusionist/engine/ui/settings-typo.js';
-import { initSettingsControls } from '@the-inclusionist/engine/ui/settings-controls.js';
-// The module-level `kb`, `resetKB`, `setKB`, `initKB` are gone in engine 11.0.0 (note DA); they live on
-// `motor.keyboardConfig` now. `saveKB` stays exported, but with a `(store, kb)` signature; the engine's
-// root-provided `motor.keyboardConfig.save()` is the one we use, so this import carries no live symbol.
 import { padPxPerMm } from '@the-inclusionist/engine/input/touch.js';
 
 import { cartridge } from './index.ts';
-import { CORRECOES_OFERECIDAS, ehCorrecao, filtroCssDe } from '../app/js/visual.ts';
-import { acoesComRotulo } from '../app/js/actions.ts';
-import { semNulos } from '../app/js/keyboard-save.ts';
 import { MS_POR_QUADRO } from '../app/js/animation.ts';
 
 const $ = <T extends Element = Element>(sel: string): T | null => document.querySelector<T>(sel);
@@ -152,20 +141,6 @@ const jogo = cartridge.create({
 });
 motor.mount(jogo.declaration, jogo.hooks);
 
-// A `(key) → string | null` reader, the shape `wordsOf` and the engine's own `labellerFrom` ask for. The
-// Engine exposes `t` (which returns the key when missing) and not `word` directly, so we read fallback-to-key
-// as «unknown», which is what the labeller then drops. Our dictionaries declare every key the preset reads,
-// so this helper only exists for safety's sake — a mismatch would surface as a mute row in the remap panel.
-const word = (chave: string): string | null => {
-  const palavra = motor.t(chave);
-  return palavra === chave ? null : palavra;
-};
-
-// ⚠️ ONE STORE PER ROOT (ADR-0232 D4, note CT). `platform/storage` is a factory now — the page-wide `get`/
-// `set` / `getJSON` members are gone, and the engine's root builds one from `host.storage` (the window's
-// `localStorage` by default). The shell builds its own on top of the same backend, so stored motion flags
-// and font choices are the same object either way. `TypoStore` is a narrow `{get, set}` view of this.
-const store = createStorage(window.localStorage);
 
 
 // ============================ THE SHELL RUNS THE LOOP ============================
@@ -200,99 +175,23 @@ const tick = (agora: number) => {
   requestAnimationFrame(tick);
 };
 requestAnimationFrame(tick);
-// TYPOGRAPHY — borrowed whole. The quiz measured that this panel serves outside its genre without a line of
-// change, and it is the strongest evidence that the menu stack belongs to the engine rather than to the
-// platformer.
-const typo = initSettingsTypo({ $, srSay: motor.say, store, root: document.documentElement, t: motor.t });
-$('#open-typo')?.addEventListener('click', () => {
-  const ov = $<HTMLElement>('#typo');
-  if (!ov) return;
-  typo.render();
-  ov.hidden = false;
-  motor.overlays.frontOverlay(ov);
-  ov.querySelector<HTMLElement>('button[data-font]:not([disabled])')?.focus();
-});
-const fechar = () => { const ov = $<HTMLElement>('#typo'); if (ov) ov.hidden = true; };
-$('#typo-close')?.addEventListener('click', fechar);
-motor.overlays.register('typo', { close: fechar, inEscapeChain: true });
-
-// THE KEYBOARD-REMAP PANEL — borrowed whole, like the typography one, and for the same reason: it is the
-// engine's screen and the game has no business rewriting the capture flow, the cross-player conflict lookup
-// or the reset.
+// ⚠️ THE TYPOGRAPHY PANEL, THE KEYBOARD-REMAP PANEL AND THE COLOUR-VISION CHOOSER USED TO LIVE HERE.
+//    All three are gone as of 2026-10-03 (Part Five, E1), because engine 11.0.0 mounts every one of them
+//    itself and the duplicates were reaching the child as two of the same control:
 //
-// ⚠️ THE PART-ONE CAVEAT ABOUT THIS BLAMED THE WRONG THING, and the correction matters more than the
-// panel. The README and `main.ts` said the remapping screen was unreachable because `CreateGameOptions` had
-// no `getPauseActs`. Measured on 2026-09-11: remapping was never behind `getPauseActs`. The pause card's
-// options list is `caa`, `empatia`, `audio`, `motora`, `tipo`, `visual`, `anim` — none of them is the remap
-// panel — and NOTHING in the engine opens `ui/settings-controls`, exactly as nothing opens
-// `ui/settings-typo`. It was mountable on engine 8 and simply had not been mounted.
-const ctrl = initSettingsControls({
-  $,
-  t: motor.t,
-  srSay: motor.say,
-  srAlert: motor.alert,
-  // ⚠️ NOT the whole `platform/storage` module: `ControlsStore` is exactly `{ saveKB, resetKB }`, and both
-  //    live in `input/keyboard` beside the `kb` they persist. Passing the broad module compiled against
-  //    nothing — the narrow type is what says which two functions this panel may reach.
-  //
-  // 🔴 AND `saveKB` IS WRAPPED, because saving what the engine hands us LOCKED THE CHILD OUT OF THE GAME.
-  //    Measured on 2026-09-11: remap a key, reload, blank page. The engine's `p3`/`p4` schemes carry `null`
-  //    for positions a seat cannot reach, `saveKB` persists all 42, and on the next boot `migrarEsquema`
-  //    does `[...teclas]` over each one — `[...null]` throws inside `createGame`, before anything renders.
-  //    `semNulos` writes only the positions that name a key; the merge on load leaves the factory's value
-  //    for the rest, so nothing is lost. The whole chain is in `app/js/keyboard-save.ts`, and it is an
-  //    ENGINE defect reported as one, not a disagreement.
-  // 🔴 `saveKB` IS STILL WRAPPED. The engine's `p3`/`p4` factory schemes carry `null` for positions a seat
-  //    cannot reach; saving them unwrapped used to lock the child out on the next boot (`migrarEsquema`
-  //    threw on `[...null]`). H11 is where we check whether 11.0.0 fixed that; until then, the wrap stays.
-  //    The method we wrap is `motor.keyboardConfig.save` instead of the free `saveKB` — the module function
-  //    now takes a store first, which this panel does not have, and `.save()` is the engine's own door.
-  store: {
-    saveKB: (esquema) => motor.keyboardConfig.save(semNulos(esquema)),
-    resetKB: () => motor.keyboardConfig.reset(),
-  },
-  // The rows are this game's preset read back through the engine's own labeller, so the screen cannot name
-  // an action the game does not read. See `acoesComRotulo`.
-  gameActions: () => acoesComRotulo(word),
-  // The live keyboard config — the engine's own since 11.0.0 (note DA). Mutated in place by successful
-  // remaps; `set` replaces it wholesale, which is what Reset needs.
-  kb: motor.keyboardConfig.kb(),
-  setKB: motor.keyboardConfig.set,
-  kbFor: (i) => motor.keyboard.kbFor(i),
-  // ⚠️ `factoryWithGame()` without args returns the engine's factory WITH this game's `keyboardMapping`
-  //    already folded in. The 10.0.0 rename (note DA) moved it to a method on `Engine.keyboardConfig`; the
-  //    module-level function is still exported with a required `mapping` arg, but the panel's "right
-  //    default" is the GAME's factory, which only the engine knows.
-  defaultSchemeFor: (_i) => motor.keyboardConfig.factoryWithGame().solo,
-  getNumPlayers: () => 1,
-  applyControls: () => { motor.keyboard.refreshControls(); },
-  assignControls: () => { motor.keyboard.assignControls(); },
-});
-$('#open-ctrl')?.addEventListener('click', () => {
-  const ov = $<HTMLElement>('#ctrl');
-  if (!ov) return;
-  ctrl.render(0);   // seat 0 — this game has one player, and `getNumPlayers` says so
-  ov.hidden = false;
-  motor.overlays.frontOverlay(ov);
-  ov.querySelector<HTMLElement>('button:not([disabled])')?.focus();
-});
-// ⚠️ G2 AND G11 USED TO INSTALL TWO document-level listeners here — one for `ctrl.handleCaptureKeydown`,
-//    one for `overlays.escapeTarget()`. Both were measured against 9.0.0 and found necessary because
-//    `createGame` did not install a keydown router. H11 remeasured against 11.0.0 (2026-10-02) and both
-//    installations ARE NOW DONE BY THE ENGINE INSIDE `createGame`:
+//      · 🔤 typography — the engine calls `initSettingsTypo` at `boot/create-game.js:1134`, and mounts
+//        the 🔤 icon in the bar.
+//      · ⌨ key remapping — the engine calls `initSettingsControls` at `boot/create-game.js:2973`.
+//        📌 G2 measured «NOTHING in the engine opens ui/settings-controls» against engine 8, and that
+//        stayed in this file as a live claim for three weeks after 11.0.0 made it false.
+//      · 🚥 colour vision — the engine mounts the icon, and it was MEASURED cycling correctly on the live
+//        deploy (desligado → protanopia → deuteranopia → tritanopia → desligado). G1 predicted it would
+//        stick after one click because `players` is typed without `visual`; the type is still that way and
+//        the icon works anyway. 🔴 Reading a type is not measuring a behaviour.
 //
-//    · Capture-key: `boot/create-game.js:3006` adds `win.addEventListener('keydown', …, true)` that
-//      checks `isCapturing()` and calls `handleCaptureKeydown`.
-//    · Escape chain: `ui/menu-nav.js:494` adds the full `menuNavKey` capture-phase handler, which walks
-//      `escapeTarget()`, calls `closeById()` and `restoreFocus()`.
-//
-//    Keeping our handlers alongside would be double delivery — redundant, not harmful (the engine's
-//    `stopPropagation` on `win` stops ours on `document` from firing), but dead code the plan rule says
-//    to remove. The forward gate below asserts the engine does the routing, so if a regression ever drops
-//    it, we notice before a child does.
-const fecharCtrl = () => { const ov = $<HTMLElement>('#ctrl'); if (ov) ov.hidden = true; };
-$('#ctrl-close')?.addEventListener('click', fecharCtrl);
-motor.overlays.register('ctrl', { close: fecharCtrl, inEscapeChain: true });
+//    The `semNulos` wrap went with the remap panel: the engine owns the panel, so it owns the save. The
+//    engine's own null-spread defect in `migrateScheme` is unchanged and still reported — but it is no
+//    longer this game's to work around, because this game no longer writes that store.
 
 // HIGH CONTRAST BY ROLE. It belongs to this game, not to the engine — the quiz's finding 8: the engine's
 // `hcnew` modes repaint the platformer's tile textures, and this game does not have its tiles. What travels
@@ -306,72 +205,6 @@ hc?.addEventListener('click', () => {
   motor.say(hc.textContent ?? '');
 });
 
-// COLOUR VISION. The six SVG filters were already installed into `#cvd` by `createGame`; what lives here is
-// the CHOOSER, and since 2026-09-11 it is four visible rows instead of a `<select>`.
-//
-// ⚠️ THE SHAPE WAS THE DEFECT, and the engine had already written it down. `ui/visual-axes-panel`: "it keeps
-// the VISIBLE-ROW form, not a `<select>` — inside a closed box, a control whose reason to exist is to be
-// FOUND by someone who sees poorly is almost the same as not having moved it."
-//
-// The rows come from the engine's `axisRows`, so the control looks and reads the same here as in every
-// other game: same `.ctrl-row`, same `role="radio"`, same "Escolhido"/"Escolher" wording from the shared
-// dictionary. The only thing this game supplies is the WRITER — `render/viz-setters` is the engine's own,
-// and its context asks for ~34 fields of a PixiJS platformer render graph this game does not have.
-const caixaViz = $<HTMLElement>('#p2-viz');
-const alvo = $<HTMLElement>('#game-region');
-const abrirViz = $<HTMLButtonElement>('#open-viz');
-if (caixaViz && alvo && motor.cvdFilters > 0) {
-  let atual: Correction = 'tricro';
-
-  const pintar = () => {
-    // ⚠️ `innerHTML` FROM A PURE ENGINE BUILDER, and the string is not user text: `axisRows` interpolates
-    // only i18n values and the axis' own literals. The old `<select>` was built with `new Option` to close
-    // the injection class pre-emptively; here the equivalent guarantee is that nothing outside the engine's
-    // dictionary reaches the template, and `ehCorrecao` guards the way back in.
-    caixaViz.innerHTML = axisRows('correcao', CORRECOES_OFERECIDAS, CORRECTION_LABEL, atual, motor.t);
-  };
-
-  pintar();
-
-  // DELEGATED, so the handler survives every repaint. Re-binding per row would leak a listener each time.
-  caixaViz.addEventListener('click', (e) => {
-    const botao = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-eixo][data-valor]');
-    if (!botao) return;
-    const escolha = buttonChoice(botao.dataset);
-    // Two guards, and neither is ceremony: the first is the engine's (is this a row of a known axis?), the
-    // second is ours (is this a correction this game offers?). `data-valor` is an attribute, and an
-    // attribute is a string anyone can write — `blind` is a real engine value and must never get through.
-    if (!escolha || escolha.axis !== 'correcao' || !ehCorrecao(escolha.value)) return;
-    atual = escolha.value;
-    alvo.style.filter = filtroCssDe(atual);
-    pintar();
-    // The label, not the state word: "Escolhido" alone would tell a screen reader that something was
-    // chosen without saying what. `aria-checked` already carries the state; the announcement carries the name.
-    motor.say(motor.t(CORRECTION_LABEL[atual]));
-  });
-
-  // THE DOOR. Same three lines as `#open-typo` and `#open-ctrl`, and the sameness is the point: three panels
-  // that open the same way are one thing to learn instead of three.
-  abrirViz?.addEventListener('click', () => {
-    const ov = $<HTMLElement>('#viz');
-    if (!ov) return;
-    ov.hidden = false;
-    motor.overlays.frontOverlay(ov);
-    // The CHOSEN row, not the first — a child who opens this panel a second time lands on what they picked,
-    // and a screen reader reads the current state instead of the top of a list.
-    (ov.querySelector<HTMLElement>('[aria-checked="true"]') ??
-      ov.querySelector<HTMLElement>('button:not([disabled])'))?.focus();
-  });
-  const fecharViz = () => { const ov = $<HTMLElement>('#viz'); if (ov) ov.hidden = true; };
-  $('#viz-close')?.addEventListener('click', fecharViz);
-  motor.overlays.register('viz', { close: fecharViz, inEscapeChain: true });
-} else if (abrirViz) {
-  // ⚠️ NO FILTERS MEANS NO PANEL, AND THEREFORE NO BUTTON. `cvdFilters` is 0 when the engine could not mount
-  //    the SVG colour matrices, and the card would open on an empty radiogroup — a control that answers
-  //    nothing is worse than an absent one, because the child spends a press finding that out. The old
-  //    always-open section had this defect too: it showed a heading over four rows that were never painted.
-  abrirViz.hidden = true;
-}
 
 // TOUCH: the PURE half of `input/touch`. `padPxPerMm` anchors the real millimetre to the device (WCAG 2.5.5),
 // and the four buttons get 11 mm MEASURED instead of a guess in pixels. The whole `initTouch` is deliberately
