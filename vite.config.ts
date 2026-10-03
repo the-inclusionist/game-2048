@@ -31,7 +31,25 @@ export default defineGameBuild({
   config: {
     // The APP's root — the engine's wrapper flips it to `.` for the cartridge mode.
     root: 'app',
-    build: { outDir: '../dist', emptyOutDir: true, target: 'es2022' },
+
+    // ============================ THE SUBPATH FOR CLOUDFLARE PAGES (D2) ============================
+    // 📌 CF Pages serves this game at `o-inclusionista.jrocha.dev.br/game-2048/` (ADR-0117 + the pasted
+    // guide). `INCL_BASE` reaches here through `[vars]` in `wrangler.toml`; local `vite dev` leaves it
+    // unset and the default `'/'` keeps the preview at the root. Without the prefix, every absolute
+    // reference the production build writes resolves against the ORIGIN root and 404s under the subpath.
+    //
+    // 📌 THE ENGINE RESOLVES `/heavy/*` AGAINST `document.baseURI` (`platform/heavy.js:178`), so with
+    // `<base href="/" />` in `app/index.html` (D3) the engine's own `/heavy/<host><path>` lands on the
+    // origin root rather than under this game's subpath — which is what makes the shared
+    // `incl-pesados-v2` cache reach across the catalogue.
+    base: process.env.INCL_BASE || '/',
+
+    // 📌 `outDir` MIRRORS THE SUBPATH so CF Pages's `pages_build_output_dir = "dist"` (wrangler.toml)
+    // finds the files under the same path the browser will request them. The pasted guide's
+    // reference implementation measured this: without the subpath on `outDir`, the same origin served
+    // `.../index.html` at the root AND `.../game-2048/assets/*` 404'd. Local dev with `INCL_BASE` unset
+    // lands at `../dist/`, exactly where the H8 build left it.
+    build: { outDir: '../dist' + (process.env.INCL_BASE || '').replace(/\/$/, ''), emptyOutDir: true, target: 'es2022' },
 
     // ============================ THE PWA FOR THE APP BUILD ============================
     // 🔴 README line 5 has said "offline as a PWA" since the repository was scaffolded.

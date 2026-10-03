@@ -50,3 +50,21 @@ describe('D1 — wrangler.toml', () => {
     expect(WRANGLER).toMatch(/^pages_build_output_dir\s*=\s*"dist"/m);
   });
 });
+
+describe('D2 — vite.config.ts honours INCL_BASE', () => {
+  const VITE = readFileSync(join(RAIZ, 'vite.config.ts'), 'utf8');
+
+  it('[Zero] 🔴 `base` is read from `process.env.INCL_BASE` with `/` as the dev-mode default', () => {
+    // Without this read, every absolute reference the production build writes resolves against the
+    // origin's root and 404s under the subpath — the same measurement game-platformer made before
+    // adding this line.
+    expect(VITE).toMatch(/base:\s*process\.env\.INCL_BASE\s*\|\|\s*['"]\/['"]/);
+  });
+
+  it('[Zero] 🔴 `outDir` mirrors the subpath, so CF Pages finds the files where the browser asks', () => {
+    // The pasted guide's own measurement: without the subpath on `outDir`, the same origin served
+    // `.../index.html` at the root AND `.../<slug>/assets/*` 404'd. The expression lands
+    // `../dist/<subpath>/` for a prod build and `../dist/` for a dev build.
+    expect(VITE).toMatch(/outDir:\s*['"]\.\.\/dist['"]\s*\+\s*\(process\.env\.INCL_BASE\s*\|\|\s*['"]['"]/);
+  });
+});
